@@ -1,0 +1,4 @@
+#live2d {
+  left: 0 !important; /* 强制使模型在左侧 */
+  right: auto !important; /* 防止它在右侧 */
+}
