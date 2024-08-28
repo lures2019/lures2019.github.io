@@ -60,7 +60,7 @@
   isHome: false,
   isHighlightShrink: undefined,
   isToc: false,
-  postUpdate: '2024-08-28 15:06:56'
+  postUpdate: '2024-08-28 15:15:27'
 }</script><script>(win=>{
       win.saveToLocal = {
         set: (key, value, ttl) => {
@@ -284,7 +284,7 @@ document.addEventListener('DOMContentLoaded', panguInit)</script><div class="js-
             'date': e.updatedAt,
           }
         })
-        saveToLocal.set('valine-newest-comments', JSON.stringify(valineArray), 10/(60*24))
+        saveToLocal.set('valine-newest-comments', JSON.stringify(valineArray), 1/(60*24))
         generateHtml(valineArray)
       }).catch(e => {
         const $dom = document.querySelector('#card-newest-comments .aside-list')
