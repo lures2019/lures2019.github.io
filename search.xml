@@ -1,0 +1,127 @@
+<?xml version="1.0" encoding="utf-8"?>
+<search> 
+  
+  
+    
+    <entry>
+      <title>Blog4 站点添加图库页面</title>
+      <link href="/posts/524e63d6.html"/>
+      <url>/posts/524e63d6.html</url>
+      
+        <content type="html"><![CDATA[<h3 id="创建界面">创建界面</h3><p>1、在<code>hexo</code>根目录下选择<code>Open Git Bash here</code>，在里面输入命令<code>hexo new page photos</code></p><p><img src="https://cdn.jsdelivr.net/gh/lures2019/Typora_image_CDN/PicGo/202408291610470.png" alt="image-20240829161016380"></p><p><img src="https://cdn.jsdelivr.net/gh/lures2019/Typora_image_CDN/PicGo/202408291611273.png" alt="image-20240829161111211"></p><p>这样便会在<code>Hexo</code>根目录下的<code>/source</code>生成文件：</p><p><img src="https://cdn.jsdelivr.net/gh/lures2019/Typora_image_CDN/PicGo/202408291612167.png" alt="image-20240829161221105"></p><p>2、打开<code>photos/index.md</code>文件，对<code>Front-matter</code>部分进行修改(侧边栏和评论区不展示)</p><figure class="highlight shell"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br></pre></td><td class="code"><pre><span class="line">---</span><br><span class="line">title: photos</span><br><span class="line">date: 2024-08-29 16:10:59</span><br><span class="line">aside: false</span><br><span class="line">comments: false</span><br><span class="line">---</span><br></pre></td></tr></table></figure><p>3、打开主题配置文件即<code>Blog\themes\butterfly\_config.yml</code>，对菜单部分进行修改：</p><p><img src="https://cdn.jsdelivr.net/gh/lures2019/Typora_image_CDN/PicGo/202408291617817.png" alt="image-20240829161719477"></p><p>我这边将<code>photos</code>页面添加到了<code>清单</code>下面</p><p>此时，首页导航栏的<code>清单</code>列表下面便有<code>照片</code>界面，但是此时相册没有内容，只有一个空白框</p><p>可以使用<code>hexo clean &amp;&amp; hexo s</code>并在浏览器输入<code>localhost:4000</code>进行查看</p><p><img src="https://cdn.jsdelivr.net/gh/lures2019/Typora_image_CDN/PicGo/202408291620247.png" alt="image-20240829162020804"></p><h3 id="图库集合页">图库集合页</h3><p>是一个普通页面，如上面创建的<code>/photos/index.md</code>页面，下面将其设置为一个图库集合页面，设置图库集合页面是使用外挂标签来实现的，书写格式如下：</p><figure class="highlight shell"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br></pre></td><td class="code"><pre><span class="line">&lt;div class=&quot;gallery-group-main&quot;&gt;</span><br><span class="line">&#123;% galleryGroup name description link img-url %&#125;</span><br><span class="line">&#123;% galleryGroup name description link img-url %&#125;</span><br><span class="line">&#123;% galleryGroup name description link img-url %&#125;</span><br><span class="line">&lt;/div&gt;</span><br></pre></td></tr></table></figure><p>此处<code>galleryGroup</code>设置内容如下：</p><ul><li><code>name</code>：图库名字</li><li><code>description</code>：图库描述</li><li><code>link</code>：链接到对应相册的地址</li><li><code>img-url</code>：图库封面的地址</li></ul><p>比如我准备上传一个图库，名字叫<code>可爱の小学生</code>，准备用<code>github</code>的<code>CDN</code>加速</p><p>参考我的 <a href="https://lures2019.github.io/2024/08/29/Blog3-%E4%BD%BF%E7%94%A8Github%E6%90%AD%E5%BB%BA%E5%85%8D%E8%B4%B9%E5%9B%BE%E5%BA%8A/">Blog3 使用 Github 搭建免费图床</a></p><p><img src="https://cdn.jsdelivr.net/gh/lures2019/Typora_image_CDN/PicGo/202408291635249.png" alt="image-20240829163539747"></p><p>从手机通过百度网盘传输到电脑桌面，所在文件夹叫<code>小学生</code></p><p>目前图集只准备一个 图库，所以设置如下：</p><figure class="highlight html"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br></pre></td><td class="code"><pre><span class="line"><span class="tag">&lt;<span class="name">div</span> <span class="attr">class</span>=<span class="string">&quot;gallery-group-main&quot;</span>&gt;</span></span><br><span class="line">&#123;% galleryGroup &#x27;可爱の小学生&#x27; &#x27;24年认识的小朋友&#x27; &#x27;primary_students&#x27; https://www.czblogs.cn/album/wallpaper.jpeg %&#125;</span><br><span class="line"><span class="tag">&lt;/<span class="name">div</span>&gt;</span></span><br></pre></td></tr></table></figure><p><img src="https://cdn.jsdelivr.net/gh/lures2019/Typora_image_CDN/PicGo/202408291653589.png" alt="image-20240829165353867"></p><p>可以看到本地测试结果正常，但是点击页面会跳转到<code>404.html</code>，因为子页面没设置</p><p>以后如果需要增加图片集，可以仿照上面的命令进行编写</p><h3 id="图库子页面">图库子页面</h3><p>1、在<code>hexo</code>博客根目录下面打开<code>git bash</code>，输入下面命令：</p><figure class="highlight shell"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line">hexo new page primary_students</span><br></pre></td></tr></table></figure><p>然后会在博客根目录下面的<code>/source</code>下生成<code>primary_students</code>子文件夹，并在其中有一个名为<code>index.md</code>的文件，即对应着的<code>可爱の小学生</code>子页面！</p><p><img src="https://cdn.jsdelivr.net/gh/lures2019/Typora_image_CDN/PicGo/202408291658746.png" alt="image-20240829165804700"></p><p>但是发现<code>/source/primary_students/index.md</code>和<code>/source/photos/index.md</code>同级，所以需要将<code>primary_students</code>文件夹剪切到<code>photos</code>文件夹下面</p><p>2、开始在子页面<code>/source/photos/primary-students/index.md</code>中使用标签外挂挂上自己的照片，写法如下：</p><figure class="highlight shell"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br></pre></td><td class="code"><pre><span class="line">&#123;% gallery %&#125;</span><br><span class="line">![]()</span><br><span class="line">&#123;% endgallery %&#125;</span><br></pre></td></tr></table></figure><p>这边图片我就将之前文件夹的所有照片贴在上面，会通过<code>PicGo</code>自动上传到<code>github</code>上获取到外链</p><p>外挂标签会自动根据图片的尺寸大小来调整图片的大小，只需要将图片罗列上去就行了！</p>]]></content>
+      
+      
+      <categories>
+          
+          <category> 界面美化 </category>
+          
+      </categories>
+      
+      
+        <tags>
+            
+            <tag> Hexo </tag>
+            
+            <tag> Github </tag>
+            
+            <tag> butterfly </tag>
+            
+            <tag> PicGo </tag>
+            
+            <tag> jsDelivr </tag>
+            
+        </tags>
+      
+    </entry>
+    
+    
+    
+    <entry>
+      <title>Blog3 使用Github搭建免费图床</title>
+      <link href="/posts/236e1c4a.html"/>
+      <url>/posts/236e1c4a.html</url>
+      
+        <content type="html"><![CDATA[<h3 id="需求">需求</h3><p>平常记笔记都是在<code>Typora</code>上，上传到<code>github</code>上也是<code>imgs</code>及<code>readme.md</code>，但是上传到其他平台就很麻烦，现在搭建了博客之后，希望通过<code>hexo new post 文章</code>然后编写<code>md</code>文件的时候图片不用相对路径，写完直接上传多爽</p><h3 id="介绍">介绍</h3><ul><li><code>github</code>的公有仓库个人可以创建很多个，当一个文件夹满仓了，可以创建新的仓库来使用~</li><li>单个仓库的容量很大，足够使用很长一段时间</li><li>配合<code>CDN</code>加速的话，访问速度会变快</li><li>使用本地上传工具方便我们快速上传图片，从而获取图片外链，所以使用<code>PicGo</code></li></ul><h3 id="教程">教程</h3><p>1、在<code>github</code>上创建图床仓库，如：<code>Typora_image_CDN</code>，仓库设置为<code>public</code></p><p><img src="https://cdn.jsdelivr.net/gh/lures2019/Typora_image_CDN/PicGo/202408291508766.png" alt="image-20240829150856700"></p><p>2、接着创建<code>Token</code></p><blockquote><p>注意：创建完成后复制生成的Token，保存到某处，退出该界面后再也无法查看Token，忘了存就再创一个</p></blockquote><p><img src="https://cdn.jsdelivr.net/gh/lures2019/Typora_image_CDN/PicGo/202408291509236.png" alt="image-20240829150943102"></p><p>点击头像下方的<code>settings</code>，选择<code>Developer settings</code>，接着<code>person access tokens</code>，选择<code>tokens(classic)</code>，创建一个<code>classic</code>仓库后选择<code>No expiration</code>并勾选<code>repo</code></p><p><img src="https://cdn.jsdelivr.net/gh/lures2019/Typora_image_CDN/PicGo/202408291510281.png" alt="image-20240829151006201"></p><p>创建完成后复制所生成的<code>Token</code>，保存到某处</p><p>3、下载<code>PicGo</code>并配置</p><p>下载地址：<a href="https://github.com/Molunerfinn/picgo/releases">Releases · Molunerfinn/PicGo (github.com)</a></p><p>选择最新版本，安装后记住<code>PicGo</code>的安装目录</p><p><img src="https://cdn.jsdelivr.net/gh/lures2019/Typora_image_CDN/PicGo/202408291510898.png" alt="image-20240829151024856"></p><ul><li><p>设定仓库名，<code>你的github账户名/图床仓库名</code>，如<code>lures2019/Typora_image_CDN</code></p></li><li><p>设定分支名，默认是<code>main</code></p><ul><li><code>github</code>更新后默认分支由<code>master</code>改成了<code>main</code>，<code>PicGo</code>界面默认是<code>master</code>，需要修改，否则上传失败</li></ul></li><li><p>设定<code>Token</code>，即为刚才保存的<code>Token</code>码，复制粘贴到这里就好</p></li><li><p>指定存储路径：上传到<code>github</code>仓库下的那个路径，这里设置为图片存储在仓库的<code>PicGo/</code>目录下(注意末尾<code>/</code>)</p></li><li><p>设定自定义域名：为了使用<code>CDN</code>加速，此处设置为：</p>  <figure class="highlight shell"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line">https://cdn.jsdelivr.net/gh/lures2019/Typora_image_CDN</span><br></pre></td></tr></table></figure><p>注意后面没有<code>/</code>，且<code>lures2019</code>替换你的<code>github</code>账户名，<code>Typora_image_CDN</code>替换为你的仓库名</p></li></ul><p>4、<code>Typora</code>设置</p><p>打开<code>Typora</code>下面文件，接着选择<code>偏好设置</code>，找到图像一栏，设置如下：</p><p><img src="https://cdn.jsdelivr.net/gh/lures2019/Typora_image_CDN/PicGo/202408291517331.png" alt="image-20240829151747224"></p><p>设置完成后点击<code>验证图片上传选项</code>，若报错，可以参考下下面博文：</p><ul><li><a href="https://blog.csdn.net/TalesOV/article/details/104450037">PicGo踩坑记（上传失败，服务端出错，请重试）_为什么图片在picgo上传失败-CSDN博客</a></li><li>我遇到错误解决措施是：关闭<code>PicGo</code>并重新打开</li></ul><p>配置好后，在<code>Typora</code>写文章时，当我们插入图片时，<code>Typora</code>会自动调用<code>PicGo</code>程序，帮我们将图片上传到<code>Github</code>中去，然后将返回的图片地址进行替换，此时可以打开<code>Github</code>看到图床仓库中由图片了</p><p><img src="https://cdn.jsdelivr.net/gh/lures2019/Typora_image_CDN/PicGo/202408291520253.png" alt="image-20240829152023096"></p><p>5、<code>PicGo</code>其他设置</p><p>自己上传图片的时候很容易遇到重名现象，这边建议<code>PicGo</code>使用<strong>时间戳命名</strong>，可以保证命名是唯一的</p><p><img src="https://cdn.jsdelivr.net/gh/lures2019/Typora_image_CDN/PicGo/202408291522029.png" alt="image-20240829152225960"></p><h3 id="CDN使用图床示例">CDN使用图床示例</h3><figure class="highlight plaintext"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line">https://cdn.jsdelivr.net/gh/lures2019/Typora_image_CDN/PicGo/202408291528537.png</span><br></pre></td></tr></table></figure>]]></content>
+      
+      
+      <categories>
+          
+          <category> 学习工具 </category>
+          
+      </categories>
+      
+      
+        <tags>
+            
+            <tag> Github </tag>
+            
+            <tag> 图床 </tag>
+            
+            <tag> PicGo </tag>
+            
+            <tag> jsDelivr </tag>
+            
+        </tags>
+      
+    </entry>
+    
+    
+    
+    <entry>
+      <title>Blog2 使用Github搭建免费CDN</title>
+      <link href="/posts/fca17c9b.html"/>
+      <url>/posts/fca17c9b.html</url>
+      
+        <content type="html"><![CDATA[<h3 id="目标">目标</h3><p>将本地图片等资源上传到免费<code>CDN</code>上，方便<code>github</code>个人博客编写及后续配置的<code>Typora</code>自动上传图床等</p><h3 id="介绍">介绍</h3><p><code>jsDelivr</code>是一个免费的公共<code>CDN(内容分发网络)</code>，可用于快速和可靠地托管<code>Js、CSS、字体等静态资源</code>，通过<code>jsDelivr</code>，可以从<code>Github、npm</code>等多个源引入前端资源。</p><p><a href="https://www.jsdelivr.com/">jsDelivr官方文档</a></p><h3 id="详细步骤">详细步骤</h3><p>1、在<code>Github</code>上创建新仓库，仓库名设置为<code>images_CDN</code>，用于存放要上传到<code>CDN</code>的图片资源</p><p><img src="https://cdn.jsdelivr.net/gh/lures2019/images_CDN@0.0.1/1.png" alt=""></p><p>2、将仓库<code>images_CDN</code>克隆到本地</p><figure class="highlight shell"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line">git clone git@github.com:lures2019/images_CDN.git</span><br></pre></td></tr></table></figure><p><img src="https://cdn.jsdelivr.net/gh/lures2019/images_CDN@0.0.1/2.png" alt=""></p><p>3、进入本地仓库，并将需要上传的图片复制到本地的<code>images_CDN</code>目录下，再使用<code>push</code>传到远程仓库</p><figure class="highlight shell"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br></pre></td><td class="code"><pre><span class="line">cd images_CDN</span><br><span class="line">git add .</span><br><span class="line">git commit -m &quot;第一次传递img图片到CDN&quot;</span><br><span class="line">git push -u origin main</span><br></pre></td></tr></table></figure><p><img src="https://cdn.jsdelivr.net/gh/lures2019/images_CDN@0.0.1/3.png" alt=""></p><p>4、进入<code>github</code>仓库的<code>code</code>页面，点击右侧的<code>Releases</code></p><p><img src="https://cdn.jsdelivr.net/gh/lures2019/images_CDN@0.0.1/4.png" alt=""></p><p>5、点击<code>Draft a new release</code>，按照图片所示创建新的<code>tag</code>，如：<code>0.0.1</code></p><p>创建完成后可以点击<code>Publish release</code>进行发布，这样就可以使用<code>CDN</code>访问图片了</p><p><img src="https://cdn.jsdelivr.net/gh/lures2019/images_CDN@0.0.1/5.png" alt=""></p><p><img src="https://cdn.jsdelivr.net/gh/lures2019/images_CDN@0.0.1/6.png" alt=""></p><p><code>CDN</code>访问的规则如下：</p><figure class="highlight nginx"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line">https://cdn.jsdelivr.net/gh/&lt;username&gt;/&lt;<span class="attribute">repo</span> name&gt;@&lt;tag&gt;/&lt;resource name&gt;</span><br></pre></td></tr></table></figure><ul><li><code>username</code>即为你的<code>github</code>用户名，如：<code>lures2019</code></li><li><code>repo name</code>即为你创建的<code>github</code>仓库名，如：<code>images_CDN</code></li><li><code>tag</code>即为上述创建的标签名，如：<code>0.0.1</code></li><li><code>resource name</code>即你需要加载的资源名，如：<code>1.png</code></li></ul><p>6、查看<code>CDN</code>资源目录</p><p><img src="https://cdn.jsdelivr.net/gh/lures2019/images_CDN@0.0.1/7.png" alt=""></p><p>7、每一个<code>release</code>发布后，里面资源就不能添加了，若有需要，可以先删除<code>release</code>和<code>tag</code>再新建</p><p><img src="https://cdn.jsdelivr.net/gh/lures2019/images_CDN@0.0.1/8.png" alt=""></p><p><img src="https://cdn.jsdelivr.net/gh/lures2019/images_CDN@0.0.1/9.png" alt=""></p><h3 id="题外话">题外话</h3><blockquote><p>针对博客最新文章前封面可能显示不出来，因为上传到github上页面层级太乱，相对路径不太适用</p><p>以后考虑发博客的时候放再图床上个再加载，这样博客封面不同且最新文章前面封面也能加载出来了</p></blockquote><p>另外，在发布文章的时候可以考虑先在本地测试下，没问题了再发</p>]]></content>
+      
+      
+      <categories>
+          
+          <category> 学习工具 </category>
+          
+      </categories>
+      
+      
+        <tags>
+            
+            <tag> Github </tag>
+            
+            <tag> CDN </tag>
+            
+        </tags>
+      
+    </entry>
+    
+    
+    
+    <entry>
+      <title>Blog1 使用Hexo搭建个人免费Github博客</title>
+      <link href="/posts/87632e22.html"/>
+      <url>/posts/87632e22.html</url>
+      
+        <content type="html"><![CDATA[<h1>前言</h1><h3 id="更改博客缘由">更改博客缘由</h3><ul><li>利用<code>github</code>搭建的博客是<code>2019</code>年疫情期间做的，当时个人比较跳脱吧，所以做了很多中二的事情，到后来因为乱七八糟的原因博客便弃了；</li><li>后续也在<code>CSDN</code>、<code>博客园</code>等乱七八糟的平台零散更新过几篇文章，但是很多审核都过不了，很生气；</li><li>于是在<strong>研1</strong>开学几天的时间打算重新搭建个免费的博客网站，用来记录学习+吐槽</li></ul><h3 id="之前样式一览">之前样式一览</h3><p><img src="../../../../images/Blog1/%E4%B9%8B%E5%89%8D%E6%A0%B7%E5%BC%8F%E4%B8%80%E8%A7%88.png" alt=""></p><p><img src="../../../../images/Blog1/%E4%B8%80%E8%A7%882.png" alt=""></p><h3 id="之前博客源文件">之前博客源文件</h3><p><img src="../../../../images/Blog1/%E4%B9%8B%E5%89%8D%E5%8D%9A%E5%AE%A2%E6%BA%90%E7%A0%81.png" alt=""></p><p>需要模板的可以自取：<a href="https://pan.baidu.com/s/1B1SpA8nnfvZE8FcfDGZkGg?pwd=ms90">https://pan.baidu.com/s/1B1SpA8nnfvZE8FcfDGZkGg?pwd=ms90</a></p><h1>模板调研</h1><p>根据浏览器搜索，常用的<code>github</code>搭建博客框架有：</p><ul><li><p><a href="https://github.com/leopardpan/leopardpan.github.io?tab=readme-ov-file">leopard</a></p></li><li><p>Jekyll可以参考下面模板：</p><figure class="highlight plaintext"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br></pre></td><td class="code"><pre><span class="line">https://github.com/mzlogin/mzlogin.github.io</span><br><span class="line">https://github.com/Huxpro/huxpro.github.io</span><br><span class="line">https://blog.csdn.net/weixin_43871601/article/details/104248805</span><br></pre></td></tr></table></figure></li><li><p><a href="https://github.com/eryajf/vdoing-template">vdoing</a></p></li><li><p><a href="https://ysgstudyhards.github.io/Docsify-Guide/#/">Docsify</a></p></li><li><p><a href="https://hwh.zone/p/56326/">Hexo</a></p></li></ul><p>选来选去，感觉还是<code>hexo</code>搭建的博客比较符合我的审美~</p><p>在<code>hexo</code>的官网选择喜欢的<a href="https://hexo.io/themes/">主题</a>，个人审美初步筛选了：</p><figure class="highlight plaintext"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br></pre></td><td class="code"><pre><span class="line">https://github.com/ch1ny/kira-hexo</span><br><span class="line">https://github.com/WinMin/Sw-blog</span><br><span class="line">https://github.com/jerryc127/hexo-theme-butterfly</span><br><span class="line">https://github.com/theme-shoka-x/hexo-theme-shokaX</span><br><span class="line">https://shoka.lostyu.me/computer-science/note/theme-shoka-doc/</span><br></pre></td></tr></table></figure><p>有很多个，个人选择了第3个，后续也是按照此进行配置~</p><h1>详细配置</h1><p>参考文章：<a href="https://zhuanlan.zhihu.com/p/60578464">使用 Hexo+GitHub 搭建个人免费博客教程（小白向） - 知乎 (zhihu.com)</a></p><p>跟着文章配置到<code>章节 7.3 更换主题</code>就行，后面看我记录</p><blockquote><p>Q1：npm安装packages过程中出现的npm fund</p></blockquote><p>在使用<code>npm</code>包进行安装的时候，提示类似下面信息不用管：</p><p><img src="../../../../images/Blog1/%E9%9D%9E%E6%8A%A5%E9%94%99%E4%BF%A1%E6%81%AF.png" alt=""></p><p>这个提示其实是说明有些模块开通了打赏功能，你可以使用<code>npm fund</code>查看打赏相应的信息</p><blockquote><p>Q2：hexo上传后打开页面显示404</p></blockquote><p>其实在文章所说的<code>_config.yml</code>文件进行修改，修改部分如图所示：</p><p><img src="../../../../images/Blog1/404.png" alt=""></p><p>现在便可以正常访问了，如下图所示：</p><p><img src="../../../../images/Blog1/hexo%E9%BB%98%E8%AE%A4%E4%B8%BB%E9%A2%98.png" alt=""></p><blockquote><p>Q3：其他问题</p></blockquote><p><img src="../../../../images/Blog1/%E5%85%B6%E4%BB%96%E9%97%AE%E9%A2%98.png" alt=""></p><p>别的没啥要注意的，就是后续用默认主题写文章的时候，诸如<code>tags</code>等格式需要注意：</p><p><img src="../../../../images/Blog1/%E9%BB%98%E8%AE%A4%E4%B8%BB%E9%A2%98%E6%96%B0%E6%96%87%E7%AB%A0%E6%A0%BC%E5%BC%8F.png" alt=""></p><h3 id="下载主题">下载主题</h3><figure class="highlight plaintext"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line">git clone -b master https://github.com/jerryc127/hexo-theme-butterfly.git themes/butterfly</span><br></pre></td></tr></table></figure><p>下载完成后，所在目录为：</p><p><img src="../../../../images/Blog1/butter.png" alt=""></p><h3 id="应用主题">应用主题</h3><p>在根目录下修改主配置文件：<code>_config.yml</code></p><p><img src="../../../../images/Blog1/%E4%BF%AE%E6%94%B9theme.png" alt=""></p><h3 id="安装相关插件">安装相关插件</h3><figure class="highlight plaintext"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line">npm install hexo-renderer-pug hexo-renderer-stylus --save</span><br></pre></td></tr></table></figure><h3 id="测试">测试</h3><figure class="highlight plaintext"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br></pre></td><td class="code"><pre><span class="line">hexo clean</span><br><span class="line">hexo g</span><br><span class="line">hexo d</span><br></pre></td></tr></table></figure><p>出现报错：</p><figure class="highlight shell"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br></pre></td><td class="code"><pre><span class="line">fatal: unable to access &#x27;https://github.com/lures2019/lures2019.github.io.git/&#x27;: Failed to connect to github.com port 443 after 21140 ms: Couldn&#x27;t connect to server</span><br><span class="line">FATAL Something&#x27;s wrong. Maybe you can find the solution here: https://hexo.io/docs/troubleshooting.html</span><br><span class="line">Error: Spawn failed</span><br><span class="line">    at ChildProcess.&lt;anonymous&gt; (F:\Blog\node_modules\hexo-deployer-git\node_modules\hexo-util\lib\spawn.js:51:21)</span><br><span class="line">    at ChildProcess.emit (node:events:519:28)</span><br><span class="line">    at cp.emit (F:\Blog\node_modules\cross-spawn\lib\enoent.js:34:29)</span><br><span class="line">    at ChildProcess._handle.onexit (node:internal/child_process:294:12)</span><br></pre></td></tr></table></figure><p>解决办法：有可能是你的git repo配置地址不正确,可以将http方式变更为ssh方式</p><p><img src="../../../../images/Blog1/%E4%B8%BB%E9%85%8D%E7%BD%AE%E6%96%87%E4%BB%B6.png" alt=""></p><h1>界面优化</h1><h3 id="标签页">标签页</h3><ol><li>前往<code>Hexo</code>博客的根目录</li><li>输入<code>hexo new page tags</code></li><li>会找到这个文件<code>source/tags/index.html</code></li><li>修改此文档：记得添加<code>type： “tags”</code></li></ol><p><img src="../../../../images/Blog1/tags%E9%85%8D%E7%BD%AE%E5%8F%82%E6%95%B0.png" alt=""></p><h3 id="分类页">分类页</h3><ol><li>前往<code>Hexo</code>根目录</li><li>输入<code>hexo new page categories</code></li><li>你会找到 这个文件<code>source/categories/index.md</code></li><li>修改此文档：记得添加<code>type： “categories”</code></li></ol><h3 id="友情链接页">友情链接页</h3><ol><li>前往<code>Hexo</code>根目录</li><li>输入<code>hexo new page link</code></li><li>你会找到这个文件<code>source/link/index.md</code></li><li>修改此文档：记得添加<code>type: &quot;link&quot;</code></li></ol><p>在<code>Hexo</code>博客目录中的 （如果没有 <code>_data</code> 文件夹，请自行创建），创建一个文件 <code>source/_datalink.yml</code></p><h3 id="配置404页面">配置404页面</h3><ol><li>打开<code>Blog/themes/butterfly/_config.yml</code>文件</li><li>修改第99行为<code>enable: true</code></li></ol><h3 id="导航栏设置-（Navigation-bar-settings）">导航栏设置 （Navigation bar settings）</h3><ol><li>打开主题配置文件</li><li>修改参数</li></ol><p><img src="../../../../images/Blog1/%E5%AF%BC%E8%88%AA%E6%A0%8F%E8%AE%BE%E7%BD%AE.png" alt=""></p><h3 id="修改菜单-目录">修改菜单/目录</h3><ol><li>修改主题配置文件</li><li>导航的文字可以自行修改</li></ol><p><img src="../../../../images/Blog1/%E8%8F%9C%E5%8D%95.png" alt=""></p><h3 id="代码-（Code-Blocks）">代码 （Code Blocks）</h3><p><code>Butterfly</code>支持6种代码高亮样式，个人选择了<code>mac</code>，即<code>highlight_theme: mac</code></p><p>支持代码复制功能，即<code>highlight_copy: true</code></p><p>设置代码框展开，有点击按钮<code>&gt;</code>，即<code>highlight_shrink: false</code></p><p>设置代码高度限制，超出的部分会隐藏，并显示展开按钮，即<code>highlight_height_limit: 100</code></p><h3 id="社交图标">社交图标</h3><p>Butterfly支持 <a href="https://fontawesome.com/icons?from=io">font-awesome v6</a> 图标.</p><p>书写格式为：<code>图标名：url || 描述性文字 || color</code></p><p><img src="../../../../images/Blog1/%E5%9B%BE%E6%A0%87.png" alt=""></p><h3 id="头像">头像</h3><figure class="highlight plaintext"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br></pre></td><td class="code"><pre><span class="line">1）打开Blog\themes\butterfly\source\img</span><br><span class="line">2）下载一张图片命名为：avater,jpg</span><br></pre></td></tr></table></figure><p>修改主题配置文件，如下图所示：</p><p><img src="../../../../images/Blog1/%E5%A4%B4%E5%83%8F.png" alt=""></p><h3 id="Hexo集成Algolia实现搜索功能">Hexo集成Algolia实现搜索功能</h3><h1>暂未实现的功能</h1><ul><li>Algolia等网页搜索功能</li><li>valine自定义表情包</li><li>Daovoice的appid找不到了，在线聊天官网打不开了（只能使用chatra）</li><li><s>google广告，个人识别码暂时无</s></li><li>网站验证</li></ul><h1>参考文献</h1><figure class="highlight plaintext"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br></pre></td><td class="code"><pre><span class="line">https://hwh.zone/p/56326/</span><br><span class="line">https://zhuanlan.zhihu.com/p/60578464</span><br><span class="line">https://docs-hexo.shokax.top/getting-started/</span><br><span class="line">https://blog.csdn.net/qq_45173404/article/details/122861321</span><br><span class="line">https://github.com/GamerNoTitle/Valine-Magic</span><br><span class="line">https://butterfly.js.org/posts/507c070f/</span><br><span class="line">https://blog.csdn.net/weixin_58068682/article/details/116612364</span><br><span class="line">https://github.com/mythsman/hexo-douban</span><br><span class="line">https://github.com/jerryc127/butterfly-plugins/tree/main/hexo-butterfly-artitalk</span><br><span class="line">https://dreamhomes.github.io/posts/202106171704/</span><br></pre></td></tr></table></figure>]]></content>
+      
+      
+      <categories>
+          
+          <category> 学习工具 </category>
+          
+      </categories>
+      
+      
+        <tags>
+            
+            <tag> Hexo </tag>
+            
+            <tag> Github </tag>
+            
+            <tag> butterfly </tag>
+            
+        </tags>
+      
+    </entry>
+    
+    
+  
+  
+</search>
