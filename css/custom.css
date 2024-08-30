@@ -72,3 +72,35 @@
 }
 
 /* 公众号 End */
+#footer-wrap {
+  display: flex; /* 使用 Flexbox 布局 */
+  justify-content: center; /* 将所有内容居中对齐 */
+  padding: 10px; /* 根据需要设置内边距 */
+}
+
+.footer-content {
+  display: flex; /* 使 footer 内容也使用 Flexbox */
+  width: 70%; /* 设置宽度为 70% 以留出更多边距 */
+  justify-content: space-between; /* 确保左右两侧内容之间有空间 */
+}
+
+.left, .center, .right {
+  padding: 0 10px; /* 为每个部分添加更小的左右内边距 */
+  text-align: center; /* 默认文本居中 */
+}
+
+.left {
+  text-align: left; /* 左侧文本左对齐 */
+}
+
+.right {
+  text-align: right; /* 右侧文本右对齐 */
+}
+
+.aplayer-lrc {
+    display: none !important; /* 强制隐藏歌词区域 */
+}
+
+
+
+
