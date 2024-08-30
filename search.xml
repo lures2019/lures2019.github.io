@@ -4,6 +4,37 @@
   
     
     <entry>
+      <title>Blog6 Python爬取研1必修课及选修课</title>
+      <link href="/posts/4f71efd0.html"/>
+      <url>/posts/4f71efd0.html</url>
+      
+        <content type="html"><![CDATA[<h3 id="需求">需求</h3><p>今天下午开组会，当半主动的向老师要求研一期间参与项目，要老师以严厉的方式对待后~</p><p>老师让把研究生选课信息发给他看，选择跟我们方向比较相关的<code>选修课</code>，在获取足够的选修学分同时也能对未来的项目有些许帮助</p><p>于是便有了本篇<code>blog</code>，下面简单带大家看一下~</p><h3 id="爬虫分析">爬虫分析</h3><p>1、无论是以何种形式存放数据，我们需要做的第一步便是获取网站的数据，先让我们看下浏览器页面(快捷键<code>Fn</code> + <code>F12</code>)</p><p><img src="https://cdn.jsdelivr.net/gh/lures2019/Typora_image_CDN/PicGo/202408302041575.png" alt="image-20240830204148445"></p><p>2、找到存放数据的文件</p><p><img src="https://cdn.jsdelivr.net/gh/lures2019/Typora_image_CDN/PicGo/202408302043727.png" alt="image-20240830204323469"></p><p>3、查看请求头等信息</p><p><img src="https://cdn.jsdelivr.net/gh/lures2019/Typora_image_CDN/PicGo/202408302045293.png" alt="image-20240830204548231"></p><p>4、既然通过上面分析发现数据是json格式，考虑用<code>csv</code>文件进行存储，因为可以按照单元格的值进行筛选</p><h3 id="爬虫源码">爬虫源码</h3><figure class="highlight python"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br><span class="line">26</span><br><span class="line">27</span><br><span class="line">28</span><br><span class="line">29</span><br><span class="line">30</span><br><span class="line">31</span><br></pre></td><td class="code"><pre><span class="line"><span class="keyword">import</span> requests</span><br><span class="line"><span class="keyword">import</span> json</span><br><span class="line"><span class="keyword">import</span> csv</span><br><span class="line"></span><br><span class="line">url = <span class="string">&#x27;http://125.34.90.207:8090/prod-api/psmp/lession/trainScheme/requirement?trainSchemeId=82&#x27;</span></span><br><span class="line">headers = &#123;</span><br><span class="line">    <span class="string">&#x27;cookie&#x27;</span>: <span class="string">&#x27;填写你的cookie&#x27;</span>,</span><br><span class="line">    <span class="string">&#x27;authorization&#x27;</span>: <span class="string">&#x27;填写你的authorization&#x27;</span>,</span><br><span class="line">    <span class="string">&#x27;host&#x27;</span>: <span class="string">&#x27;125.34.90.207:8090&#x27;</span>,</span><br><span class="line">    <span class="string">&#x27;referer&#x27;</span>: <span class="string">&#x27;http://125.34.90.207:8090/student/plan/selectPlan&#x27;</span>,</span><br><span class="line">    <span class="string">&#x27;user-agent&#x27;</span>: <span class="string">&#x27;Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/128.0.0.0 Safari/537.36 Edg/128.0.0.0&#x27;</span></span><br><span class="line">&#125;</span><br><span class="line">response = requests.get(url, headers=headers)</span><br><span class="line">response.encoding = response.apparent_encoding</span><br><span class="line">data = json.loads(response.text)</span><br><span class="line">lessons = data[<span class="string">&#x27;data&#x27;</span>][<span class="string">&#x27;lessionList&#x27;</span>]</span><br><span class="line"><span class="comment"># 创建csv文件存储爬取的数据</span></span><br><span class="line">file = <span class="built_in">open</span>(<span class="string">&#x27;研1选课信息.csv&#x27;</span>, <span class="string">&#x27;w&#x27;</span>, encoding=<span class="string">&#x27;utf-8-sig&#x27;</span>, newline=<span class="string">&#x27;&#x27;</span>)</span><br><span class="line">csv_writer = csv.writer(file)</span><br><span class="line">csv_writer.writerow([<span class="string">&quot;课程编号&quot;</span>, <span class="string">&quot;课程分类&quot;</span>, <span class="string">&quot;课程性质&quot;</span>, <span class="string">&quot;课程名称&quot;</span>, <span class="string">&quot;学时&quot;</span>, <span class="string">&quot;学分&quot;</span>])</span><br><span class="line"></span><br><span class="line"><span class="keyword">for</span> lesson <span class="keyword">in</span> lessons:</span><br><span class="line">    <span class="comment"># 获取每个课程的信息</span></span><br><span class="line">    lessionNo = lesson[<span class="string">&#x27;lessionNo&#x27;</span>].strip()  <span class="comment"># 课程编号</span></span><br><span class="line">    lessionTypeName = lesson[<span class="string">&#x27;lessionTypeName&#x27;</span>].strip()  <span class="comment"># 课程分类</span></span><br><span class="line">    xingZhiName = lesson[<span class="string">&#x27;xingZhiName&#x27;</span>].strip()  <span class="comment"># 课程性质</span></span><br><span class="line">    lessionName = lesson[<span class="string">&#x27;lessionName&#x27;</span>].strip()  <span class="comment"># 课程名称</span></span><br><span class="line">    period = <span class="built_in">str</span>(lesson[<span class="string">&#x27;period&#x27;</span>]).strip()  <span class="comment"># 学时</span></span><br><span class="line">    credit = <span class="built_in">str</span>(lesson[<span class="string">&#x27;credit&#x27;</span>]).strip()  <span class="comment"># 学分</span></span><br><span class="line"></span><br><span class="line">    csv_writer.writerow([lessionNo, lessionTypeName, xingZhiName, lessionName, period, credit])</span><br></pre></td></tr></table></figure><p>结果便会在本地同级目录下生成<code>研1选课信息.csv</code>文件，打开页面一观：</p><p><img src="https://cdn.jsdelivr.net/gh/lures2019/Typora_image_CDN/PicGo/202408302049337.png" alt="image-20240830204913995"></p><h3 id="其他">其他</h3><blockquote><p>发现即使用github的CDN加速，但是有些图片加载仍然很慢~</p><p>想找一个能将图片url进行压缩显示新图片的功能网站</p></blockquote><p>如果能找到，下篇博文应该会写这个了~</p>]]></content>
+      
+      
+      <categories>
+          
+          <category> Python </category>
+          
+      </categories>
+      
+      
+        <tags>
+            
+            <tag> Python </tag>
+            
+            <tag> 爬虫 </tag>
+            
+            <tag> requests </tag>
+            
+            <tag> json </tag>
+            
+        </tags>
+      
+    </entry>
+    
+    
+    
+    <entry>
       <title>Blog5 研1开学必需品</title>
       <link href="/posts/a4a0e4e5.html"/>
       <url>/posts/a4a0e4e5.html</url>
@@ -47,13 +78,13 @@
             
             <tag> Github </tag>
             
-            <tag> Hexo </tag>
-            
-            <tag> butterfly </tag>
-            
             <tag> PicGo </tag>
             
             <tag> jsDelivr </tag>
+            
+            <tag> Hexo </tag>
+            
+            <tag> butterfly </tag>
             
         </tags>
       
