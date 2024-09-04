@@ -4,6 +4,33 @@
   
     
     <entry>
+      <title>Blog7 英语学习计划</title>
+      <link href="/posts/a965601.html"/>
+      <url>/posts/a965601.html</url>
+      
+        <content type="html"><![CDATA[<h3 id="Preface">Preface</h3><p>昨天去煤科总院开了研究生开学典礼及开学第一课，听了专家们讲座对研究生阶段的学习有了些比较清楚的认知，但是这不是最重要的，个人觉得最重要的事情是关于英语学习方面的事：</p><ul><li>英语六级考到500+方便以后的申博【研1要考过，后续不让考了】</li><li>雅思考到6.5以上可以走公司的澳大利亚新南威尔士和<a href="https://zhida.zhihu.com/search?q=%E4%BC%8D%E4%BC%A6%E8%B4%A1&amp;zhida_source=entity&amp;is_preview=1">伍伦贡</a>大学的项目，拿双学位证书【计划研1过】</li></ul><p><img src="https://cdn.jsdelivr.net/gh/lures2019/Typora_image_CDN/PicGo/202409040717966.png" alt="新南威尔士雅思成绩要求"></p><p>其他学校语言要求：<a href="https://www.chinaielts.org/about_ielts/global_recognition_ranking/91324.shtml#:~:text=Massachuse">2024年QS世界大学排名TOP200及雅思要求 - 各国院校机构排名 - 认可的国家与机构 - 选择雅思 - 首页 (chinaielts.org)</a></p><h3 id="六级备考">六级备考</h3><figure class="highlight plaintext"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br></pre></td><td class="code"><pre><span class="line">报名时间：</span><br><span class="line">2024年9月20日12：00~9月25日17：00</span><br><span class="line">笔试时间：</span><br><span class="line">2024年12月14日(101天)</span><br><span class="line">复习资料：</span><br><span class="line">20天背完六级核心词汇(ipad/炭炭背) + 真题(张建1黄皮书已买)</span><br></pre></td></tr></table></figure><p>1、单词</p><p>词书<code>1</code>天<code>1</code>个<code>list</code>，边听录音边盯着词书来记忆，一个<code>list</code>录音放完之后挡住自测，这样<code>循环5次</code>左右，直到有几个词总是不会，<strong>再用抄写来记忆</strong>，最后自测基本无误后结束。</p><ul><li>先集中背英译汉，再汉译英</li><li>高频词背完英汉互译，要给自己默写英译汉和汉译英<strong>两轮</strong></li><li>有时间把中频词同样的操作，低频词和零频词可以不管</li></ul><p>2、听力(真题)</p><ul><li>做听力真题像考试时一样，赶在文本播放前先划选项关键词</li><li>先看文本听录音过一遍，遇到不会的词和短语标注，后面再重复1次，然后闭着眼睛听不会的勾出来，睡前再听一次，早读读一次</li></ul><p>3、阅读(真题)</p><ul><li>练真题掐时间，告诉自己<code>50</code>分钟一到立刻停笔</li><li>阅读文本尽量不留死角，从文段到题目选项，难词、长难句都弄懂，好的句式、词组要积累下来，对写作和翻译有用</li></ul><p>4、真题(写作翻译)</p><ul><li>阅读文本积累的好词好句在写作中能用到</li><li>写作的谋篇布局要有逻辑</li></ul><figure class="highlight plaintext"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br></pre></td><td class="code"><pre><span class="line">计划安排：</span><br><span class="line">1）每天新单词100个，理论上41天完成【最高压力值600词/天】</span><br><span class="line">2）阅读每周精度2篇</span><br><span class="line">3）听力每周完成一套精听</span><br><span class="line">4）写作翻译每周各来一次</span><br><span class="line">5）早读在自习室过一下艾宾浩斯单词 + 精读后的阅读 + 精听后的听力</span><br><span class="line"></span><br><span class="line">tips:</span><br><span class="line">- 可以在干别的事累了之后做，养成习惯</span><br><span class="line">- 以一个新blog的形式记录每周任务完成否，更细致的可以记录当天都做了什么(考完之后上传)</span><br></pre></td></tr></table></figure><h3 id="雅思备考">雅思备考</h3><p>暂时不急，等<code>大学英语六级</code>考过了之后再说，寒假的时候可以着手处理</p>]]></content>
+      
+      
+      <categories>
+          
+          <category> 学校生活 </category>
+          
+      </categories>
+      
+      
+        <tags>
+            
+            <tag> 英语学习 </tag>
+            
+            <tag> 未来规划 </tag>
+            
+        </tags>
+      
+    </entry>
+    
+    
+    
+    <entry>
       <title>Blog6 Python爬取研1必修课及选修课</title>
       <link href="/posts/4f71efd0.html"/>
       <url>/posts/4f71efd0.html</url>
@@ -76,9 +103,9 @@
       
         <tags>
             
-            <tag> Github </tag>
-            
             <tag> Hexo </tag>
+            
+            <tag> Github </tag>
             
             <tag> butterfly </tag>
             
@@ -140,9 +167,9 @@
       
         <tags>
             
-            <tag> CDN </tag>
-            
             <tag> Github </tag>
+            
+            <tag> CDN </tag>
             
         </tags>
       
@@ -167,9 +194,9 @@
       
         <tags>
             
-            <tag> Github </tag>
-            
             <tag> Hexo </tag>
+            
+            <tag> Github </tag>
             
             <tag> butterfly </tag>
             
