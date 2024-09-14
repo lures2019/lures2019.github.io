@@ -4,6 +4,33 @@
   
     
     <entry>
+      <title>Blog9 MathType使用笔记</title>
+      <link href="/posts/fc844b8e.html"/>
+      <url>/posts/fc844b8e.html</url>
+      
+        <content type="html"><![CDATA[<h3 id="破解安装">破解安装</h3><p>有能力可以支持正版，<code>30</code>天免费试用。</p><p>破解版安装教程到微信公众号或者浏览器上搜索，之前看了很多文章都被删了。</p><h3 id="参考资料">参考资料</h3><h5 id="学术论文写作时，word中Mathtype的使用"><a href="https://www.bilibili.com/video/BV1TL4y1A7pX/?spm_id_from=333.337.search-card.all.click&amp;vd_source=e3d69e895d76a53ec59141bcdd17b141">学术论文写作时，word中Mathtype的使用</a></h5><p>博主主要介绍了几点：</p><ul><li>在<code>word</code>写论文中要插入行间公式时可以选择<code>右编号</code>，此时论文公式会自动右对齐</li><li>要进行<code>式(0.1)</code>这种引用公式时可以使用选项<code>插入引用</code>然后选择上面公式，这样即使公式变动也能自动更新</li><li>当一行中符号往上飘的时候，可以选择<code>切换Tex</code>点<code>2</code>次，结果会正常</li><li>可以在<code>MathType</code>的<code>预置--&gt;工作区预置--&gt;允许从键盘输入TeX语言</code></li></ul><h4 id="找Mathpix平替">找Mathpix平替</h4><p><a href="https://simpletex.net/">SimpleTex主页——致力于提供先进的公式识别/文档识别解决方案</a></p>]]></content>
+      
+      
+      <categories>
+          
+          <category> 学习工具 </category>
+          
+      </categories>
+      
+      
+        <tags>
+            
+            <tag> MathType </tag>
+            
+            <tag> 工具 </tag>
+            
+        </tags>
+      
+    </entry>
+    
+    
+    
+    <entry>
       <title>Blog8 Python爬取线代班级名单</title>
       <link href="/posts/346d96ca.html"/>
       <url>/posts/346d96ca.html</url>
@@ -171,11 +198,11 @@
             
             <tag> Github </tag>
             
-            <tag> 图床 </tag>
-            
             <tag> PicGo </tag>
             
             <tag> jsDelivr </tag>
+            
+            <tag> 图床 </tag>
             
         </tags>
       
