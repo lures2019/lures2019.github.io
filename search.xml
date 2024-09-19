@@ -4,11 +4,11 @@
   
     
     <entry>
-      <title>Blog9 MathType使用笔记</title>
-      <link href="/posts/fc844b8e.html"/>
-      <url>/posts/fc844b8e.html</url>
+      <title>Blog10 Zotero使用教程</title>
+      <link href="/posts/8b48d892.html"/>
+      <url>/posts/8b48d892.html</url>
       
-        <content type="html"><![CDATA[<h3 id="破解安装">破解安装</h3><p>有能力可以支持正版，<code>30</code>天免费试用。</p><p>破解版安装教程到微信公众号或者浏览器上搜索，之前看了很多文章都被删了。</p><h3 id="参考资料">参考资料</h3><h5 id="学术论文写作时，word中Mathtype的使用"><a href="https://www.bilibili.com/video/BV1TL4y1A7pX/?spm_id_from=333.337.search-card.all.click&amp;vd_source=e3d69e895d76a53ec59141bcdd17b141">学术论文写作时，word中Mathtype的使用</a></h5><p>博主主要介绍了几点：</p><ul><li>在<code>word</code>写论文中要插入行间公式时可以选择<code>右编号</code>，此时论文公式会自动右对齐</li><li>要进行<code>式(0.1)</code>这种引用公式时可以使用选项<code>插入引用</code>然后选择上面公式，这样即使公式变动也能自动更新</li><li>当一行中符号往上飘的时候，可以选择<code>切换Tex</code>点<code>2</code>次，结果会正常</li><li>可以在<code>MathType</code>的<code>预置--&gt;工作区预置--&gt;允许从键盘输入TeX语言</code></li></ul><h4 id="找Mathpix平替">找Mathpix平替</h4><p><a href="https://simpletex.net/">SimpleTex主页——致力于提供先进的公式识别/文档识别解决方案</a></p>]]></content>
+        <content type="html"><![CDATA[<h3 id="Preface">Preface</h3><p>科创公司这边最近给了3份论文让我们改版式，于是在之前<code>MathType</code>配置好了之后，也是成功用在论文修改中了，感觉使用后确实挺方便，下面来简单看一下效果：</p><p><img src="https://cdn.jsdelivr.net/gh/lures2019/Typora_image_CDN/PicGo/202409191727703.png" alt="image-20240919172715640"></p><p>右对齐且式右边编号修改后能自动改变引用，真的挺方便，大伙有机会可以试试！</p><p>跟博士师姐说了之后建议我再使用下<code>Zotero</code>，于是便有了本期笔记！<em>★,°</em>:.☆(￣▽￣)/$:<em>.°★</em> 。</p><h3 id="References">References</h3><h4 id="Zotero零基础保姆级教程"><a href="https://www.bilibili.com/video/BV1o3411Q7JQ/?spm_id_from=333.337.search-card.all.click&amp;vd_source=e3d69e895d76a53ec59141bcdd17b141">Zotero零基础保姆级教程</a></h4><ul><li><p>在首选项中设置语言、文件夹存放位置</p>  <figure class="highlight shell"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line">D:\data\Zotero</span><br></pre></td></tr></table></figure></li><li><p>建立文件夹进行分类，然后文献导入</p><p>使用浏览器插件，可以讲页面的内容导入到对应的目标文件夹中</p><p><img src="https://cdn.jsdelivr.net/gh/lures2019/Typora_image_CDN/PicGo/202409191904414.png" alt="image-20240919190452314"></p></li><li><p><code>shift</code> + 文献拖动 从一个文件夹到另一个文件夹，不同时归属于两个文件夹</p></li><li><p><code>ctrl</code> + 文献 可以看到当前文件归属于哪个文件夹</p></li><li><p>可以自己管理标签</p></li><li><p>在<code>word</code>中可以使用<code>Zotero</code>方便引用</p></li></ul><h4 id="Zotero文献管理软件使用指南——入门篇"><a href="https://blog.csdn.net/l903445981/article/details/119960684">Zotero文献管理软件使用指南——入门篇</a></h4><p>视频中提到的<a href="https://github.com/l0o0/jasminum">茉莉花插件</a>可以在这里面下载</p><h4 id="Zotero-translators-中文仓库"><a href="https://github.com/l0o0/translators_CN">Zotero translators 中文仓库</a></h4><p>针对中文文献下载的一个工具，此时便可以下载包括知网在内的很多论文了！</p>]]></content>
       
       
       <categories>
@@ -20,9 +20,36 @@
       
         <tags>
             
-            <tag> MathType </tag>
+            <tag> Zotero </tag>
             
             <tag> 工具 </tag>
+            
+        </tags>
+      
+    </entry>
+    
+    
+    
+    <entry>
+      <title>Blog9 MathType使用笔记</title>
+      <link href="/posts/fc844b8e.html"/>
+      <url>/posts/fc844b8e.html</url>
+      
+        <content type="html"><![CDATA[<h3 id="破解安装">破解安装</h3><p>有能力可以支持正版，<code>30</code>天免费试用。</p><p>破解版安装教程到微信公众号或者浏览器上搜索，之前看了很多文章都被删了。</p><h3 id="参考资料">参考资料</h3><h5 id="学术论文写作时，word中Mathtype的使用"><a href="https://www.bilibili.com/video/BV1TL4y1A7pX/?spm_id_from=333.337.search-card.all.click&amp;vd_source=e3d69e895d76a53ec59141bcdd17b141">学术论文写作时，word中Mathtype的使用</a></h5><p>博主主要介绍了几点：</p><ul><li>在<code>word</code>写论文中要插入行间公式时可以选择<code>右编号</code>，此时论文公式会自动右对齐</li><li>要进行<code>式(0.1)</code>这种引用公式时可以使用选项<code>插入引用</code>然后选择上面公式，这样即使公式变动也能自动更新</li><li>当一行中符号往上飘的时候，可以选择<code>切换Tex</code>点<code>2</code>次，结果会正常</li><li>可以在<code>MathType</code>的<code>预置--&gt;工作区预置--&gt;允许从键盘输入TeX语言</code></li></ul><h4 id="找Mathpix平替">找Mathpix平替</h4><p><a href="https://simpletex.net/">SimpleTex主页——致力于提供先进的公式识别/文档识别解决方案</a></p><h4 id="PPT利用LaTeX输入公式">PPT利用LaTeX输入公式</h4><p><a href="https://blog.csdn.net/lyh458/article/details/130768651">PPT / Powerpoint中利用LaTeX输入公式_ppt插入latex公式-CSDN博客</a></p><p>参考这篇文章下载对应的插件，然后<code>PPT</code>启用宏，在添加过程中遇到<code>信任</code>问题，可以参考下面文章：</p><p><a href="https://blog.csdn.net/weixin_46585199/article/details/130298023">一定解决Excel“安全风险 microsoft 已阻止宏运行 因为此文件的来源不受信任问题”_microsoft已阻止宏运行,因为此文件的来源不受信任-CSDN博客</a></p>]]></content>
+      
+      
+      <categories>
+          
+          <category> 学习工具 </category>
+          
+      </categories>
+      
+      
+        <tags>
+            
+            <tag> 工具 </tag>
+            
+            <tag> MathType </tag>
             
         </tags>
       
@@ -198,11 +225,11 @@
             
             <tag> Github </tag>
             
+            <tag> 图床 </tag>
+            
             <tag> PicGo </tag>
             
             <tag> jsDelivr </tag>
-            
-            <tag> 图床 </tag>
             
         </tags>
       
