@@ -4,6 +4,33 @@
   
     
     <entry>
+      <title>Blog11 华为杯数学建模比赛</title>
+      <link href="/posts/b0c85e88.html"/>
+      <url>/posts/b0c85e88.html</url>
+      
+        <content type="html"><![CDATA[<h3 id="过程">过程</h3><p>和杨兄是在水导群认识的，当时看了他的建立觉得他很厉害，然后就看他朋友圈说找个数学建模队友，然后当时有点不好意思的加入了。到比赛前也没一起训练，比赛第一天他有课，我跟肖兄就是看了看题，仅有的进度就是第一天晚上11点多一起开了个语音选择了地理大数据题即<code>D</code>题。</p><p>第二天和第三天其实也没啥进度，就好像是我跟肖兄各搞个的，我用<code>Gpt 4o-plus</code>和网上的一个思路对已有的数据集做处理然后数据可视化，第四天和第五天开始赶进度，第四天我还是跟着网上思路对另一个数据集进行处理，使用多元线性回归、多项式回归、随机森林、<code>SVR</code>这些模型对数据进行训练，然后过采样欠采样损失函数这种使模型呈现出的效果好点。第五天凌晨2点多水完第三问，总之留给论文的时间不多了，所以最后论文出现了很多格式上的问题没有时间修改，几乎没得奖希望了！</p><h3 id="感触">感触</h3><ul><li>这次建模确实挺累的，两天只睡了5h左右</li><li>论文写作也不是难事，不要想着一步到位，可以先利用<code>gpt</code>等将初版写好，后面再改进</li><li>从项目中学习，进步的才会更快，<code>gpt4o-plus</code>该买还是买，确实方便</li></ul><h3 id="学习了">学习了</h3><ul><li>在远程服务器上跑模型</li><li>如何根据已有实验完成论文的初稿</li></ul><p><img src="https://cdn.jsdelivr.net/gh/lures2019/Typora_image_CDN/PicGo/202409251818417.png" alt="image-20240925181814353"></p>]]></content>
+      
+      
+      <categories>
+          
+          <category> 学校生活 </category>
+          
+      </categories>
+      
+      
+        <tags>
+            
+            <tag> 论文 </tag>
+            
+            <tag> 比赛 </tag>
+            
+        </tags>
+      
+    </entry>
+    
+    
+    
+    <entry>
       <title>Blog10 Zotero使用教程</title>
       <link href="/posts/8b48d892.html"/>
       <url>/posts/8b48d892.html</url>
@@ -190,15 +217,15 @@
       
         <tags>
             
+            <tag> Hexo </tag>
+            
             <tag> Github </tag>
+            
+            <tag> butterfly </tag>
             
             <tag> PicGo </tag>
             
             <tag> jsDelivr </tag>
-            
-            <tag> Hexo </tag>
-            
-            <tag> butterfly </tag>
             
         </tags>
       
@@ -225,11 +252,11 @@
             
             <tag> Github </tag>
             
-            <tag> 图床 </tag>
-            
             <tag> PicGo </tag>
             
             <tag> jsDelivr </tag>
+            
+            <tag> 图床 </tag>
             
         </tags>
       
@@ -254,9 +281,9 @@
       
         <tags>
             
-            <tag> CDN </tag>
-            
             <tag> Github </tag>
+            
+            <tag> CDN </tag>
             
         </tags>
       
@@ -281,9 +308,9 @@
       
         <tags>
             
-            <tag> Github </tag>
-            
             <tag> Hexo </tag>
+            
+            <tag> Github </tag>
             
             <tag> butterfly </tag>
             
