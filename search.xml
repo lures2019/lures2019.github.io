@@ -4,6 +4,87 @@
   
     
     <entry>
+      <title>Blog17 Ubuntu22.04下使用OBS进行B站直播</title>
+      <link href="/posts/5a2dd50e.html"/>
+      <url>/posts/5a2dd50e.html</url>
+      
+        <content type="html"><![CDATA[<h3 id="前言">前言</h3><p>众所周知，<code>Linux</code>系统是个极具生产力的系统，换言之，就是娱乐软件比较少，不容易分心，但是为个人自控力又比较弱，所以在<code>Linux</code>上搭建<code>OBS</code>进行直播是个不错的选择，那为什么会选择<code>BiliBili</code>，因为之前这个实名认证了，别的平台直播又要认证太麻烦了，然后在国外平台直播又不敢，害怕进去，所以只有这个选择了。</p><h3 id="安装部署">安装部署</h3><p>打开终端后，输入下面命令：</p><figure class="highlight shell"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br></pre></td><td class="code"><pre><span class="line"><span class="meta prompt_"># </span><span class="language-bash">1、将OBS Studio的官方PPA添加到系统中</span></span><br><span class="line">sudo add-apt-repository ppa:obsproject/obs-studio</span><br><span class="line"><span class="meta prompt_"></span></span><br><span class="line"><span class="meta prompt_"># </span><span class="language-bash">2、更新系统软件包</span></span><br><span class="line">sudo apt update &amp;&amp; sudo apt upgrade</span><br><span class="line"><span class="meta prompt_"></span></span><br><span class="line"><span class="meta prompt_"># </span><span class="language-bash">3、安装OBS Studio</span></span><br><span class="line">sudo apt install obs-studio</span><br></pre></td></tr></table></figure><p>安装完成后，在应用列表就能找到<code>OBS</code>，如图所示：</p><p><img src="https://cdn.jsdelivr.net/gh/lures2019/Ubuntu_Image/PicGo/202410071957588.png" alt="image-20241007195748533"></p><h3 id="配置OBS">配置OBS</h3><p><img src="https://cdn.jsdelivr.net/gh/lures2019/Ubuntu_Image/PicGo/202410071958647.png" alt="image-20241007195845607"></p><p>主要是设置一下推流码即可，这个可以去<code>B</code>站页面找(但是现在阿<code>B</code>要求至少<code>50</code>个人才能开播)</p><p><img src="https://cdn.jsdelivr.net/gh/lures2019/Ubuntu_Image/PicGo/202410072000240.png" alt="image-20241007200040170"></p><p>此时便能开播了，至于一些更高级的<code>OBS</code>直播界面配置，我不太会用～</p><h3 id="参考资料">参考资料</h3><ul><li><a href="https://juejin.cn/post/7256879435340775484">https://juejin.cn/post/7256879435340775484</a></li></ul>]]></content>
+      
+      
+      <categories>
+          
+          <category> 学习工具 </category>
+          
+      </categories>
+      
+      
+        <tags>
+            
+            <tag> Ubuntu22.04 </tag>
+            
+            <tag> OBS </tag>
+            
+        </tags>
+      
+    </entry>
+    
+    
+    
+    <entry>
+      <title>Blog16 Ubuntu22.04下扩展磁盘加载失败解决方案</title>
+      <link href="/posts/596732ea.html"/>
+      <url>/posts/596732ea.html</url>
+      
+        <content type="html"><![CDATA[<h3 id="问题简述">问题简述</h3><p>在打开保存<code>PicGo</code>软件的固态拓展盘时候出现下面报错信息：</p><figure class="highlight html"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line">Error mounting /dev/nvme1n1p2 at /media/lures/Others: wrong fs type, bad option, bad superblock on /dev/nvme1n1p2,missing codepage or helper program, or other error</span><br></pre></td></tr></table></figure><h3 id="解决方案">解决方案</h3><h4 id="检查文件系统类型">检查文件系统类型</h4><figure class="highlight shell"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line">sudo blkid /dev/nvme1n1p2</span><br></pre></td></tr></table></figure><p><img src="https://cdn.jsdelivr.net/gh/lures2019/Ubuntu_Image/PicGo/202410071944166.png" alt="image-20241007194419115"></p><p>由输出信息可以看出，分区<code>/dev/nvme1n1p2</code>是<code>NTFS</code>文件系统，所以在挂载时需要确保系统已经安装了对<code>NTFS</code>的支持程序，步骤如下：</p><h4 id="安装ntfs-3g">安装ntfs-3g</h4><figure class="highlight shell"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br></pre></td><td class="code"><pre><span class="line">sudo apt update</span><br><span class="line">sudo apt install ntfs-3g</span><br></pre></td></tr></table></figure><h4 id="尝试挂载分区">尝试挂载分区</h4><figure class="highlight shell"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br></pre></td><td class="code"><pre><span class="line">sudo mount -t ntfs-3g /dev/nvme1n1p2 /media/lures/Others</span><br><span class="line"><span class="meta prompt_"># </span><span class="language-bash">若/media/lures/Others不存在，则要先创建它</span></span><br><span class="line">sudo mkdir -p /media/lures/Others</span><br></pre></td></tr></table></figure><p>通过以上步骤已经完成了磁盘的加载，效果图如下：</p><p><img src="https://cdn.jsdelivr.net/gh/lures2019/Ubuntu_Image/PicGo/202410071947015.png" alt="image-20241007194740974"></p><h4 id="其他问题">其他问题</h4><p><img src="https://cdn.jsdelivr.net/gh/lures2019/Ubuntu_Image/PicGo/202410071948706.png" alt="image-20241007194818662"></p>]]></content>
+      
+      
+      <categories>
+          
+          <category> 学习工具 </category>
+          
+      </categories>
+      
+      
+        <tags>
+            
+            <tag> Ubuntu22.04 </tag>
+            
+            <tag> 磁盘 </tag>
+            
+        </tags>
+      
+    </entry>
+    
+    
+    
+    <entry>
+      <title>Blog15 Ubuntu22.04下蓝牙耳机连接问题解决方案</title>
+      <link href="/posts/69881e38.html"/>
+      <url>/posts/69881e38.html</url>
+      
+        <content type="html"><![CDATA[<h3 id="问题简述">问题简述</h3><p><img src="https://cdn.jsdelivr.net/gh/lures2019/Ubuntu_Image/PicGo/202410071929680.png" alt="image-20241007192942638"></p><p>如图，就是打开<code>Ubuntu22.04</code>的设置页面时，点击<code>Connection</code>按钮，每次变红后很快又会变黑，压根连不上蓝牙，尝试过重启系统但是没有效果，给<s>学习</s>(玩耍)还是带来一些麻烦，于是便有了这期<code>Blog</code></p><h3 id="解决方案">解决方案</h3><blockquote><p>1、配置蓝牙信息</p></blockquote><p>先按照<code>Linux中文网</code>教程将相关的蓝牙配置给配置上了，具体流程参考教程：<a href="https://cn.linux-console.net/?p=13313#:~:text=%E6%9C%AC%E6%8C%87%E5%8D%97%E5%B0%86%E5%90%91%E6%82%A8%E5%B1%95%E7%A4%BA%E5%A6%82%E4%BD%95">https://cn.linux-console.net/?p=13313#:~:text=本指南将向您展示如何</a></p><blockquote><p>2、下载蓝牙管理工具</p></blockquote><figure class="highlight shell"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line">sudo apt-get install blueman</span><br></pre></td></tr></table></figure><p>此时可以在应用中找到<code>bluetooth manager</code></p><p><img src="https://cdn.jsdelivr.net/gh/lures2019/Ubuntu_Image/PicGo/202410071935803.png" alt="image-20241007193553746"></p><p>然后进入后，点击<code>search</code>，找到目标耳机后右键<code>connect</code></p><p><img src="https://cdn.jsdelivr.net/gh/lures2019/Ubuntu_Image/PicGo/202410071937922.png" alt="image-20241007193720888"></p><blockquote><p>3、上述办法没有解决</p></blockquote><p>若前两步没有解决问题，可以再次打开设置页面，点击<code>Remove Device</code>，将设备删除</p><p><img src="https://cdn.jsdelivr.net/gh/lures2019/Ubuntu_Image/PicGo/202410071938100.png" alt="image-20241007193824060"></p><p>然后将耳机重新开机，接着在<code>bluetooth manager</code>里面重新<code>search</code>和<code>connect</code>，一般这个步骤都能有效解决。</p><h3 id="参考资料">参考资料</h3><ul><li><a href="https://zhuanlan.zhihu.com/p/552920619">https://zhuanlan.zhihu.com/p/552920619</a></li><li><a href="https://cn.linux-console.net/?p=13313">https://cn.linux-console.net/?p=13313</a></li></ul>]]></content>
+      
+      
+      <categories>
+          
+          <category> 学习工具 </category>
+          
+      </categories>
+      
+      
+        <tags>
+            
+            <tag> Ubuntu22.04 </tag>
+            
+            <tag> 蓝牙 </tag>
+            
+        </tags>
+      
+    </entry>
+    
+    
+    
+    <entry>
       <title>Blog14 Ubuntu22.04下配置PicGo及图床</title>
       <link href="/posts/c71211ae.html"/>
       <url>/posts/c71211ae.html</url>
