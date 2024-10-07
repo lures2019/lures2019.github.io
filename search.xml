@@ -4,6 +4,39 @@
   
     
     <entry>
+      <title>Blog14 Ubuntu22.04下配置PicGo及图床</title>
+      <link href="/posts/c71211ae.html"/>
+      <url>/posts/c71211ae.html</url>
+      
+        <content type="html"><![CDATA[<h3 id="先看Windows下配置教程">先看Windows下配置教程</h3><p>文章链接：<a href="https://lures2019.github.io/posts/236e1c4a.html">https://lures2019.github.io/posts/236e1c4a.html</a></p><h3 id="Ubuntu22-04下配置">Ubuntu22.04下配置</h3><h4 id="在Ubuntu22-04下生存rsa密钥并部署到Github">在Ubuntu22.04下生存rsa密钥并部署到Github</h4><figure class="highlight shell"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br></pre></td><td class="code"><pre><span class="line"><span class="meta prompt_"># </span><span class="language-bash">1、安装ssh</span></span><br><span class="line">sudo apt update</span><br><span class="line">sudo apt upgrade</span><br><span class="line">sudo apt install openssh-server</span><br><span class="line"><span class="meta prompt_"></span></span><br><span class="line"><span class="meta prompt_"># </span><span class="language-bash">2、生成SSH密钥对，输出全部enter</span></span><br><span class="line">ssh-keygen</span><br><span class="line"><span class="meta prompt_"></span></span><br><span class="line"><span class="meta prompt_"># </span><span class="language-bash">3、查看公钥并复制</span></span><br><span class="line">cat ~/.ssh/id_rsa.pub</span><br><span class="line"><span class="meta prompt_"></span></span><br><span class="line"><span class="meta prompt_"># </span><span class="language-bash">4、将公钥添加到github中</span></span><br></pre></td></tr></table></figure><p><img src="https://cdn.jsdelivr.net/gh/lures2019/Ubuntu_Image/PicGo/202410071910520.png" alt="image-20241007191052479"></p><p><img src="https://cdn.jsdelivr.net/gh/lures2019/Ubuntu_Image/PicGo/202410071911991.png" alt="image-20241007191140930"></p><h4 id="在Github上配置图床及CDN">在Github上配置图床及CDN</h4><p>按照在<code>Windows</code>下配置同样流程，新建仓库<code>Ubuntu_Image</code>，后面操作一样，注意还是要记住<code>token</code></p><p><img src="https://cdn.jsdelivr.net/gh/lures2019/Ubuntu_Image/PicGo/202410071913294.png" alt="image-20241007191348255"></p><h4 id="下载PicGo并配置">下载PicGo并配置</h4><p>打开链接：<a href="https://github.com/Molunerfinn/PicGo/releases%EF%BC%8C%E4%B8%8B%E8%BD%BD%E4%BB%A5%60AppImage%60%E7%BB%93%E5%B0%BE%E7%9A%84%E6%96%87%E4%BB%B6%EF%BC%8C%E5%A6%82%E5%9B%BE%E6%89%80%E6%98%AF%EF%BC%9A">https://github.com/Molunerfinn/PicGo/releases，下载以`AppImage`结尾的文件，如图所是：</a></p><p><img src="https://cdn.jsdelivr.net/gh/lures2019/Ubuntu_Image/PicGo/202410071916217.png" alt="image-20241007191613162"></p><p>下载下来的文件在<code>Ubuntu22.04</code>下面其实已经是可以双击运行的，运行过程中，在<code>Ubuntu22.04</code>的右上角点击放大主窗口然后进入页面配置，配置教程同<code>Windows</code>，配置好的界面如下：</p><p><img src="https://cdn.jsdelivr.net/gh/lures2019/Ubuntu_Image/PicGo/202410071918740.png" alt="image-20241007191833707"></p><p>此时不放心的话可以在主页面进行上传测试，如果图片上传后显示蓝色即为成功，红色即为失败，具体失败解决办法参考<code>WIndows</code>教程</p><h4 id="配置Typota自上传图片">配置Typota自上传图片</h4><p>首先一定要记得手动打开<code>PicGo</code>软件，后面<code>Typora</code>上传才会成功</p><p><img src="https://cdn.jsdelivr.net/gh/lures2019/Ubuntu_Image/PicGo/202410071921611.png" alt="image-20241007192114573"></p><p>此时可以通过验证图片上传选项来测试结果是否正确～</p><h4 id="参考资料">参考资料</h4><ul><li><a href="https://git-scm.com/book/zh/v2/%E6%9C%8D%E5%8A%A1%E5%99%A8%E4%B8%8A%E7%9A%84-Git-%E7%94%9F%E6%88%90-SSH-%E5%85%AC%E9%92%A5#:~:text=%E9%A6%96%E5%85%88%20ssh-key">https://git-scm.com/book/zh/v2/服务器上的-Git-生成-SSH-公钥#:~:text=首先 ssh-key</a></li><li><a href="https://picgo.github.io/PicGo-Doc/zh/guide/#picgo-is-here">https://picgo.github.io/PicGo-Doc/zh/guide/#picgo-is-here</a></li><li><a href="https://github.com/Molunerfinn/PicGo/releases">https://github.com/Molunerfinn/PicGo/releases</a></li></ul>]]></content>
+      
+      
+      <categories>
+          
+          <category> 学习工具 </category>
+          
+      </categories>
+      
+      
+        <tags>
+            
+            <tag> Github </tag>
+            
+            <tag> Ubuntu22.04 </tag>
+            
+            <tag> 图床 </tag>
+            
+            <tag> PicGo </tag>
+            
+            <tag> jsDelivr </tag>
+            
+        </tags>
+      
+    </entry>
+    
+    
+    
+    <entry>
       <title>Blog13 Ubuntu22.04下使用Clash教程</title>
       <link href="/posts/103cfa43.html"/>
       <url>/posts/103cfa43.html</url>
