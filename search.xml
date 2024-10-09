@@ -4,6 +4,33 @@
   
     
     <entry>
+      <title>Blog20 使用Ubuntu22.04搭建深度学习环境</title>
+      <link href="/posts/972f5071.html"/>
+      <url>/posts/972f5071.html</url>
+      
+        <content type="html"><![CDATA[<p>具体流程没记录，下面是测试环境成功的截图：</p><p><img src="https://cdn.jsdelivr.net/gh/lures2019/Typora_image_CDN/PicGo/202410091032278.png" alt="image-20241009103217177"></p><p><img src="https://cdn.jsdelivr.net/gh/lures2019/Typora_image_CDN/PicGo/202410091032323.png" alt="image-20241009103227217"></p><p><img src="https://cdn.jsdelivr.net/gh/lures2019/Typora_image_CDN/PicGo/202410091032108.png" alt="image-20241009103233018"></p><p><img src="https://cdn.jsdelivr.net/gh/lures2019/Typora_image_CDN/PicGo/202410091032108.png" alt=""></p>]]></content>
+      
+      
+      <categories>
+          
+          <category> 学习工具 </category>
+          
+      </categories>
+      
+      
+        <tags>
+            
+            <tag> Ubuntu22.04 </tag>
+            
+            <tag> 深度学习环境 </tag>
+            
+        </tags>
+      
+    </entry>
+    
+    
+    
+    <entry>
       <title>Blog19 三只超萌小橘找家啦！</title>
       <link href="/posts/48b98b21.html"/>
       <url>/posts/48b98b21.html</url>
@@ -157,11 +184,11 @@
       
         <tags>
             
+            <tag> Github </tag>
+            
             <tag> Ubuntu22.04 </tag>
             
             <tag> 图床 </tag>
-            
-            <tag> Github </tag>
             
             <tag> PicGo </tag>
             
@@ -441,15 +468,15 @@
       
         <tags>
             
+            <tag> Hexo </tag>
+            
             <tag> Github </tag>
+            
+            <tag> butterfly </tag>
             
             <tag> PicGo </tag>
             
             <tag> jsDelivr </tag>
-            
-            <tag> Hexo </tag>
-            
-            <tag> butterfly </tag>
             
         </tags>
       
@@ -474,9 +501,9 @@
       
         <tags>
             
-            <tag> 图床 </tag>
-            
             <tag> Github </tag>
+            
+            <tag> 图床 </tag>
             
             <tag> PicGo </tag>
             
@@ -532,9 +559,9 @@
       
         <tags>
             
-            <tag> Github </tag>
-            
             <tag> Hexo </tag>
+            
+            <tag> Github </tag>
             
             <tag> butterfly </tag>
             
