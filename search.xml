@@ -4,6 +4,64 @@
   
     
     <entry>
+      <title>Blog32 北京黑狸花领养</title>
+      <link href="/posts/f569db74.html"/>
+      <url>/posts/f569db74.html</url>
+      
+        <content type="html"><![CDATA[<p>🐾【北京领养】喵有千面，各有千秋，不过拥有顶流颜值和完美长毛的黑狸花，是不是人人都爱！今天推荐拥有美短缅因血统的黑狸大帅哥——奶糖！奶糖喜欢被称呼为:奶糖宝贝，听到这个称呼，他就会摇曳着华丽的大尾巴飘过来蹭手，甚至还会温柔的舔手，又威武又撒娇的分寸也是拿捏的刚刚好。奶糖已经成年，但叫声还是有点奶声奶气，伸懒腰时身长1米8，粘人时蜷缩成一小团，可甜可盐相当百搭，爱他的美貌或爱他的柔和，都能成为你领养的绝对理由！🏠寻找温馨有爱的家，要求有固定住所🏠，家人需全员同意！ 我们承诺，审核通过，我们会亲自将奶糖送到家里，签领养协议，接受家访和回访！有意者请加微信 jingxianjiejie 给奶糖一个温暖的归宿吧💕💕</p><video width="600" height="400" controls>  <source src="https://raw.githubusercontent.com/lures2019/Typora_image_CDN/refs/heads/main/7.mp4" type="video/mp4">  Your browser does not support the video tag.</video>]]></content>
+      
+      
+      <categories>
+          
+          <category> 学校生活 </category>
+          
+      </categories>
+      
+      
+        <tags>
+            
+            <tag> 社会公益 </tag>
+            
+            <tag> 志愿活动 </tag>
+            
+        </tags>
+      
+    </entry>
+    
+    
+    
+    <entry>
+      <title>Blog31 论文矢量图绘制</title>
+      <link href="/posts/68726b45.html"/>
+      <url>/posts/68726b45.html</url>
+      
+        <content type="html"><![CDATA[<h3 id="常用的图片格式解释">常用的图片格式解释</h3><ul><li><code>fig</code>：<code>matlab</code>默认的图片保存格式，在其他软件上一般不可用，可视为矢量图</li><li><code>eps</code>：矢量图，适用于<code>LaTex</code></li><li><code>svg</code>：指可伸缩矢量图形<code>(Scalable Vector Graphics)</code></li><li><code>emf</code>：矢量图，适合<code>word</code></li><li><code>jpg</code>：位图，很古老的图片格式，同时也几乎是最常用的图片格式</li><li><code>bmp</code>：位图，未压缩</li><li><code>png</code>：位图，无损压缩</li></ul><h3 id="Python绘制矢量图">Python绘制矢量图</h3><ul><li><p>参考博客：<a href="https://blog.csdn.net/weixin_40525909/article/details/106903251">https://blog.csdn.net/weixin_40525909/article/details/106903251</a></p></li><li><p>绘图思路：</p><ul><li>使用<code>Python</code>的一些模块如<code>matplotlib</code>来绘制<code>svg</code>图</li><li>使用一些软件打开<code>svg</code>类型的图然后复制到论文中就行了</li></ul></li><li><p>示例代码及截图：</p><p>首先需要安装第三方模块<code>svgwrite</code>，安装命令为：<code>pip install svgwrite</code></p><p><img src="https://cdn.jsdelivr.net/gh/lures2019/Typora_image_CDN/PicGo/202410291322903.png" alt="安装svgwrite模块"></p>  <figure class="highlight python"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br><span class="line">26</span><br><span class="line">27</span><br><span class="line">28</span><br><span class="line">29</span><br><span class="line">30</span><br><span class="line">31</span><br><span class="line">32</span><br><span class="line">33</span><br><span class="line">34</span><br></pre></td><td class="code"><pre><span class="line"><span class="keyword">import</span> svgwrite</span><br><span class="line"></span><br><span class="line"><span class="keyword">def</span> <span class="title function_">create_svg</span>(<span class="params">filename=<span class="string">&quot;example.svg&quot;</span></span>):</span><br><span class="line">    <span class="comment"># 创建一个SVG图纸，设置尺寸</span></span><br><span class="line">    dwg = svgwrite.Drawing(filename, size=(<span class="string">&quot;500px&quot;</span>, <span class="string">&quot;500px&quot;</span>))</span><br><span class="line">    </span><br><span class="line">    <span class="comment"># 定义一个渐变并添加到SVG中</span></span><br><span class="line">    gradient = dwg.linearGradient((<span class="number">0</span>, <span class="number">0</span>), (<span class="number">1</span>, <span class="number">1</span>))</span><br><span class="line">    gradient.add_stop_color(<span class="number">0</span>, <span class="string">&quot;purple&quot;</span>)</span><br><span class="line">    gradient.add_stop_color(<span class="number">1</span>, <span class="string">&quot;lightblue&quot;</span>)</span><br><span class="line">    dwg.defs.add(gradient)</span><br><span class="line">    </span><br><span class="line">    <span class="comment"># 使用渐变填充背景</span></span><br><span class="line">    dwg.add(dwg.rect(insert=(<span class="number">0</span>, <span class="number">0</span>), size=(<span class="string">&quot;100%&quot;</span>, <span class="string">&quot;100%&quot;</span>), fill=gradient.get_paint_server()))</span><br><span class="line">    </span><br><span class="line">    <span class="comment"># 绘制一个有边框的圆形</span></span><br><span class="line">    dwg.add(dwg.circle(center=(<span class="string">&quot;250px&quot;</span>, <span class="string">&quot;250px&quot;</span>), r=<span class="string">&quot;80px&quot;</span>, fill=<span class="string">&quot;white&quot;</span>, stroke=<span class="string">&quot;black&quot;</span>, stroke_width=<span class="number">3</span>))</span><br><span class="line">    </span><br><span class="line">    <span class="comment"># 绘制一个半透明的矩形</span></span><br><span class="line">    dwg.add(dwg.rect(insert=(<span class="string">&quot;50px&quot;</span>, <span class="string">&quot;50px&quot;</span>), size=(<span class="string">&quot;100px&quot;</span>, <span class="string">&quot;100px&quot;</span>), fill=<span class="string">&quot;green&quot;</span>, opacity=<span class="number">0.5</span>, rx=<span class="number">10</span>, ry=<span class="number">10</span>))</span><br><span class="line">    </span><br><span class="line">    <span class="comment"># 添加一条对角线</span></span><br><span class="line">    dwg.add(dwg.line(start=(<span class="string">&quot;0px&quot;</span>, <span class="string">&quot;500px&quot;</span>), end=(<span class="string">&quot;500px&quot;</span>, <span class="string">&quot;0px&quot;</span>), stroke=<span class="string">&quot;orange&quot;</span>, stroke_width=<span class="number">5</span>))</span><br><span class="line">    </span><br><span class="line">    <span class="comment"># 添加一个带阴影效果的文本</span></span><br><span class="line">    dwg.add(dwg.text(<span class="string">&quot;Hello, SVG!&quot;</span>, insert=(<span class="string">&quot;180px&quot;</span>, <span class="string">&quot;450px&quot;</span>), font_size=<span class="string">&quot;30px&quot;</span>, font_family=<span class="string">&quot;Arial&quot;</span>, fill=<span class="string">&quot;black&quot;</span>))</span><br><span class="line">    dwg.add(dwg.text(<span class="string">&quot;Hello, SVG!&quot;</span>, insert=(<span class="string">&quot;182px&quot;</span>, <span class="string">&quot;452px&quot;</span>), font_size=<span class="string">&quot;30px&quot;</span>, font_family=<span class="string">&quot;Arial&quot;</span>, fill=<span class="string">&quot;white&quot;</span>, opacity=<span class="number">0.7</span>))</span><br><span class="line">    </span><br><span class="line">    <span class="comment"># 保存文件</span></span><br><span class="line">    dwg.save()</span><br><span class="line">    <span class="built_in">print</span>(<span class="string">f&quot;SVG file saved as <span class="subst">&#123;filename&#125;</span>&quot;</span>)</span><br><span class="line"></span><br><span class="line"><span class="comment"># 生成SVG图形</span></span><br><span class="line">create_svg()</span><br></pre></td></tr></table></figure></li><li><p>用<code>Inkscape</code>打开矢量图后显示如下：</p><p><img src="https://cdn.jsdelivr.net/gh/lures2019/Typora_image_CDN/PicGo/202410291324936.png" alt="svg矢量图"></p></li><li><p>直接复制<code>example.svg</code>文件到<code>word</code>中就可以显示出效果了，如图所示：</p><p><img src="https://cdn.jsdelivr.net/gh/lures2019/Typora_image_CDN/PicGo/202410291328360.png" alt="word插入效果图"></p></li></ul><h3 id="PPT绘制矢量图">PPT绘制矢量图</h3><ul><li><p>参考博客：<a href="https://blog.csdn.net/lyh458/article/details/130768113">https://blog.csdn.net/lyh458/article/details/130768113</a></p></li><li><p>输入的元素(图片、公式、图形等)是矢量或高清的，全选后鼠标右键点击组合，如下图所示：</p><p><img src="https://cdn.jsdelivr.net/gh/lures2019/Typora_image_CDN/PicGo/202410291338440.png" alt="PPT元素组合"></p></li><li><p>==不修改<code>PPT</code>尺寸的话导出的<code>pdf</code>会有大片白边==，点击组合，选中菜单栏格式，记下高度和宽度</p><p><img src="https://cdn.jsdelivr.net/gh/lures2019/Typora_image_CDN/PicGo/202410291341983.png" alt="记下高度和宽度"></p></li><li><p>修改页面尺寸，点击菜单栏设计，点击幻灯片大小，自定义幻灯片大小，输入刚记下的组合尺寸【如果有边框的话，建议输入的尺寸比实际稍微大一点点(如：大<code>0.1cm</code>)，否则边框可能会被吃掉】，点击确定后，选择并点击最大化</p><p><img src="https://cdn.jsdelivr.net/gh/lures2019/Typora_image_CDN/PicGo/202410291347918.png" alt="组合尺寸"></p></li><li><p>点击文件，另存为<code>pdf</code>文件即可，若是使用<code>LaTeX</code>写论文，就可以在<code>tex</code>文件中直接使用该<code>pdf</code>文件作为图源导入了。【使用<code>LaTeX</code>导入图源<code>pdf</code>操作见<code>LaTeX</code>使用<code>blog</code>】</p></li><li><p>不推荐使用<code>PPT</code>绘图后保存为高清图片并设置分辨率，得出的图不是矢量图，不能无限放大不失真，因此不适合在论文中使用。</p></li></ul><h3 id="Inkscape绘制矢量图">Inkscape绘制矢量图</h3><ul><li>参考视频：<a href="https://www.bilibili.com/video/BV1B54y1X7iX">https://www.bilibili.com/video/BV1B54y1X7iX</a></li><li>准备系统学一下输出笔记单独做一期</li></ul>]]></content>
+      
+      
+      <categories>
+          
+          <category> 学习工具 </category>
+          
+      </categories>
+      
+      
+        <tags>
+            
+            <tag> 论文 </tag>
+            
+            <tag> 矢量图 </tag>
+            
+            <tag> Python </tag>
+            
+            <tag> Inkscape </tag>
+            
+        </tags>
+      
+    </entry>
+    
+    
+    
+    <entry>
       <title>Blog30 狮子喵小YY找家啦</title>
       <link href="/posts/84e3a47b.html"/>
       <url>/posts/84e3a47b.html</url>
