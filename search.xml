@@ -4,6 +4,35 @@
   
     
     <entry>
+      <title>Blog39 overleaf+LaTeX使用教程</title>
+      <link href="/posts/903e4eb0.html"/>
+      <url>/posts/903e4eb0.html</url>
+      
+        <content type="html"><![CDATA[<h3 id="公开的LaTeX模板">公开的LaTeX模板</h3><p><img src="https://cdn.jsdelivr.net/gh/lures2019/Typora_image_CDN/PicGo/202410311606258.png" alt="IROS期刊要求"></p><p><img src="https://cdn.jsdelivr.net/gh/lures2019/Typora_image_CDN/PicGo/202410311609552.png" alt="开源LaTeX模板"></p><p><img src="https://cdn.jsdelivr.net/gh/lures2019/Typora_image_CDN/PicGo/202410311640698.png" alt="elegant book使用中文环境"></p><p><img src="https://cdn.jsdelivr.net/gh/lures2019/Typora_image_CDN/PicGo/202410311711643.png" alt="elegant编写中文笔记"></p><h3 id="总结">总结</h3><ul><li>基本上比较简单，需要用到什么东西现搜先用就行</li><li>主要还是使用公开模板，自己创建模板的话问题比较大</li></ul><h3 id="参考资料">参考资料</h3><ul><li><a href="https://www.bilibili.com/video/BV1cg411V7hW/?spm_id_from=333.337.search-card.all.click&amp;vd_source=360107114b407635159a596070bbc927">8分钟入门 Overleaf &amp; Latex_哔哩哔哩_bilibili</a></li><li><a href="https://blog.csdn.net/a13478107907/article/details/143102012">LaTeX 初学者教程：使用 Overleaf 撰写高质量论文（超级精炼版）</a></li><li><a href="https://www.bilibili.com/video/BV15W4y1J7Fj/?spm_id_from=333.337.search-card.all.click&amp;vd_source=360107114b407635159a596070bbc927">【Maki’s Lab】LaTeX+Overleaf教程_哔哩哔哩_bilibili</a></li><li><a href="https://github.com/ElegantLaTeX/ElegantBook/">ElegantLaTeX/ElegantBook: Elegant LaTeX Template for Books</a></li></ul>]]></content>
+      
+      
+      <categories>
+          
+          <category> 学习工具 </category>
+          
+      </categories>
+      
+      
+        <tags>
+            
+            <tag> 论文 </tag>
+            
+            <tag> LaTeX </tag>
+            
+            <tag> overleaf </tag>
+            
+        </tags>
+      
+    </entry>
+    
+    
+    
+    <entry>
       <title>Blog38 长毛三花妹妹找领养</title>
       <link href="/posts/c495dfa3.html"/>
       <url>/posts/c495dfa3.html</url>
@@ -676,9 +705,9 @@
       
         <tags>
             
-            <tag> Ubuntu22.04 </tag>
-            
             <tag> Github </tag>
+            
+            <tag> Ubuntu22.04 </tag>
             
             <tag> 图床 </tag>
             
