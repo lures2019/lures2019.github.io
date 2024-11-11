@@ -867,8 +867,6 @@
       
         <tags>
             
-            <tag> Ubuntu22.04 </tag>
-            
             <tag> Github </tag>
             
             <tag> 图床 </tag>
@@ -876,6 +874,8 @@
             <tag> PicGo </tag>
             
             <tag> jsDelivr </tag>
+            
+            <tag> Ubuntu22.04 </tag>
             
         </tags>
       
