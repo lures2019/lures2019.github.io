@@ -40,6 +40,21 @@ input, select, textarea, button { font: inherit; }
 .back { display: inline-block; margin-bottom: 22px; }
 .eyebrow { color: var(--accent); font-size: .76rem; font-weight: 700; letter-spacing: .14em; }
 .layout { display: grid; grid-template-columns: minmax(250px, .8fr) minmax(0, 1.7fr); gap: 18px; align-items: start; }
+.layout[data-guest] { grid-template-columns: minmax(0, 1fr); }
+.todo-owner summary { cursor: pointer; font-weight: 700; }
+.todo-owner form, #owner-connected { margin-top: 12px; }
+.timer-clock { display: block; margin: 12px 0; font-size: clamp(2.4rem, 9vw, 4.6rem); font-variant-numeric: tabular-nums; font-weight: 700; color: var(--accent); }
+.focus-stats .metric { background: var(--accent); color: var(--on-accent); }
+.focus-stats .metric strong { color: inherit; }
+.ranking-title { margin: 20px 0 4px; }
+.focus-ranking { padding-left: 1.7em; margin: 0; }
+.focus-ranking li { border-bottom: 1px solid var(--line); padding: 8px 0; }
+.focus-ranking li::marker { color: var(--accent); font-weight: 700; }
+.focus-rank-label { display: flex; gap: 10px; justify-content: space-between; overflow-wrap: anywhere; }
+.focus-rank-label span { flex-shrink: 0; }
+.focus-ranking meter { display: block; width: 100%; height: 10px; margin-top: 4px; }
+.focus-ranking meter::-webkit-meter-bar { background: var(--wash); border: 0; }
+.focus-ranking meter::-webkit-meter-optimum-value { background: var(--accent); }
 .panel { padding: clamp(16px, 3vw, 24px); background: var(--surface); border: 1px solid var(--line); border-radius: 16px; }
 .panel + .panel { margin-top: 16px; }
 .section-heading, .actions, .filters { display: flex; flex-wrap: wrap; align-items: center; gap: 9px; }

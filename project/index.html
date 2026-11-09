@@ -4,11 +4,12 @@
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <meta name="robots" content="noindex">
-  <meta http-equiv="Content-Security-Policy" content="default-src 'none'; script-src 'self'; style-src 'self'; img-src 'self'; form-action 'none'; base-uri 'none'">
+  <meta name="referrer" content="no-referrer">
+  <meta http-equiv="Content-Security-Policy" content="default-src 'none'; script-src 'self'; style-src 'self'; img-src 'self'; connect-src https://api.github.com; form-action 'none'; base-uri 'none'; object-src 'none'">
   <title>每日待办 · Zaydenの树屋</title>
   <link rel="icon" href="../img/favicon.png">
   <link rel="stylesheet" href="../assets/personal/personal.css">
-  <script defer src="../assets/personal/todo.js"></script>
+  <script type="module" src="../assets/personal/todo.js?v=2"></script>
 </head>
 <body>
   <main class="shell">
@@ -16,17 +17,43 @@
       <a class="back" href="../">← 返回树屋</a>
       <p class="eyebrow">ZAYDEN’S TREEHOUSE / 01</p>
       <h1>每日待办</h1>
-      <p>把想做的事记下来，按天安排，按月和按年回看。</p>
+      <p>查看树屋的公开待办，按日、周、月或年回看。</p>
     </header>
     <noscript><p class="panel">启用 JavaScript 后即可使用待办。</p></noscript>
-    <div class="layout">
-      <section class="panel editor" aria-labelledby="task-form-title">
+    <details class="panel todo-owner">
+      <summary>站主编辑</summary>
+      <form id="owner-connect">
+        <label for="todo-token">GitHub Fine-grained 令牌</label>
+        <input id="todo-token" name="token" type="password" autocomplete="off" maxlength="255" required>
+        <p class="muted">仅 lures2019 可以编辑。令牌只在本次打开的页面中使用。</p>
+        <button id="todo-connect" type="submit">连接 GitHub</button>
+      </form>
+      <div id="owner-connected" hidden>
+        <p>已连接 lures2019。提交后，任务内容会写入公开待办仓库。</p>
+        <button id="todo-disconnect" type="button" class="secondary">退出编辑</button>
+      </div>
+    </details>
+    <p id="todo-status" class="status" role="status" aria-live="polite">正在读取 GitHub 待办…</p>
+    <div class="layout" id="todo-layout" data-guest>
+      <section class="panel editor" id="todo-editor" aria-labelledby="task-form-title" hidden>
         <h2 id="task-form-title">新建待办</h2>
         <form id="task-form">
           <label for="task-title">任务</label>
           <input id="task-title" name="title" maxlength="160" required placeholder="例如：整理本周论文笔记">
           <label for="task-date">安排日期</label>
           <input id="task-date" name="date" type="date" required>
+          <label for="task-repeat">重复规则</label>
+          <select id="task-repeat" name="repeat">
+            <option value="none">不重复</option>
+            <option value="daily">每天</option>
+            <option value="weekly">每周</option>
+            <option value="monthly">每月</option>
+            <option value="yearly">每年</option>
+          </select>
+          <div id="repeat-end" hidden>
+            <label for="task-end">重复截止日期（可选）</label>
+            <input id="task-end" name="endDate" type="date">
+          </div>
           <label for="task-note">备注 <span class="muted">（可选）</span></label>
           <textarea id="task-note" name="note" maxlength="2000" rows="3" placeholder="补充细节或下一步"></textarea>
           <div class="actions">
@@ -34,22 +61,27 @@
             <button id="task-cancel" class="secondary" type="button" hidden>取消编辑</button>
           </div>
         </form>
-        <p class="muted note">任务保存在当前浏览器。导出备份可以在换设备时恢复记录。</p>
+        <p class="muted note">标题、日期、完成状态和备注会公开显示。</p>
         <div class="actions">
           <button id="export-tasks" class="secondary" type="button">导出备份</button>
           <button id="import-tasks" class="secondary" type="button">导入备份</button>
+          <button id="import-local" class="secondary" type="button">导入旧版浏览器待办</button>
           <input id="backup-file" type="file" accept=".json,application/json" hidden>
         </div>
       </section>
       <section class="panel" aria-labelledby="tasks-heading">
         <div class="section-heading">
-          <h2 id="tasks-heading">我的任务</h2>
-          <button id="today" class="secondary compact" type="button">今天</button>
+          <h2 id="tasks-heading">公开待办</h2>
+          <div class="actions">
+            <button id="today" class="secondary compact" type="button">今天</button>
+            <button id="todo-refresh" class="secondary compact" type="button">刷新列表</button>
+          </div>
         </div>
         <div class="filters">
           <label>范围
             <select id="view">
               <option value="day">按天</option>
+              <option value="week">按周</option>
               <option value="month">按月</option>
               <option value="year">按年</option>
             </select>
@@ -67,7 +99,47 @@
         <div id="task-list"></div>
       </section>
     </div>
-    <p id="todo-status" class="status" role="status" aria-live="polite"></p>
+    <section class="panel review focus-timer" id="focus-timer" aria-labelledby="timer-heading" hidden>
+      <div class="section-heading">
+        <h2 id="timer-heading">番茄钟</h2>
+        <span class="muted" id="timer-state">等待开始</span>
+      </div>
+      <p class="muted">从任务列表点「计时」可关联某次待办。直接输入事项，保存时会新建一项待办。</p>
+      <form id="timer-form">
+        <div class="filters">
+          <label>任务事项 <input name="title" maxlength="160" required placeholder="例如：阅读论文"></label>
+          <label>计时方式
+            <select name="mode">
+              <option value="countdown">倒计时</option>
+              <option value="stopwatch">正计时</option>
+            </select>
+          </label>
+          <label id="timer-minutes">分钟 <input name="minutes" type="number" min="1" max="720" step="1" value="25" required></label>
+        </div>
+        <output id="timer-clock" class="timer-clock" aria-label="计时">00:25:00</output>
+        <div class="actions">
+          <button id="timer-start" type="submit">开始计时</button>
+          <button id="timer-pause" type="button" class="secondary" hidden>暂停</button>
+          <button id="timer-save" type="button" hidden>结束并保存</button>
+          <button id="timer-discard" type="button" class="secondary" hidden>放弃本次</button>
+        </div>
+      </form>
+    </section>
+    <section class="panel review focus-stats" aria-labelledby="focus-title">
+      <div class="section-heading">
+        <h2 id="focus-title">学习时长</h2>
+        <label>统计范围
+          <select id="focus-scope">
+            <option value="all">全部记录</option>
+            <option value="period">当前日期范围</option>
+          </select>
+        </label>
+      </div>
+      <div id="focus-metrics" class="review-preview"></div>
+      <p class="muted note">日均时长按实际有计时记录的日期计算，使用北京时间。</p>
+      <h3 class="ranking-title">学习任务 Top 10</h3>
+      <ol id="focus-ranking" class="focus-ranking"></ol>
+    </section>
     <section class="panel review" aria-labelledby="review-title">
       <h2 id="review-title">年度回顾</h2>
       <p class="muted">每年 12 月 31 日起，打开本页时会生成当年的回顾。跨年后也可以补看，下载的 HTML 可离线打开。</p>

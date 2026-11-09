@@ -223,7 +223,7 @@ document.addEventListener('DOMContentLoaded', function () {
       btf.addGlobalFn('igOfTabs', () => { ig.destroy() }, false, tabs)
     }
 
-    const replaceDq = str => str.replace(/"/g, '&quot;') // replace double quotes to &quot;
+    const escapeAttr = str => str.replace(/&/g, '&amp;').replace(/"/g, '&quot;')
 
     const getItems = (nextGroupKey, count) => {
       const nextItems = []
@@ -236,12 +236,15 @@ document.addEventListener('DOMContentLoaded', function () {
         }
 
         const item = data[num]
-        const alt = item.alt ? `alt="${replaceDq(item.alt)}"` : ''
-        const title = item.title ? `title="${replaceDq(item.title)}"` : ''
-        const zoom = item.original ? `data-zoom-src="${replaceDq(item.original)}"` : ''
+        const alt = item.alt ? `alt="${escapeAttr(item.alt)}"` : ''
+        const title = item.title ? `title="${escapeAttr(item.title)}"` : ''
+        const original = item.original ? `data-original-src="${escapeAttr(item.original)}"` : ''
+        const full = item.full ? `data-full-src="${escapeAttr(item.full)}"` : ''
+        const size = Number.isInteger(item.width) && Number.isInteger(item.height)
+          ? `width="${item.width}" height="${item.height}"` : ''
 
         nextItems.push(`<div class="item ">
-            <img src="${item.url}" data-grid-maintained-target="true" ${alt} ${title} ${zoom} />
+            <img src="${escapeAttr(item.url)}" decoding="async" data-grid-maintained-target="true" ${alt} ${title} ${original} ${full} ${size} />
           </div>`)
       }
       return nextItems
@@ -836,7 +839,28 @@ document.addEventListener('DOMContentLoaded', function () {
           const item = document.createElement('li')
           const date = document.createElement('span')
           date.textContent = year + ' 年'
-          item.append(date, ' · ' + title)
+          const template = document.createElement('template')
+          template.innerHTML = typeof title === 'string' ? title : ''
+          const text = template.content.textContent.trim()
+          const href = template.content.querySelector('a[href]')?.getAttribute('href')
+          item.append(date, ' · ')
+          if (href) {
+            try {
+              const url = new URL(href, 'https://baike.baidu.com/')
+              if (url.protocol === 'https:' || url.protocol === 'http:') {
+                const link = document.createElement('a')
+                link.href = url.href
+                link.target = '_blank'
+                link.rel = 'noopener noreferrer'
+                link.textContent = text
+                item.append(link)
+                return item
+              }
+            } catch {
+              // Keep the title if the upstream link is malformed.
+            }
+          }
+          item.append(text)
           return item
         }))
       } catch {

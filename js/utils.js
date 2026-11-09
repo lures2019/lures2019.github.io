@@ -182,7 +182,37 @@ const btf = {
     if (service === 'mediumZoom') {
       const attach = () => {
         const images = Array.from(ele).filter(img => img.isConnected && !img.classList.contains('medium-zoom-image'))
-        if (images.length) mediumZoom(images, { background: 'var(--zoom-bg)' })
+        if (!images.length) return
+        const zoom = mediumZoom(images, { background: 'var(--zoom-bg)' })
+        let links
+        const removeLinks = () => {
+          links?.remove()
+          links = undefined
+        }
+        zoom.on('opened', () => {
+          const image = zoom.getZoomedImage()
+          if (!image?.dataset.fullSrc && !image?.dataset.originalSrc) return
+          removeLinks()
+          links = document.createElement('div')
+          links.className = 'photo-source-links'
+          links.addEventListener('click', event => event.stopPropagation())
+          for (const [source, label] of [[image.dataset.fullSrc, '高清图'], [image.dataset.originalSrc, '原图']]) {
+            if (!source) continue
+            const link = document.createElement('a')
+            const url = new URL(source, location.href)
+            if (url.protocol !== 'https:' && url.protocol !== 'http:') continue
+            link.href = url.href
+            link.textContent = label
+            link.target = '_blank'
+            link.rel = 'noopener noreferrer'
+            links.append(link)
+          }
+          if (links.childElementCount) document.body.append(links)
+        }).on('close', removeLinks)
+        btf.addGlobalFn('pjax', () => {
+          removeLinks()
+          zoom.detach()
+        })
       }
       if (typeof mediumZoom === 'function') attach()
       else {
