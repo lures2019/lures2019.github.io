@@ -176,10 +176,22 @@ const btf = {
   },
 
   loadLightbox: ele => {
+    if (!ele.length) return
     const service = GLOBAL_CONFIG.lightbox
 
     if (service === 'mediumZoom') {
-      mediumZoom(ele, { background: 'var(--zoom-bg)' })
+      const attach = () => {
+        const images = Array.from(ele).filter(img => img.isConnected && !img.classList.contains('medium-zoom-image'))
+        if (images.length) mediumZoom(images, { background: 'var(--zoom-bg)' })
+      }
+      if (typeof mediumZoom === 'function') attach()
+      else {
+        window.mediumZoomLoad ||= getScript(GLOBAL_CONFIG.mediumZoomJs).catch(error => {
+          delete window.mediumZoomLoad
+          throw error
+        })
+        window.mediumZoomLoad.then(attach).catch(console.error)
+      }
     }
 
     if (service === 'fancybox') {

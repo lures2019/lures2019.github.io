@@ -1,0 +1,105 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="robots" content="noindex, nofollow">
+  <meta name="referrer" content="no-referrer">
+  <meta http-equiv="Content-Security-Policy" content="default-src 'none'; script-src 'self'; style-src 'self'; img-src 'self' data:; form-action 'none'; base-uri 'none'">
+  <title>私密空间 · Zaydenの树屋</title>
+  <link rel="icon" href="../img/favicon.png">
+  <link rel="stylesheet" href="../assets/personal/personal.css">
+  <script type="module" src="../assets/personal/vault-editor.js"></script>
+</head>
+<body>
+  <main class="shell">
+    <header class="page-intro">
+      <a class="back" href="../">← 返回树屋</a>
+      <p class="eyebrow">ZAYDEN’S TREEHOUSE / 02</p>
+      <h1>私密空间</h1>
+      <p>把照片、日记和论文进度整理在一起，选择要分享的内容。</p>
+    </header>
+    <noscript><p class="panel">启用 JavaScript 后即可在浏览器中解锁资料。</p></noscript>
+    <section id="gate" class="panel" aria-labelledby="gate-title">
+      <h2 id="gate-title">打开资料库</h2>
+      <form id="unlock-form">
+        <label for="owner-password">资料库密码</label>
+        <input id="owner-password" name="password" type="password" maxlength="512" required autocomplete="current-password">
+        <div id="create-options" hidden>
+          <label for="owner-confirm">再次输入新密码</label>
+          <input id="owner-confirm" name="confirmation" type="password" minlength="16" maxlength="512" autocomplete="new-password">
+          <label for="owner-import">从 GitHub 私仓下载的备份文件（可选）</label>
+          <input id="owner-import" name="backup" type="file" accept=".vault">
+          <p class="muted">新建资料库时请设至少 16 位密码。恢复备份时输入备份的原密码。</p>
+        </div>
+        <div class="actions"><button id="unlock" type="submit" disabled>打开资料库</button></div>
+      </form>
+    </section>
+    <p class="status" id="vault-status" role="status" aria-live="polite"></p>
+    <div id="vault-content" hidden>
+      <div class="actions">
+        <button id="backup" type="button" class="secondary">下载加密备份</button>
+        <button id="lock" type="button" class="secondary">锁定</button>
+        <a href="https://github.com/lures2019/treehouse-vault" target="_blank" rel="noopener noreferrer">打开 GitHub 私仓 ↗</a>
+      </div>
+      <p class="muted">加密备份可提交到自己的 GitHub 私人仓库。工作副本保存在当前浏览器，十分钟无操作会锁定。</p>
+      <div class="layout">
+        <section class="panel" aria-labelledby="entry-heading">
+          <h2 id="entry-heading">添加记录</h2>
+          <form id="entry-form">
+            <label for="entry-kind">类型</label>
+            <select id="entry-kind" name="kind">
+              <option value="photo">照片</option><option value="journal">日记</option><option value="paper">论文</option>
+            </select>
+            <label for="entry-title">标题</label>
+            <input id="entry-title" name="title" maxlength="160" required>
+            <label for="entry-date">日期</label>
+            <input id="entry-date" name="date" type="date" required>
+            <div id="photo-fields">
+              <label for="entry-photo">照片文件</label>
+              <input id="entry-photo" name="photo" type="file" accept="image/jpeg,image/png,image/webp">
+              <p class="muted">导入时生成 WebP，最长边 1600 像素。</p>
+            </div>
+            <div id="paper-fields" hidden>
+              <label for="paper-status">进度</label>
+              <select id="paper-status" name="paperStatus">
+                <option value="writing">写作中</option><option value="submitted">已投稿</option><option value="published">已发表</option>
+              </select>
+            </div>
+            <label for="entry-note">说明或正文</label>
+            <textarea id="entry-note" name="note" maxlength="12000" rows="5"></textarea>
+            <div class="actions">
+              <button id="entry-save" type="submit">保存记录</button>
+              <button id="entry-cancel" class="secondary" type="button" hidden>取消编辑</button>
+            </div>
+          </form>
+        </section>
+        <section class="panel" aria-labelledby="records-heading">
+          <h2 id="records-heading">我的记录</h2>
+          <div class="filters">
+            <label>筛选
+              <select id="entry-filter"><option value="all">全部</option><option value="photo">照片</option><option value="journal">日记</option><option value="paper">论文</option></select>
+            </label>
+            <label>论文统计年份 <select id="paper-year"></select></label>
+          </div>
+          <p id="paper-summary" class="muted"></p>
+          <p class="muted">勾选愿意分享的记录，再生成分享文件。</p>
+          <div id="records"></div>
+        </section>
+      </div>
+      <section class="panel review" aria-labelledby="share-title">
+        <h2 id="share-title">生成密码分享</h2>
+        <p class="muted">每个分享使用独立密码。将加密文件发布到博客后，再把链接和密码交给对方。</p>
+        <button id="make-share" type="button">生成分享文件和密码</button>
+        <div id="share-result" class="share-result" hidden>
+          <label for="share-link">分享链接</label>
+          <input id="share-link" readonly>
+          <label for="share-password">分享密码</label>
+          <input id="share-password" readonly>
+          <div class="actions"><button id="save-share" type="button" class="secondary">下载加密分享文件</button></div>
+        </div>
+      </section>
+    </div>
+  </main>
+</body>
+</html>

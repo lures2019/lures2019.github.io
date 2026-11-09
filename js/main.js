@@ -238,9 +238,10 @@ document.addEventListener('DOMContentLoaded', function () {
         const item = data[num]
         const alt = item.alt ? `alt="${replaceDq(item.alt)}"` : ''
         const title = item.title ? `title="${replaceDq(item.title)}"` : ''
+        const zoom = item.original ? `data-zoom-src="${replaceDq(item.original)}"` : ''
 
         nextItems.push(`<div class="item ">
-            <img src="${item.url}" data-grid-maintained-target="true" ${alt + title} />
+            <img src="${item.url}" data-grid-maintained-target="true" ${alt} ${title} ${zoom} />
           </div>`)
       }
       return nextItems
@@ -806,6 +807,53 @@ document.addEventListener('DOMContentLoaded', function () {
     }
   }
 
+  let historyRequest
+  let historyUrl
+  const loadHistory = () => {
+    const list = document.querySelector('[data-history-url]')
+    if (!list) return
+
+    const load = async () => {
+      const today = new Date()
+      const month = String(today.getMonth() + 1).padStart(2, '0')
+      const day = String(today.getDate()).padStart(2, '0')
+      const url = list.dataset.historyUrl + month + '.json'
+      try {
+        if (historyUrl !== url || !historyRequest) {
+          historyUrl = url
+          historyRequest = fetch(url).then(response => {
+            if (!response.ok) throw new Error('History data unavailable')
+            return response.json()
+          })
+        }
+        const events = (await historyRequest)['S' + month + day] || []
+        if (!list.isConnected) return
+        if (!events.length) {
+          list.firstElementChild.textContent = '暂无记录'
+          return
+        }
+        list.replaceChildren(...events.map(({ year, title }) => {
+          const item = document.createElement('li')
+          const date = document.createElement('span')
+          date.textContent = year + ' 年'
+          item.append(date, ' · ' + title)
+          return item
+        }))
+      } catch {
+        if (historyUrl === url) historyRequest = undefined
+        if (list.isConnected) list.firstElementChild.textContent = '暂时无法加载'
+      }
+    }
+
+    const observer = new IntersectionObserver(entries => {
+      if (!entries[0].isIntersecting) return
+      observer.disconnect()
+      load()
+    })
+    observer.observe(list)
+    btf.addGlobalFn('pjax', () => observer.disconnect())
+  }
+
   const lazyloadImg = () => {
     window.lazyLoadInstance = new LazyLoad({
       elements_selector: 'img',
@@ -866,6 +914,7 @@ document.addEventListener('DOMContentLoaded', function () {
     galleryContainer.length && addJustifiedGallery(galleryContainer)
 
     runLightbox()
+    loadHistory()
     addTableWrap()
     clickFnOfTagHide()
     tabsFn()

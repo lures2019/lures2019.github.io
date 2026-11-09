@@ -1,0 +1,38 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="robots" content="noindex, nofollow">
+  <meta name="referrer" content="no-referrer">
+  <meta http-equiv="Content-Security-Policy" content="default-src 'none'; script-src 'self'; style-src 'self'; img-src 'self' data:; connect-src 'self'; form-action 'none'; base-uri 'none'">
+  <title>私密分享 · Zaydenの树屋</title>
+  <link rel="icon" href="../img/favicon.png">
+  <link rel="stylesheet" href="../assets/personal/personal.css">
+  <script type="module" src="../assets/personal/vault-viewer.js"></script>
+</head>
+<body>
+  <main class="shell narrow">
+    <header class="page-intro">
+      <a class="back" href="../">← 返回树屋</a>
+      <p class="eyebrow">ZAYDEN’S TREEHOUSE</p>
+      <h1>私密分享</h1>
+      <p>输入分享者给你的密码，在当前浏览器中查看。</p>
+    </header>
+    <section class="panel" id="reader-gate">
+      <form id="read-share">
+        <label for="reader-password">分享密码</label>
+        <input id="reader-password" name="password" type="password" maxlength="512" autocomplete="off" required>
+        <label for="reader-file">使用加密文件（可选）</label>
+        <input id="reader-file" name="file" type="file" accept=".vault">
+        <div class="actions"><button type="submit">解锁分享</button></div>
+      </form>
+    </section>
+    <p class="status" id="reader-status" role="status" aria-live="polite"></p>
+    <section class="panel" id="reader-content" hidden>
+      <div class="section-heading"><h2>分享的记录</h2><button type="button" id="reader-lock" class="secondary">锁定</button></div>
+      <div id="reader-records"></div>
+    </section>
+  </main>
+</body>
+</html>

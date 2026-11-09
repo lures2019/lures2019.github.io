@@ -1,0 +1,99 @@
+:root {
+  color-scheme: light dark;
+  --page: #f3f5ed;
+  --surface: #fffefa;
+  --ink: #202a22;
+  --muted: #536356;
+  --line: #dce2d5;
+  --accent: #245b44;
+  --on-accent: #fff;
+  --wash: #e7efe4;
+  font-family: "Segoe UI", "PingFang SC", "Microsoft YaHei", sans-serif;
+}
+
+@media (prefers-color-scheme: dark) {
+  :root {
+    --page: #151d18;
+    --surface: #202b23;
+    --ink: #ecf2e9;
+    --muted: #b3c0b3;
+    --line: #3c4c40;
+    --accent: #a6d8b4;
+    --on-accent: #102a1b;
+    --wash: #2a3a2e;
+  }
+}
+
+* { box-sizing: border-box; }
+[hidden] { display: none !important; }
+body { margin: 0; background: var(--page); color: var(--ink); line-height: 1.6; }
+a { color: var(--accent); }
+h1, h2, h3, p { margin-top: 0; }
+h2 { font-size: 1.25rem; }
+h3 { font-size: 1rem; }
+input, select, textarea, button { font: inherit; }
+.shell { width: min(1080px, calc(100% - 32px)); margin: 0 auto 48px; }
+.shell.narrow { max-width: 760px; }
+.page-intro { padding: 24px 0 18px; }
+.page-intro h1 { margin: 0 0 6px; font-size: clamp(2rem, 6vw, 3.3rem); line-height: 1.15; }
+.page-intro p:last-child { color: var(--muted); }
+.back { display: inline-block; margin-bottom: 22px; }
+.eyebrow { color: var(--accent); font-size: .76rem; font-weight: 700; letter-spacing: .14em; }
+.layout { display: grid; grid-template-columns: minmax(250px, .8fr) minmax(0, 1.7fr); gap: 18px; align-items: start; }
+.panel { padding: clamp(16px, 3vw, 24px); background: var(--surface); border: 1px solid var(--line); border-radius: 16px; }
+.panel + .panel { margin-top: 16px; }
+.section-heading, .actions, .filters { display: flex; flex-wrap: wrap; align-items: center; gap: 9px; }
+.section-heading { justify-content: space-between; margin-bottom: 12px; }
+.section-heading h2 { margin: 0; }
+.actions { margin: 10px 0; }
+.filters { align-items: flex-end; }
+.filters label { flex: 1 1 110px; }
+.muted, .task-meta, .note { color: var(--muted); font-size: .88rem; }
+.note { margin: 15px 0 0; }
+.status { margin: 10px 0; color: var(--accent); }
+.status:empty { margin: 0 0 16px; }
+label { display: block; font-size: .9rem; font-weight: 600; }
+form label:not(:first-child) { margin-top: 10px; }
+input:not([type="checkbox"]), textarea, select {
+  width: 100%;
+  min-height: 42px;
+  padding: 7px 10px;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  background: var(--surface);
+  color: var(--ink);
+}
+textarea { resize: vertical; }
+input[type="checkbox"] { width: 18px; height: 18px; margin: 0; accent-color: var(--accent); }
+button {
+  min-height: 42px;
+  padding: 7px 12px;
+  border: 1px solid transparent;
+  border-radius: 8px;
+  background: var(--accent);
+  color: var(--on-accent);
+  cursor: pointer;
+}
+button.secondary { background: var(--wash); color: var(--ink); border-color: var(--line); }
+button.compact { min-height: 34px; padding: 3px 9px; font-size: .85rem; }
+button:disabled { opacity: .65; cursor: default; }
+.actions select { width: auto; }
+.task-group { margin: 14px 0 4px; color: var(--muted); }
+.task { display: grid; grid-template-columns: auto minmax(0, 1fr) auto; gap: 10px; align-items: start; padding: 12px 0; border-top: 1px solid var(--line); }
+.task input { margin-top: 4px; }
+.task p, .task h3 { margin: 0; overflow-wrap: anywhere; }
+.task-note, .entry-text { white-space: pre-wrap; overflow-wrap: anywhere; }
+.task[data-done] h3 { text-decoration: line-through; color: var(--muted); }
+.task .actions { margin: 0; gap: 4px; }
+.review-preview { display: grid; grid-template-columns: repeat(auto-fit, minmax(120px, 1fr)); gap: 10px; margin-top: 16px; }
+.metric { background: var(--wash); border-radius: 8px; padding: 10px 12px; margin: 0; color: var(--muted); }
+.metric strong { display: block; color: var(--ink); font-size: 1.35rem; }
+.entry { padding: 12px 0; border-top: 1px solid var(--line); }
+.entry h3, .entry p { margin-bottom: 5px; }
+.entry img { display: block; max-width: 100%; height: auto; border-radius: 8px; }
+.entry .entry-meta { color: var(--muted); font-size: .88rem; }
+.share-result { overflow-wrap: anywhere; }
+@media (max-width: 650px) {
+  .layout { grid-template-columns: 1fr; }
+  .task .actions { grid-column: 2; }
+}
