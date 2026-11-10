@@ -1,8 +1,8 @@
 import { base64, deriveKey, download, el, localDay, randomBytes, seal, unseal } from './vault-crypto.js'
-import { createLibrary, paperDetails, paperStages } from './vault-library.js?v=5'
+import { createLibrary, paperDetails, paperStages } from './vault-library.js?v=6'
 import { cacheImportedMedia, draftMedia, makeBundle, openBundle, syncImportedMedia, uploadMedia } from './vault-media.js'
 import { recordMedia } from './vault-media-model.js'
-import { openWriter } from './vault-writing.js?v=5'
+import { openWriter } from './vault-writing.js?v=6'
 import {
   closeCloudShare, cloudConfigured, cloudConnected, connectCloud, disconnectCloud, emptyRevision, listCloudShares,
   loadCloudArchive, publishCloudShare, remoteRevision, resumeCloud, uploadCloudArchive
@@ -15,7 +15,7 @@ const unlockForm = get('unlock-form')
 const entryForm = get('entry-form')
 const entryDialog = get('entry-dialog')
 const selected = new Set()
-const library = createLibrary(get('records'), { controls: recordControls, mediaOptions: () => ({ owner: true }), editPaper (record) {
+const library = createLibrary(get('records'), { controls: recordControls, mediaOptions: () => ({ owner: true }), uploadPdf: openPaperPdf, editPaper (record) {
   beginEdit(record)
   if (entryDialog.open) launchWriting()
 } })
@@ -34,6 +34,8 @@ let cloudConflict = false
 let preferCloud = false
 let attachments = []
 let paperPdfRemoved = false
+let pdfDialog
+const normalizedPdfs = new WeakMap()
 let importedMedia = []
 let writing
 let noteFormat
@@ -210,11 +212,10 @@ function showFields () {
   get('photo-fields').hidden = kind !== 'photo'
   get('video-fields').hidden = kind !== 'video'
   get('paper-fields').hidden = kind !== 'paper'
-  get('paper-pdf-fields').hidden = entryForm.elements.paperStage.value !== 'published'
   get('entry-note').hidden = rich
   get('rich-fields').hidden = !rich
   get('attachment-fields').hidden = kind === 'video'
-  get('attachment-help').textContent = '每条记录最多 16 个附件。' + (rich ? '选择图片后可插入正文。' : '附件显示在照片配文下方。')
+  get('attachment-help').textContent = '每条记录最多 16 个附件。' + (rich ? '图片和视频可插入正文。' : '图片附件会出现在相册中。')
   get('entry-note-label').textContent = { photo: '照片配文', video: '视频配文', journal: '日记正文', paper: '论文笔记' }[kind]
   entryForm.elements.photo.required = kind === 'photo' && !editing
   entryForm.elements.video.required = kind === 'video' && !editing
@@ -255,7 +256,7 @@ function beginEdit (record) {
 function launchWriting (initialImage) {
   if (!entryDialog.open || writing?.open) return
   writing = openWriter({
-    record: { kind: entryForm.elements.kind.value, note: entryForm.elements.note.value, format: noteFormat, font: noteFont },
+    record: { kind: entryForm.elements.kind.value, title: entryForm.elements.title.value, note: entryForm.elements.note.value, format: noteFormat, font: noteFont },
     attachments, initialImage,
     onApply (html, font, files) {
       entryForm.elements.note.value = html
@@ -278,7 +279,7 @@ function showAttachments () {
   get('remove-paper-pdf').hidden = !pdf
   get('attachment-list').replaceChildren(...attachments.map(item => {
     const row = el('li', item.ref.name)
-    if (['journal', 'paper'].includes(entryForm.elements.kind.value) && /^image\/(png|jpeg|gif|webp)$/.test(item.ref.type)) {
+    if (['journal', 'paper'].includes(entryForm.elements.kind.value) && /^(image\/(png|jpeg|gif|webp)|video\/(mp4|webm))$/.test(item.ref.type)) {
       const insert = el('button', '插入正文', 'secondary compact')
       insert.type = 'button'
       insert.onclick = () => launchWriting(item)
@@ -306,6 +307,59 @@ get('entry-attachments').addEventListener('change', event => {
 })
 get('remove-paper-pdf').addEventListener('click', () => { paperPdfRemoved = true; showAttachments() })
 
+async function uploadPaperPdf (file, progress) {
+  if (await file.slice(0, 5).text() !== '%PDF-') throw new Error('请选择有效的 PDF 文件。')
+  if (file.type !== 'application/pdf') {
+    if (!normalizedPdfs.has(file)) normalizedPdfs.set(file, new File([file], file.name, { type: 'application/pdf' }))
+    file = normalizedPdfs.get(file)
+  }
+  return uploadMedia(file, progress)
+}
+
+function openPaperPdf (record) {
+  if (!owner || saving || pdfDialog?.open) return
+  const dialog = el('dialog', '', 'vault-dialog')
+  dialog.setAttribute('aria-label', '上传论文 PDF')
+  const title = el('h2', record.pdf ? '更换论文 PDF' : '上传论文 PDF')
+  const form = el('form')
+  const label = el('label', '选择论文 PDF')
+  const input = el('input')
+  input.type = 'file'
+  input.accept = 'application/pdf,.pdf'
+  input.required = true
+  label.append(input)
+  const submit = el('button', '加密上传')
+  const close = el('button', '取消', 'secondary')
+  close.type = 'button'
+  close.onclick = () => { if (!submit.disabled) dialog.close() }
+  const actions = el('div', '', 'actions')
+  actions.append(submit, close)
+  const status = el('p', '', 'status')
+  status.setAttribute('role', 'status')
+  form.append(label, actions, status)
+  dialog.append(title, el('p', record.title, 'muted'), form)
+  document.body.append(dialog)
+  pdfDialog = dialog
+  dialog.addEventListener('cancel', event => { if (submit.disabled) event.preventDefault() })
+  dialog.addEventListener('close', () => { dialog.remove(); if (pdfDialog === dialog) pdfDialog = undefined }, { once: true })
+  form.onsubmit = async event => {
+    event.preventDefault()
+    const unlocked = owner
+    if (!unlocked || submit.disabled) return
+    submit.disabled = close.disabled = true
+    try {
+      const pdf = await uploadPaperPdf(input.files[0], message => { status.textContent = message; activity() })
+      if (owner !== unlocked || !dialog.open) return
+      if (await persist(unlocked.records.map(item => item.id === record.id ? { ...item, pdf } : item))) {
+        dialog.close()
+        notify('论文 PDF 已加密保存。')
+      } else status.textContent = get('vault-status').textContent || 'PDF 保存失败，请重试。'
+    } catch (error) { status.textContent = error.message || '上传失败，请重试。' }
+    finally { submit.disabled = close.disabled = false }
+  }
+  dialog.showModal()
+}
+
 function clearShare () {
   share = undefined
   get('share-result').hidden = true
@@ -319,6 +373,7 @@ function lock (feedback = '资料库已锁定。') {
   owner = undefined
   if (writing?.open) writing.close()
   if (entryDialog.open) entryDialog.close()
+  if (pdfDialog?.open) pdfDialog.close()
   selected.clear()
   clearShare()
   edit()
@@ -467,9 +522,8 @@ entryForm.addEventListener('submit', async event => {
       record.published = record.stage === 'published'
       record.accepted = ['published', 'accepted'].includes(record.stage) ? 'yes' : record.stage === 'rejected' ? 'no' : 'pending'
       record.paperStatus = record.published ? 'published' : record.stage === 'writing' ? 'writing' : 'submitted'
-      const file = record.published && form.paperPdf.files[0]
-      if (file && await file.slice(0, 5).text() !== '%PDF-') throw new Error('请选择有效的 PDF 文件。')
-      if (file) record.pdf = await uploadMedia(file, progress)
+      const file = form.paperPdf.files[0]
+      if (file) record.pdf = await uploadPaperPdf(file, progress)
       else if (!paperPdfRemoved && editing?.pdf) record.pdf = editing.pdf
     }
     if (kind === 'photo') {

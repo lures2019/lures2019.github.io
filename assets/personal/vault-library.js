@@ -1,9 +1,12 @@
 import { download, el } from './vault-crypto.js'
 import { openMedia } from './vault-media.js'
-import { richBody } from './vault-rich.js?v=5'
+import { editableDocument, richBody } from './vault-rich.js?v=6'
 import { localDay, period, validDay } from './todo-model.js'
 
 const kinds = { photo: '照片', journal: '日记', paper: '论文', video: '视频' }
+const isPhoto = file => /^image\/(png|jpeg|webp|gif)$/.test(file.type)
+const isVideo = file => /^video\/(mp4|webm)$/.test(file.type)
+const mediaKind = file => isPhoto(file) ? 'image' : isVideo(file) ? 'video' : 'file'
 export const paperStages = {
   writing: '写作中', submitted: '已投稿', reviewing: '审稿中', revising: '返修中',
   accepted: '已录用', published: '已见刊', rejected: '已拒稿', withdrawn: '已撤稿'
@@ -41,8 +44,9 @@ function button (text, handler) {
   return control
 }
 
-export function createLibrary (root, { controls, mediaOptions, editPaper } = {}) {
-  const type = select({ all: '全部类型', ...kinds })
+export function createLibrary (root, { controls, mediaOptions, editPaper, uploadPdf } = {}) {
+  const tabs = el('nav', '', 'vault-category-tabs')
+  tabs.setAttribute('aria-label', '按记录类型浏览')
   const range = select({ all: '全部日期', week: '按周', month: '按月', year: '按年' })
   const date = el('input')
   date.type = 'date'
@@ -52,7 +56,7 @@ export function createLibrary (root, { controls, mediaOptions, editPaper } = {})
   search.type = 'search'
   search.placeholder = '搜索标题或正文'
   const filters = el('div', '', 'vault-filters')
-  filters.append(field('类型', type), field('统计范围', range), field('参照日期', date), field('分类', category), field('搜索', search))
+  filters.append(field('统计范围', range), field('参照日期', date), field('分类', category), field('搜索', search))
   const stats = el('div', '', 'vault-stats')
   const listing = el('div', '', 'vault-records')
   const urls = new Map()
@@ -69,7 +73,7 @@ export function createLibrary (root, { controls, mediaOptions, editPaper } = {})
   let revision = 0
   let reader
 
-  root.append(filters, stats, listing)
+  root.append(tabs, filters, stats, listing)
 
   function clearMedia () {
     revision++
@@ -105,6 +109,7 @@ export function createLibrary (root, { controls, mediaOptions, editPaper } = {})
           player.playsInline = true
         } else player.alt = alt || file.name
         box.replaceChildren(player)
+        if (kind === 'image' && box.closest('.vault-photo-album')) attachPhotoPreview(player)
         if (kind === 'video') void player.play().catch(() => {})
       } catch (error) {
         status.textContent = error.message || '附件暂时无法读取。'
@@ -120,25 +125,60 @@ export function createLibrary (root, { controls, mediaOptions, editPaper } = {})
 
   function notes (record) {
     const box = el('div', '', 'vault-notes')
-    box.append(richBody(record, (file, alt) => mediaControl(file, 'image', alt)))
-    for (const file of record.attachments || []) box.append(mediaControl(file, 'file'))
+    const navigation = el('nav', '', 'vault-outline vault-reading-outline')
+    navigation.hidden = true
+    const source = document.createElement('template')
+    const inlineIds = new Set()
+    if (record.format === 'visual') {
+      source.innerHTML = record.note
+      for (const marker of source.content.querySelectorAll('[data-inline-media]')) inlineIds.add(marker.dataset.inlineMedia)
+    } else for (const match of record.note.matchAll(/attachment:([a-f0-9-]{36})/g)) inlineIds.add(match[1])
+    box.append(noteExports(record), navigation, richBody(record, (file, alt) => mediaControl(file, mediaKind(file), alt), navigation))
+    for (const file of record.attachments || []) {
+      if (!inlineIds.has(file.id)) box.append(mediaControl(file, mediaKind(file)))
+    }
     return box
   }
 
-  function routePaper (id) {
-    const url = new URL(location.href)
-    if (id) url.searchParams.set('paper', id)
-    else url.searchParams.delete('paper')
-    return url
+  function noteExports (record) {
+    const actions = el('div', '', 'vault-note-exports')
+    const menu = select({ '': '导出与打印', print: '打印到打印机', pdf: '保存为 PDF', docx: '下载 Word DOCX', png: '导出高清 PNG', jpeg: '导出高清 JPEG', svg: '导出 SVG' })
+    menu.setAttribute('aria-label', '导出与打印')
+    const status = el('span', '', 'muted')
+    status.setAttribute('role', 'status')
+    menu.onchange = async () => {
+      const format = menu.value
+      if (!format) return
+      menu.disabled = true
+      status.textContent = '正在准备文档…'
+      try {
+        const { exportNote } = await import('./vault-export.js?v=6')
+        await exportNote({ format, title: record.title, font: record.font, html: await editableDocument(record),
+          files: (record.attachments || []).map(ref => ({ ref })), mediaOptions: mediaOptions?.(), alive: () => visible && actions.isConnected })
+        status.textContent = ['print', 'pdf'].includes(format) ? '请在浏览器打印窗口选择输出位置。' : '文档已生成。'
+      } catch (error) { status.textContent = error.message || '导出失败，请重试。' }
+      finally { menu.disabled = false; menu.value = '' }
+    }
+    actions.append(menu, status)
+    return actions
   }
 
-  function paperLink (title, id) {
+  function viewLink (title, kind, id, reset = false) {
+    const url = new URL(location.href)
+    for (const key of ['kind', 'record', 'paper']) url.searchParams.delete(key)
+    if (Object.hasOwn(kinds, kind)) url.searchParams.set('kind', kind)
+    if (id) url.searchParams.set(kind === 'paper' ? 'paper' : 'record', id)
     const link = el('a', title)
-    link.href = routePaper(id).href
+    link.href = url.href
     link.addEventListener('click', event => {
-      if (event.metaKey || event.ctrlKey || event.shiftKey || event.altKey) return
+      if (event.button !== 0 || event.metaKey || event.ctrlKey || event.shiftKey || event.altKey) return
       event.preventDefault()
-      history.pushState(null, '', link.href)
+      if (reset) {
+        range.value = category.value = 'all'
+        search.value = ''
+        limit = 18
+      }
+      if (location.href !== link.href) history.pushState(null, '', link.href)
       render()
       root.scrollIntoView({ block: 'start' })
     })
@@ -165,7 +205,7 @@ export function createLibrary (root, { controls, mediaOptions, editPaper } = {})
       const row = el('tr')
       const paper = paperDetails(record)
       const title = el('td')
-      const link = paperLink(record.title, record.id)
+      const link = viewLink(record.title, 'paper', record.id)
       link.title = record.title
       title.append(link)
       const journal = el('td', paper.journal)
@@ -177,8 +217,9 @@ export function createLibrary (root, { controls, mediaOptions, editPaper } = {})
       const indexing = el('td', paper.indexing)
       indexing.title = paper.indexing
       row.append(title, journal, stage, indexing)
-      const pdf = el('td', paper.published ? '待上传' : '—')
-      if (paper.published && record.pdf) pdf.replaceChildren(mediaControl(record.pdf, 'file', undefined, '下载 PDF'))
+      const pdf = el('td', '—')
+      if (record.pdf) pdf.replaceChildren(mediaControl(record.pdf, 'file', undefined, '下载 PDF'))
+      else if (uploadPdf) pdf.replaceChildren(button('上传 PDF', () => uploadPdf(record)))
       row.append(pdf)
       table.tBodies[0].append(row)
     }
@@ -189,51 +230,91 @@ export function createLibrary (root, { controls, mediaOptions, editPaper } = {})
 
   function paperPage (record) {
     const article = el('article', '', 'vault-paper-detail entry')
-    article.append(paperLink('← 返回资料库', null), el('h3', record.title))
+    article.append(viewLink('← 返回资料库', 'paper'), el('h3', record.title))
     const paper = paperDetails(record)
     article.append(el('p', [paper.journal, paper.submitted || '未填投稿日期', paperStages[paper.stage], paper.indexing].join(' · '), 'entry-meta'))
-    if (paper.published && record.pdf) article.append(mediaControl(record.pdf, 'file'))
+    const pdfActions = el('div', '', 'actions')
+    if (record.pdf) pdfActions.append(mediaControl(record.pdf, 'file'))
+    if (uploadPdf) pdfActions.append(button(record.pdf ? '更换 PDF' : '上传 PDF', () => uploadPdf(record)))
+    article.append(pdfActions)
     if (controls) article.append(controls(record))
     article.append(el('h4', '论文笔记'), record.note || record.attachments?.length ? notes(record) : el('p', '尚未填写笔记。', 'muted'))
     if (editPaper) article.append(button('编辑论文笔记', () => editPaper(record)))
     return article
   }
 
-  function openJournal (record) {
-    const dialog = el('dialog', '', 'vault-dialog vault-reader-dialog')
-    dialog.setAttribute('aria-label', record.title)
-    const header = el('header', '', 'vault-dialog-head')
-    header.append(el('h2', record.title), button('关闭', () => dialog.close()))
-    const documentView = el('div', '', 'vault-reading-page')
-    documentView.append(el('p', [record.date, record.category].filter(Boolean).join(' · '), 'entry-meta'), notes(record))
-    dialog.append(header, documentView)
-    document.body.append(dialog)
-    reader = dialog
-    dialog.addEventListener('close', () => {
-      for (const [box, url] of urls) {
-        if (dialog.contains(box)) { URL.revokeObjectURL(url); urls.delete(box) }
+  function detailPage (record) {
+    const photo = record.kind === 'photo'
+    const article = el('article', '', 'vault-record-detail vault-reading-page')
+    article.append(viewLink(`← 返回${kinds[record.kind]}`, record.kind), el('h3', record.title),
+      el('p', [record.date, record.category].filter(Boolean).join(' · '), 'entry-meta'))
+    if (!photo) article.append(notes(record))
+    else {
+      if (record.note) article.append(el('p', record.note, 'vault-album-caption'))
+      const grid = el('div', '', 'vault-photo-album')
+      const mainImage = coverPhoto(record)
+      attachPhotoPreview(mainImage)
+      grid.append(mainImage)
+      for (const file of record.attachments || []) {
+        if (isPhoto(file)) grid.append(mediaControl(file, 'image'))
+        else article.append(mediaControl(file, mediaKind(file)))
       }
-      dialog.remove()
-      if (reader === dialog) reader = undefined
-    }, { once: true })
-    dialog.showModal()
+      article.append(grid)
+    }
+    if (controls) article.append(controls(record))
+    return article
+  }
+
+  function coverPhoto (record) {
+    const img = el('img')
+    img.alt = record.title
+    img.loading = 'lazy'
+    img.decoding = 'async'
+    img.src = 'data:image/webp;base64,' + record.photo
+    return img
+  }
+
+  function attachPhotoPreview (image) {
+    image.tabIndex = 0
+    image.setAttribute('role', 'button')
+    image.setAttribute('aria-label', '放大图片：' + image.alt)
+    const open = () => {
+      const dialog = el('dialog', '', 'vault-dialog vault-image-viewer')
+      dialog.setAttribute('aria-label', '图片预览')
+      const preview = el('img')
+      preview.src = image.src
+      preview.alt = image.alt
+      dialog.append(button('关闭', () => dialog.close()), preview)
+      document.body.append(dialog)
+      reader = dialog
+      dialog.addEventListener('close', () => {
+        dialog.remove()
+        if (reader === dialog) reader = undefined
+      }, { once: true })
+      dialog.showModal()
+    }
+    image.onclick = open
+    image.onkeydown = event => {
+      if (['Enter', ' '].includes(event.key)) { event.preventDefault(); open() }
+    }
   }
 
   function card (record) {
     const article = el('article', '', 'entry vault-card')
     article.dataset.kind = record.kind
-    article.append(el('h3', record.title), el('p', [record.date, kinds[record.kind], record.category].filter(Boolean).join(' · '), 'entry-meta'))
+    const title = el('h3')
+    title.append(viewLink(record.title, record.kind, record.id))
+    article.append(title, el('p', [record.date, kinds[record.kind], record.category].filter(Boolean).join(' · '), 'entry-meta'))
     if (record.kind === 'photo') {
       const photo = el('figure', '', 'vault-photo')
-      const img = el('img')
-      img.alt = record.title
-      img.loading = 'lazy'
-      img.decoding = 'async'
-      img.src = 'data:image/webp;base64,' + record.photo
-      photo.append(img)
+      const imageLink = viewLink('', 'photo', record.id)
+      imageLink.append(coverPhoto(record))
+      photo.append(imageLink)
       if (record.note) photo.append(el('figcaption', record.note))
       article.append(photo)
-      for (const file of record.attachments || []) article.append(mediaControl(file, 'file'))
+      for (const file of record.attachments || []) {
+        if (!isPhoto(file)) article.append(mediaControl(file, 'file'))
+      }
     } else if (record.kind === 'video') {
       article.append(mediaControl(record.video, 'video'))
       if (record.note) article.append(el('p', record.note, 'entry-text'))
@@ -244,7 +325,7 @@ export function createLibrary (root, { controls, mediaOptions, editPaper } = {})
         const text = record.format === 'visual' ? preview.content.textContent : record.note.replace(/^[#>*+-]+\s*/gm, '')
         if (text.trim()) article.append(el('p', text.trim().slice(0, 220), 'vault-journal-excerpt'))
       }
-      article.append(button('打开日记正文', () => openJournal(record)))
+      article.append(viewLink('打开日记正文', 'journal', record.id))
     }
     if (controls) article.append(controls(record))
     return article
@@ -252,20 +333,32 @@ export function createLibrary (root, { controls, mediaOptions, editPaper } = {})
 
   function render () {
     clearMedia()
-    const selectedPaper = new URL(location.href).searchParams.get('paper')
-    const detail = records.find(record => record.kind === 'paper' && record.id === selectedPaper)
+    const params = new URL(location.href).searchParams
+    const selectedKind = params.get('kind')
+    const selectedPaper = params.get('paper')
+    const selectedRecord = params.get('record')
+    const detail = records.find(record => (record.kind === 'paper' && record.id === selectedPaper) ||
+      (['photo', 'journal'].includes(record.kind) && record.kind === selectedKind && record.id === selectedRecord))
     filters.hidden = stats.hidden = Boolean(detail) || !visible
+    tabs.hidden = !visible
     date.disabled = range.value === 'all'
     listing.replaceChildren()
     if (!visible) { stats.replaceChildren(); return }
-    if (detail) { listing.append(paperPage(detail)); return }
+    const activeKind = detail?.kind || selectedKind
+    tabs.replaceChildren(...Object.entries({ all: '全部', photo: '照片', video: '视频', paper: '论文', journal: '日记' }).map(([kind, label]) => {
+      const count = kind === 'all' ? records.length : records.filter(record => record.kind === kind).length
+      const link = viewLink(`${label} ${count}`, kind, null, true)
+      if (kind === (activeKind || 'all')) link.setAttribute('aria-current', 'page')
+      return link
+    }))
+    if (detail) { listing.append(detail.kind === 'paper' ? paperPage(detail) : detailPage(detail)); return }
     const scope = range.value === 'all' ? null : period(validDay(date.value) ? date.value : localDay(), range.value)
     const keyword = search.value.trim().toLocaleLowerCase()
     const filtered = records.filter(record => (!scope || (record.date >= scope.start && record.date <= scope.end)) &&
       (category.value === 'all' || (record.category || '') === category.value.slice(1)) &&
-      (type.value === 'all' || record.kind === type.value) &&
+      (!Object.hasOwn(kinds, selectedKind) || record.kind === selectedKind) &&
       (!keyword || [record.title, record.note, record.journal].some(text => typeof text === 'string' && text.toLocaleLowerCase().includes(keyword))))
-      .sort((a, b) => b.date.localeCompare(a.date))
+      .sort((a, b) => Number(b.id === selectedRecord) - Number(a.id === selectedRecord) || b.date.localeCompare(a.date))
     stats.replaceChildren(el('p', (scope?.label || '全部日期') + ' · ' + filtered.length + ' 条记录', 'muted'))
     for (const [key, label] of Object.entries(kinds)) {
       stats.append(el('span', label + ' ' + filtered.filter(record => record.kind === key).length))
@@ -303,7 +396,7 @@ export function createLibrary (root, { controls, mediaOptions, editPaper } = {})
       visible = false
       records = []
       category.replaceChildren(new Option('全部分类', 'all'))
-      type.value = range.value = 'all'
+      range.value = 'all'
       date.value = localDay()
       search.value = ''
       limit = 18

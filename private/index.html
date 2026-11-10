@@ -5,11 +5,11 @@
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <meta name="robots" content="noindex, nofollow">
   <meta name="referrer" content="no-referrer">
-  <meta http-equiv="Content-Security-Policy" content="default-src 'none'; script-src 'self'; style-src 'self'; img-src 'self' data: blob:; media-src blob:; connect-src 'self' https://treehouse-vault.vault-cloud.workers.dev; form-action 'none'; base-uri 'none'">
+  <meta http-equiv="Content-Security-Policy" content="default-src 'none'; script-src 'self'; style-src 'self'; style-src-attr 'unsafe-inline'; img-src 'self' data: blob:; media-src blob:; connect-src 'self' data: blob: https://treehouse-vault.vault-cloud.workers.dev; form-action 'none'; base-uri 'none'">
   <title>私密空间 · Zaydenの树屋</title>
   <link rel="icon" href="../img/favicon.png">
-  <link rel="stylesheet" href="../assets/personal/personal.css?v=5">
-  <script type="module" src="../assets/personal/vault-editor.js?v=5"></script>
+  <link rel="stylesheet" href="../assets/personal/personal.css?v=6">
+  <script type="module" src="../assets/personal/vault-editor.js?v=6"></script>
 </head>
 <body>
   <main class="shell vault-shell">
@@ -91,8 +91,8 @@
               <label for="paper-indexing">检索（可选）</label>
               <input id="paper-indexing" name="paperIndexing" list="paper-index-options" maxlength="80" placeholder="例如 SCI、EI、Scopus">
               <datalist id="paper-index-options"><option value="SCI / SCIE"><option value="SSCI"><option value="EI"><option value="Scopus"><option value="CSCD"><option value="CSSCI"><option value="北大核心"><option value="暂未检索"></datalist>
-              <div id="paper-pdf-fields" hidden>
-                <label for="paper-pdf">已见刊 PDF（可稍后上传）</label>
+              <div id="paper-pdf-fields">
+                <label for="paper-pdf">论文 PDF（可稍后上传）</label>
                 <input id="paper-pdf" name="paperPdf" type="file" accept="application/pdf,.pdf">
                 <p class="muted" id="paper-pdf-name"></p>
                 <button id="remove-paper-pdf" type="button" class="secondary compact" hidden>移除现有 PDF</button>

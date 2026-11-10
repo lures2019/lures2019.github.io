@@ -1,4 +1,5 @@
 import { el } from './vault-crypto.js'
+import { copyFormatting, fonts, outline, setFont } from './vault-layout.js'
 
 const assets = new Map()
 let parser
@@ -61,7 +62,7 @@ async function markdown () {
   return md
 }
 
-const allowedTags = new Set('p div br h1 h2 h3 h4 h5 h6 strong b em i u s strike ul ol li a blockquote pre code table thead tbody tfoot tr th td span hr'.split(' '))
+const allowedTags = new Set('p div br h1 h2 h3 h4 h5 h6 strong b em i u s strike del mark font ul ol li a blockquote pre code table thead tbody tfoot tr th td span hr'.split(' '))
 const blockedTags = new Set(['script', 'style', 'iframe', 'object', 'svg', 'math', 'template'])
 
 export function safeLink (value) {
@@ -79,10 +80,11 @@ export function cleanDocument (html) {
   function copy (from, to, depth = 0) {
     if (depth > 40) return
     for (const child of from.childNodes) {
-      if (child.nodeType === Node.TEXT_NODE) { to.append(child.textContent); continue }
-      if (child.nodeType !== Node.ELEMENT_NODE || blockedTags.has(child.localName)) continue
+      if (child.nodeType === Node.TEXT_NODE) { to.append(child.textContent.replaceAll('\u200b', '')); continue }
+      if (child.nodeType !== Node.ELEMENT_NODE || child.namespaceURI !== 'http://www.w3.org/1999/xhtml' || blockedTags.has(child.localName)) continue
       if (!allowedTags.has(child.localName)) { copy(child, to, depth + 1); continue }
-      const next = el(child.localName)
+      const next = el(child.localName === 'font' ? 'span' : child.localName)
+      copyFormatting(child, next)
       if (next.localName === 'a') {
         const href = safeLink(child.getAttribute('href'))
         if (href) {
@@ -95,10 +97,11 @@ export function cleanDocument (html) {
         next.className = 'vault-math'
         next.dataset.math = child.dataset.math
         next.dataset.display = String(child.dataset.display === 'true')
+        if (child.dataset.display === 'true' && child.dataset.number) next.dataset.number = child.dataset.number.slice(0, 32)
         next.textContent = child.dataset.math
       } else if (/^[a-f0-9-]{36}$/.test(child.dataset?.inlineMedia)) {
         next.dataset.inlineMedia = child.dataset.inlineMedia
-        next.textContent = (child.dataset.alt || child.textContent || '图片').slice(0, 200)
+        next.textContent = (child.dataset.alt || child.textContent || '附件').slice(0, 200)
       } else copy(child, next, depth + 1)
       to.append(next)
     }
@@ -122,22 +125,28 @@ export async function renderEquations (root) {
   if (!equations.length) return
   await script('katex')
   for (const equation of equations) {
-    window.katex.render(equation.dataset.math, equation, {
+    const expression = el('span', '', 'vault-math-expression')
+    window.katex.render(equation.dataset.math, expression, {
       output: 'mathml', displayMode: equation.dataset.display === 'true', throwOnError: false, trust: false, maxExpand: 100
     })
+    equation.replaceChildren(expression)
+    if (equation.dataset.display === 'true' && equation.dataset.number) {
+      equation.append(el('span', '(' + equation.dataset.number + ')', 'vault-math-number'))
+    }
   }
 }
 
-export function richBody (record, inlineMedia) {
+export function richBody (record, inlineMedia, navigation) {
   const body = el('div', record.format === 'visual' ? '' : record.note, 'vault-rich-text')
-  if (['serif', 'mono'].includes(record.font)) body.dataset.font = record.font
+  if (Object.hasOwn(fonts, record.font)) setFont(body, record.font)
   if (!['rich', 'visual'].includes(record.format) || !record.note) return body
   void (async () => {
     body.innerHTML = await editableDocument(record)
     for (const node of body.querySelectorAll('[data-inline-media]')) {
-      const file = record.attachments?.find(item => item.id === node.dataset.inlineMedia && /^image\/(png|jpeg|gif|webp)$/.test(item.type))
-      if (file) node.replaceWith(inlineMedia(file, node.textContent))
+      const file = record.attachments?.find(item => item.id === node.dataset.inlineMedia)
+      if (file) node.replaceChildren(inlineMedia(file, node.textContent))
     }
+    if (navigation && body.querySelector('h1,h2,h3,h4,h5,h6')) { outline(body, navigation); navigation.hidden = false }
     await renderEquations(body)
   })().catch(() => { /* The source text remains readable if a vendor asset is unavailable. */ })
   return body
