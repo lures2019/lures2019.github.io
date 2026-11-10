@@ -1,7 +1,7 @@
 import { el } from './vault-crypto.js'
 import { draftMedia, openMedia } from './vault-media.js'
-import { cleanDocument, editableDocument, renderEquations, safeLink } from './vault-rich.js?v=6'
-import { alignments, bounded, fonts, listStyles, outline, setFont } from './vault-layout.js'
+import { cleanDocument, editableDocument, renderEquations, safeLink } from './vault-rich.js?v=7'
+import { alignments, bounded, fonts, imageLimits, listStyles, outline, setFont, setImageSize, sizeLimits, updateWordCount } from './vault-layout.js?v=7'
 
 const isImage = item => /^image\/(png|jpeg|webp|gif)$/.test(item.ref.type)
 const isVideo = item => /^video\/(mp4|webm)$/.test(item.ref.type)
@@ -17,6 +17,7 @@ export function openWriter ({ record, attachments, initialImage, onApply }) {
   dialog.setAttribute('aria-label', '写作窗口')
   const tools = el('div', '', 'vault-writer-tools')
   const header = el('header', '', 'vault-dialog-head')
+  const wordCount = el('span', '正文 0 字', 'vault-word-count')
   const toolbar = el('div', '', 'vault-ribbon')
   const canvas = el('div', '', 'vault-writing-canvas')
   const navigation = el('nav', '', 'vault-outline')
@@ -36,6 +37,11 @@ export function openWriter ({ record, attachments, initialImage, onApply }) {
   let files = attachments.slice()
   let activeMedia
 
+  function refreshWriting () {
+    outline(page, navigation)
+    updateWordCount(page, wordCount)
+  }
+
   function button (label, action, primary = false) {
     const control = el('button', label, primary ? '' : 'secondary compact')
     control.type = 'button'
@@ -50,7 +56,7 @@ export function openWriter ({ record, attachments, initialImage, onApply }) {
     document.execCommand(name, false, value)
     dirty = true
     rememberSelection()
-    outline(page, navigation)
+    refreshWriting()
   }
 
   function restoreSelection () {
@@ -91,14 +97,21 @@ export function openWriter ({ record, attachments, initialImage, onApply }) {
     if (!active.rangeCount) return
     const range = active.getRangeAt(0)
     const span = el('span')
-    apply(span)
     if (range.collapsed) span.textContent = '\u200b'
     else span.append(range.extractContents())
+    apply(span)
     range.insertNode(span)
     active.selectAllChildren(span)
     if (span.textContent === '\u200b') active.collapseToEnd()
     dirty = true
     rememberSelection()
+  }
+
+  function fontSize (size) {
+    inlineFormat(span => {
+      for (const child of span.querySelectorAll('[style]')) child.style.removeProperty('font-size')
+      span.style.fontSize = `${size}pt`
+    })
   }
 
   function paragraphFormat (apply) {
@@ -136,8 +149,8 @@ export function openWriter ({ record, attachments, initialImage, onApply }) {
     chip?.classList.add('vault-media-selected')
   }
 
-  function resizeMedia (chip, width) {
-    chip.style.width = `${Math.round(bounded(width, 48, 1600, 320))}px`
+  function resizeMedia (chip, width, height) {
+    setImageSize(chip, width, height)
     dirty = true
   }
 
@@ -170,10 +183,11 @@ export function openWriter ({ record, attachments, initialImage, onApply }) {
         handle.addEventListener('pointerdown', event => {
           event.preventDefault()
           selectMedia(chip)
-          const start = event.clientX
-          const width = chip.getBoundingClientRect().width
+          const { width, height } = image.getBoundingClientRect()
+          if (!width || !height) return
+          const { clientX, clientY } = event
           handle.setPointerCapture(event.pointerId)
-          handle.onpointermove = move => resizeMedia(chip, width + move.clientX - start)
+          handle.onpointermove = move => resizeMedia(chip, width + move.clientX - clientX, height + move.clientY - clientY)
           handle.onlostpointercapture = () => { handle.onpointermove = null }
         })
         chip.replaceChildren(image, handle)
@@ -264,7 +278,8 @@ export function openWriter ({ record, attachments, initialImage, onApply }) {
   }
 
   for (const [label, name, value] of [
-    ['撤销', 'undo'], ['重做', 'redo'], ['加粗', 'bold'], ['斜体', 'italic'], ['下划线', 'underline'], ['删除线', 'strikeThrough']
+    ['撤销', 'undo'], ['重做', 'redo'], ['加粗', 'bold'], ['斜体', 'italic'], ['下划线', 'underline'], ['删除线', 'strikeThrough'],
+    ['上标', 'superscript'], ['下标', 'subscript']
   ]) toolbar.append(button(label, () => command(name, value)))
   const sizes = Object.fromEntries([8, 9, 10, 10.5, 11, 12, 14, 16, 18, 20, 22, 24, 28, 32, 36, 48, 60, 72].map(size => [size, `${size} pt`]))
   const textColor = el('input')
@@ -278,7 +293,11 @@ export function openWriter ({ record, attachments, initialImage, onApply }) {
   }
   toolbar.append(selectControl('标题级别', { p: '正文', h1: '标题 1', h2: '标题 2', h3: '标题 3', h4: '标题 4', h5: '标题 5', h6: '标题 6' }, value => command('formatBlock', value)),
     font, selectControl('选中文字字体', Object.fromEntries(Object.entries(fonts).map(([key, [label]]) => [key, label])), key => inlineFormat(span => setFont(span, key))),
-    selectControl('字号', sizes, size => inlineFormat(span => { span.style.fontSize = `${size}pt` })),
+    selectControl('字号', sizes, fontSize),
+    button('自定义字号', () => {
+      customSize.hidden = !customSize.hidden
+      if (!customSize.hidden) customSize.querySelector('input').select()
+    }),
     textColor, selectControl('高亮颜色', highlightColors, color => inlineFormat(span => { span.style.backgroundColor = color })), highlight,
     selectControl('段落对齐', alignments, value => paragraphFormat(block => { block.style.textAlign = value })),
     selectControl('项目符号', Object.fromEntries(Object.entries(listStyles).slice(0, 3)), style => list('ul', style)),
@@ -310,6 +329,7 @@ export function openWriter ({ record, attachments, initialImage, onApply }) {
     }
     return form
   }
+  const customSize = numbersForm('vault-writing-prompt', [['字号（pt）', 12, sizeLimits.min, sizeLimits.max, .01]], '应用字号', ([size]) => fontSize(size))
   const spacing = numbersForm('vault-writing-prompt', [['段前（pt）', 0, 0, 72, 1], ['段后（pt）', 8, 0, 72, 1], ['首行缩进（字符）', 2, 0, 8, .5]], '应用段距与缩进', ([before, after, indent]) => {
     paragraphFormat(block => {
       block.style.marginTop = `${before}pt`
@@ -322,8 +342,11 @@ export function openWriter ({ record, attachments, initialImage, onApply }) {
     const row = '<tr>' + '<td>内容</td>'.repeat(columns) + '</tr>'
     command('insertHTML', '<table>' + header + '<tbody>' + row.repeat(rows - 1) + '</tbody></table><p><br></p>')
   })
-  const imageWidth = numbersForm('vault-writing-prompt', [['图片宽度（px）', 320, 48, 1600, 1]], '应用图片宽度', ([width]) => {
-    if (activeMedia?.isConnected) resizeMedia(activeMedia, width)
+  const imageSize = numbersForm('vault-writing-prompt', [
+    ['图片宽度（px）', 320, imageLimits.min, imageLimits.width, 1],
+    ['图片高度（px）', 240, imageLimits.min, imageLimits.height, 1]
+  ], '应用图片尺寸', ([width, height]) => {
+    if (activeMedia?.isConnected) resizeMedia(activeMedia, width, height)
   })
   function imageSelected (action) {
     if (activeMedia?.isConnected && activeMedia.querySelector('img')) action()
@@ -333,7 +356,16 @@ export function openWriter ({ record, attachments, initialImage, onApply }) {
     selectControl('图片对齐', { left: '图片左对齐', center: '图片居中', right: '图片右对齐' }, value => imageSelected(() => {
       activeMedia.dataset.align = value
       dirty = true
-    })), button('图片尺寸', () => imageSelected(() => { imageWidth.hidden = !imageWidth.hidden })), button('链接', () => ask('链接地址', 'https://', value => {
+    })), button('图片尺寸', () => imageSelected(() => {
+      imageSize.hidden = !imageSize.hidden
+      if (imageSize.hidden) return
+      const image = activeMedia.querySelector('img')
+      const [width, height] = imageSize.querySelectorAll('input')
+      width.value = bounded(Math.round(parseFloat(activeMedia.style.width) || image.width), imageLimits.min, imageLimits.width, 320)
+      height.value = bounded(Number(activeMedia.dataset.height) ||
+        Math.round(width.valueAsNumber * image.naturalHeight / image.naturalWidth || image.height), imageLimits.min, imageLimits.height, 240)
+      width.focus()
+    })), button('链接', () => ask('链接地址', 'https://', value => {
     const href = safeLink(value)
     if (!href) { notice.textContent = '请输入有效的链接地址。'; return false }
     if (selection?.toString()) command('createLink', href)
@@ -361,7 +393,7 @@ export function openWriter ({ record, attachments, initialImage, onApply }) {
     exportControl.disabled = true
     notice.textContent = '正在准备文档…'
     try {
-      const { exportNote } = await import('./vault-export.js?v=6')
+      const { exportNote } = await import('./vault-export.js?v=7')
       await exportNote({ format, title: record.title, font: font.value, html: cleanDocument(page.innerHTML), files, mediaOptions: { owner: true }, alive: () => dialog.open })
       notice.textContent = ['print', 'pdf'].includes(format) ? '可在浏览器打印窗口选择打印机或「另存为 PDF」。' : '文档已生成。'
     } catch (error) { notice.textContent = error.message || '导出失败，请重试。' }
@@ -371,7 +403,7 @@ export function openWriter ({ record, attachments, initialImage, onApply }) {
   function close () {
     if (!dirty || confirm('关闭写作窗口并放弃本次修改？')) dialog.close()
   }
-  header.append(el('h2', record.kind === 'paper' ? '论文笔记' : '日记正文'), exportControl,
+  header.append(el('h2', record.kind === 'paper' ? '论文笔记' : '日记正文'), wordCount, exportControl,
     button('关闭', close), button('应用到记录', () => {
       if (!ready) return
       const html = cleanDocument(page.innerHTML)
@@ -386,7 +418,7 @@ export function openWriter ({ record, attachments, initialImage, onApply }) {
     dialog.remove()
   }, { once: true })
   document.addEventListener('selectionchange', rememberSelection)
-  page.addEventListener('input', () => { dirty = true; rememberSelection(); outline(page, navigation) })
+  page.addEventListener('input', () => { dirty = true; rememberSelection(); refreshWriting() })
   page.addEventListener('click', event => {
     const chip = event.target.closest('[data-math]')
     if (chip) formula(chip, chip.dataset.display === 'true')
@@ -399,7 +431,7 @@ export function openWriter ({ record, attachments, initialImage, onApply }) {
   })
   page.addEventListener('drop', event => event.preventDefault())
   canvas.append(navigation, page)
-  tools.append(header, toolbar, prompt, spacing, tableSettings, imageWidth, notice)
+  tools.append(header, toolbar, prompt, customSize, spacing, tableSettings, imageSize, notice)
   dialog.append(tools, canvas, fileList)
   document.body.append(dialog)
   dialog.showModal()
@@ -412,7 +444,7 @@ export function openWriter ({ record, attachments, initialImage, onApply }) {
     if (initialImage) insertImage(initialImage)
     decorateImages()
     fileNames()
-    outline(page, navigation)
+    refreshWriting()
     return renderEquations(page)
   }).catch(() => { notice.textContent = '部分公式暂时无法排版，可点击公式编辑。' })
   return dialog

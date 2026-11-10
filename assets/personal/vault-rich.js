@@ -1,5 +1,5 @@
 import { el } from './vault-crypto.js'
-import { copyFormatting, fonts, outline, setFont } from './vault-layout.js'
+import { copyFormatting, fonts, outline, setFont, updateWordCount } from './vault-layout.js?v=7'
 
 const assets = new Map()
 let parser
@@ -62,7 +62,7 @@ async function markdown () {
   return md
 }
 
-const allowedTags = new Set('p div br h1 h2 h3 h4 h5 h6 strong b em i u s strike del mark font ul ol li a blockquote pre code table thead tbody tfoot tr th td span hr'.split(' '))
+const allowedTags = new Set('p div br h1 h2 h3 h4 h5 h6 strong b em i u s strike del mark font sup sub ul ol li a blockquote pre code table thead tbody tfoot tr th td span hr'.split(' '))
 const blockedTags = new Set(['script', 'style', 'iframe', 'object', 'svg', 'math', 'template'])
 
 export function safeLink (value) {
@@ -136,12 +136,16 @@ export async function renderEquations (root) {
   }
 }
 
-export function richBody (record, inlineMedia, navigation) {
+export function richBody (record, inlineMedia, navigation, count) {
   const body = el('div', record.format === 'visual' ? '' : record.note, 'vault-rich-text')
   if (Object.hasOwn(fonts, record.font)) setFont(body, record.font)
-  if (!['rich', 'visual'].includes(record.format) || !record.note) return body
+  if (!['rich', 'visual'].includes(record.format) || !record.note) {
+    if (count) updateWordCount(body, count)
+    return body
+  }
   void (async () => {
     body.innerHTML = await editableDocument(record)
+    if (count) updateWordCount(body, count)
     for (const node of body.querySelectorAll('[data-inline-media]')) {
       const file = record.attachments?.find(item => item.id === node.dataset.inlineMedia)
       if (file) node.replaceChildren(inlineMedia(file, node.textContent))

@@ -1,6 +1,6 @@
 import { download, el } from './vault-crypto.js'
 import { openMedia } from './vault-media.js'
-import { editableDocument, richBody } from './vault-rich.js?v=6'
+import { editableDocument, richBody } from './vault-rich.js?v=7'
 import { localDay, period, validDay } from './todo-model.js'
 
 const kinds = { photo: '照片', journal: '日记', paper: '论文', video: '视频' }
@@ -133,7 +133,10 @@ export function createLibrary (root, { controls, mediaOptions, editPaper, upload
       source.innerHTML = record.note
       for (const marker of source.content.querySelectorAll('[data-inline-media]')) inlineIds.add(marker.dataset.inlineMedia)
     } else for (const match of record.note.matchAll(/attachment:([a-f0-9-]{36})/g)) inlineIds.add(match[1])
-    box.append(noteExports(record), navigation, richBody(record, (file, alt) => mediaControl(file, mediaKind(file), alt), navigation))
+    const count = ['journal', 'paper'].includes(record.kind) ? el('span', '', 'vault-word-count') : null
+    const actions = noteExports(record)
+    if (count) actions.append(count)
+    box.append(actions, navigation, richBody(record, (file, alt) => mediaControl(file, mediaKind(file), alt), navigation, count))
     for (const file of record.attachments || []) {
       if (!inlineIds.has(file.id)) box.append(mediaControl(file, mediaKind(file)))
     }
@@ -152,7 +155,7 @@ export function createLibrary (root, { controls, mediaOptions, editPaper, upload
       menu.disabled = true
       status.textContent = '正在准备文档…'
       try {
-        const { exportNote } = await import('./vault-export.js?v=6')
+        const { exportNote } = await import('./vault-export.js?v=7')
         await exportNote({ format, title: record.title, font: record.font, html: await editableDocument(record),
           files: (record.attachments || []).map(ref => ({ ref })), mediaOptions: mediaOptions?.(), alive: () => visible && actions.isConnected })
         status.textContent = ['print', 'pdf'].includes(format) ? '请在浏览器打印窗口选择输出位置。' : '文档已生成。'
@@ -238,7 +241,9 @@ export function createLibrary (root, { controls, mediaOptions, editPaper, upload
     if (uploadPdf) pdfActions.append(button(record.pdf ? '更换 PDF' : '上传 PDF', () => uploadPdf(record)))
     article.append(pdfActions)
     if (controls) article.append(controls(record))
-    article.append(el('h4', '论文笔记'), record.note || record.attachments?.length ? notes(record) : el('p', '尚未填写笔记。', 'muted'))
+    article.append(el('h4', '论文笔记'))
+    if (record.note || record.attachments?.length) article.append(notes(record))
+    else article.append(el('span', '正文 0 字', 'vault-word-count'), el('p', '尚未填写笔记。', 'muted'))
     if (editPaper) article.append(button('编辑论文笔记', () => editPaper(record)))
     return article
   }

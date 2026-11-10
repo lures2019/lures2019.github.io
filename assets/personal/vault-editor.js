@@ -1,8 +1,8 @@
 import { base64, deriveKey, download, el, localDay, randomBytes, seal, unseal } from './vault-crypto.js'
-import { createLibrary, paperDetails, paperStages } from './vault-library.js?v=6'
+import { createLibrary, paperDetails, paperStages } from './vault-library.js?v=7'
 import { cacheImportedMedia, draftMedia, makeBundle, openBundle, syncImportedMedia, uploadMedia } from './vault-media.js'
 import { recordMedia } from './vault-media-model.js'
-import { openWriter } from './vault-writing.js?v=6'
+import { openWriter } from './vault-writing.js?v=7'
 import {
   closeCloudShare, cloudConfigured, cloudConnected, connectCloud, disconnectCloud, emptyRevision, listCloudShares,
   loadCloudArchive, publishCloudShare, remoteRevision, resumeCloud, uploadCloudArchive

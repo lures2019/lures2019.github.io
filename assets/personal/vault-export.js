@@ -1,7 +1,7 @@
 import { download, el } from './vault-crypto.js'
 import { openMedia } from './vault-media.js'
-import { renderEquations } from './vault-rich.js?v=6'
-import { setFont } from './vault-layout.js'
+import { renderEquations } from './vault-rich.js?v=7'
+import { setFont } from './vault-layout.js?v=7'
 
 const libraries = new Map()
 let printCleanup
@@ -70,8 +70,11 @@ async function sheetFor ({ title, font, html, files, format, mediaOptions, alive
     image.alt = name
     image.src = await dataUrl(format === 'docx' ? await wordImage(blob) : blob)
     await image.decode()
-    image.width = Math.min(680, parseFloat(node.style.width) || image.naturalWidth)
-    image.height = Math.round(image.width * image.naturalHeight / image.naturalWidth)
+    const width = parseFloat(node.style.width) || image.naturalWidth
+    const ratio = node.dataset.height ? Number(node.dataset.height) / width : image.naturalHeight / image.naturalWidth
+    image.width = Math.min(680, width)
+    image.height = Math.round(image.width * ratio)
+    node.style.width = `${image.width}px`
     node.style.textAlign = node.dataset.align || 'center'
     node.replaceChildren(image)
   }

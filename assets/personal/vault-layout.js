@@ -27,6 +27,18 @@ export function bounded (value, min, max, fallback) {
   return String(value).trim() && Number.isFinite(number) ? Math.min(max, Math.max(min, number)) : fallback
 }
 
+export const imageLimits = { min: 48, width: 1600, height: 2400 }
+export const sizeLimits = { min: 6, max: 96 }
+
+export function setImageSize (node, width, height) {
+  const pixelWidth = Math.round(bounded(width, imageLimits.min, imageLimits.width, 320))
+  node.style.width = `${pixelWidth}px`
+  if (height === undefined) return
+  const pixelHeight = Math.round(bounded(height, imageLimits.min, imageLimits.height, pixelWidth))
+  node.dataset.height = pixelHeight
+  node.style.aspectRatio = `${pixelWidth} / ${pixelHeight}`
+}
+
 function dimension (value, unit, min, max) {
   const match = /^(-?\d+(?:\.\d+)?)(pt|px|em)$/.exec(value || '')
   if (!match || (match[2] !== unit && !(unit === 'pt' && match[2] === 'px'))) return ''
@@ -52,8 +64,9 @@ export function copyFormatting (from, to) {
   const style = from.style
   const font = from.dataset?.font
   if (Object.hasOwn(fonts, font)) setFont(to, font)
-  const size = dimension(style.fontSize, 'pt', 6, 96)
+  const size = dimension(style.fontSize, 'pt', sizeLimits.min, sizeLimits.max)
   if (size) to.style.fontSize = size
+  if (['super', 'sub'].includes(style.verticalAlign)) to.style.verticalAlign = style.verticalAlign
   const color = colorValue(style.color || from.getAttribute('color') || '')
   const background = colorValue(style.backgroundColor)
   if (color) to.style.color = color
@@ -67,10 +80,28 @@ export function copyFormatting (from, to) {
   if (indent) to.style.textIndent = indent
   if (['ol', 'ul'].includes(to.localName) && Object.hasOwn(listStyles, style.listStyleType)) to.style.listStyleType = style.listStyleType
   if (/^[a-f0-9-]{36}$/.test(from.dataset?.inlineMedia)) {
-    const width = dimension(style.width, 'px', 48, 1600)
-    if (width) to.style.width = width
+    const width = dimension(style.width, 'px', imageLimits.min, imageLimits.width)
+    if (width) setImageSize(to, parseFloat(width), /^\d+$/.test(from.dataset.height) ? Number(from.dataset.height) : undefined)
     if (['left', 'center', 'right'].includes(from.dataset.align)) to.dataset.align = from.dataset.align
   }
+}
+
+export function updateWordCount (page, output) {
+  const parts = []
+  function collect (node) {
+    if (node.nodeType === Node.TEXT_NODE) { parts.push(node.textContent); return }
+    if (node.nodeType !== Node.ELEMENT_NODE) return
+    if (node.matches('[data-inline-media], [data-math]')) { parts.push(' '); return }
+    const block = node.matches('p, div, br, h1, h2, h3, h4, h5, h6, li, blockquote, pre, th, td, hr')
+    if (block) parts.push(' ')
+    for (const child of node.childNodes) collect(child)
+    if (block) parts.push(' ')
+  }
+  collect(page)
+  let count = 0
+  const text = parts.join('').replaceAll('\u200b', '').replace(/\p{Script=Han}/gu, () => { count++; return ' ' })
+  count += (text.match(/[\p{L}\p{M}\p{N}]+(?:['’.-][\p{L}\p{M}\p{N}]+)*/gu) || []).length
+  output.textContent = `正文 ${count} 字`
 }
 
 export function outline (page, panel) {
