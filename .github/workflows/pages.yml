@@ -1,0 +1,47 @@
+name: Deploy blog to GitHub Pages
+
+on:
+  push:
+    branches: [master]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: treehouse-pages
+  cancel-in-progress: false
+
+jobs:
+  package:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v6
+        with:
+          persist-credentials: false
+      - name: Package the generated blog
+        run: |
+          mkdir -p "$RUNNER_TEMP/treehouse-pages"
+          git archive HEAD | tar -xf - -C "$RUNNER_TEMP/treehouse-pages"
+          test -s "$RUNNER_TEMP/treehouse-pages/index.html"
+          test -s "$RUNNER_TEMP/treehouse-pages/private/index.html"
+      - uses: actions/upload-pages-artifact@v4
+        with:
+          path: ${{ runner.temp }}/treehouse-pages
+
+  deploy:
+    needs: package
+    runs-on: ubuntu-latest
+    timeout-minutes: 35
+    permissions:
+      pages: write
+      id-token: write
+    environment:
+      name: github-pages
+      url: ${{ steps.publish.outputs.page_url }}
+    steps:
+      - name: Publish static files
+        id: publish
+        uses: actions/deploy-pages@v5
+        with:
+          timeout: 1800000
