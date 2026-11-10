@@ -1,6 +1,7 @@
 (() => {
   const service = document.currentScript.dataset.service
   const avatarPath = '/assets/community/avatars.svg'
+  const avatarCount = 64
   const commentPath = /^\/(books|movies|music)\/?(?:index\.html)?$/
   const dateFormat = new Intl.DateTimeFormat('zh-CN', { dateStyle: 'medium', timeStyle: 'short', timeZone: 'Asia/Shanghai' })
   const items = new WeakSet()
@@ -8,6 +9,7 @@
   let observer
   let lastPage
   let lastCount
+  let highlighter
 
   function node (tag, text = '', className = '') {
     const element = document.createElement(tag)
@@ -30,7 +32,82 @@
   function avatarIndex (text) {
     let hash = 0
     for (const character of text) hash = (Math.imul(31, hash) + character.codePointAt(0)) >>> 0
-    return hash % 8
+    return hash % avatarCount
+  }
+
+  function deviceLabel (value) {
+    if (/平板|ipad|tablet/i.test(value)) return '平板'
+    if (/手机|iphone|android|mobile|ipod/i.test(value)) return '手机'
+    if (/桌面|windows|linux|macintosh|macos|mac os|ubuntu|cros|chrome os/i.test(value)) return '桌面'
+    return '其他'
+  }
+
+  function prism () {
+    return highlighter ||= new Promise((resolve, reject) => {
+      const asset = document.createElement('script')
+      asset.src = '/assets/community/prism.js?v=1'
+      asset.onload = () => resolve(window.Prism)
+      asset.onerror = () => { highlighter = undefined; asset.remove(); reject(new Error('语法高亮暂时无法加载')) }
+      document.head.append(asset)
+    })
+  }
+
+  function formatCode (pre, code, name = '') {
+    if (pre.dataset.treehouseCode) return
+    pre.dataset.treehouseCode = 'true'
+    const inferred = [...code.classList, ...pre.classList].map(value => value.match(/^lang(?:uage)?-([\w+-]+)$/i)?.[1]).find(Boolean)
+    const language = (name || inferred || '').toLowerCase()
+    const raw = code.textContent
+    const box = node('div', '', 'comment-code')
+    const bar = node('div', '', 'comment-code-bar')
+    const copy = button('复制代码')
+    copy.onclick = async () => {
+      try { await navigator.clipboard.writeText(raw); copy.textContent = '已复制' }
+      catch { copy.textContent = '请选中代码复制' }
+    }
+    bar.append(node('span', language || '纯文本'), copy)
+    pre.before(box)
+    box.append(bar, pre)
+    code.textContent = raw
+    if (language) void prism().then(engine => {
+      if (engine && Object.hasOwn(engine.languages, language)) code.innerHTML = engine.highlight(raw, engine.languages[language], language)
+    }).catch(() => {})
+  }
+
+  function commentText (text) {
+    const result = node('div', '', 'review-text')
+    const fence = /^```([\w+-]*)[ \t]*\r?\n([\s\S]*?)\r?\n```[ \t]*$/gm
+    let end = 0
+    for (const match of text.matchAll(fence)) {
+      result.append(text.slice(end, match.index))
+      const pre = node('pre')
+      const code = node('code', match[2])
+      pre.append(code)
+      result.append(pre)
+      formatCode(pre, code, match[1])
+      end = match.index + match[0].length
+    }
+    result.append(text.slice(end))
+    return result
+  }
+
+  function codeButton (input) {
+    const control = button('插入代码块', 'review-button comment-code-insert')
+    control.addEventListener('mousedown', event => event.preventDefault())
+    control.onclick = () => {
+      const start = input.selectionStart
+      const end = input.selectionEnd
+      const code = input.value.slice(start, end) || '// 在这里粘贴代码'
+      const block = '```javascript\n' + code + '\n```'
+      const before = start > 0 && input.value[start - 1] !== '\n' ? '\n' : ''
+      const after = input.value[end] !== '\n' ? '\n' : ''
+      if (input.maxLength > 0 && input.value.length - (end - start) + before.length + block.length + after.length > input.maxLength) return
+      input.setRangeText(before + block + after, start, end, 'end')
+      input.dispatchEvent(new Event('input', { bubbles: true }))
+      input.focus()
+      input.setSelectionRange(start + before.length + 3, start + before.length + 13)
+    }
+    return control
   }
 
   async function api (path, body, count = false) {
@@ -100,22 +177,26 @@
     const bodyLabel = node('label', '短评内容')
     bodyLabel.append(body)
     const avatarField = node('fieldset', '', 'review-avatars')
-    avatarField.append(node('legend', '选择头像'))
-    for (let i = 0; i < 8; i++) {
+    avatarField.append(node('legend', `选择头像（${avatarCount} 款）`))
+    const avatarGrid = node('div', '', 'review-avatar-grid')
+    const defaultAvatar = avatarIndex(browserActor())
+    for (let i = 0; i < avatarCount; i++) {
       const label = node('label')
       const radio = node('input')
       radio.type = 'radio'
       radio.name = 'avatar'
       radio.value = String(i)
-      radio.checked = i === avatarIndex(browserActor())
+      radio.checked = i === defaultAvatar
       radio.setAttribute('aria-label', '头像 ' + (i + 1))
       const image = node('img')
       image.src = avatar(i)
       image.alt = ''
+      image.loading = 'lazy'
       image.width = image.height = 32
       label.append(radio, image)
-      avatarField.append(label)
+      avatarGrid.append(label)
     }
+    avatarField.append(avatarGrid)
     const publish = button('发表短评')
     publish.type = 'submit'
     const cancel = button('取消回复')
@@ -123,7 +204,7 @@
     const replyInfo = node('span', '', 'review-reply-info')
     const actions = node('div', '', 'review-actions')
     actions.append(publish, cancel, replyInfo)
-    form.append(authorLabel, bodyLabel, avatarField, actions)
+    form.append(authorLabel, bodyLabel, codeButton(body), avatarField, actions)
     dialog.append(header, form, status, list)
     document.body.append(dialog)
     dialog.showModal()
@@ -153,9 +234,9 @@
       const time = node('time', dateFormat.format(entry.time))
       time.dateTime = new Date(entry.time).toISOString()
       const meta = node('div', '', 'review-meta')
-      meta.append(name, time, node('span', entry.terminal))
+      meta.append(name, time, node('span', deviceLabel(entry.terminal), 'comment-device'))
       const main = node('div', '', 'review-main')
-      main.append(meta, node('p', entry.body, 'review-text'))
+      main.append(meta, commentText(entry.body))
       const tools = node('div', '', 'review-actions')
       const like = button('♥ ' + entry.likes, 'review-button review-like')
       like.disabled = Boolean(entry.liked)
@@ -254,6 +335,27 @@
     }
   }
 
+  function valineTools () {
+    const root = document.getElementById('vcomment')
+    if (!root) return
+    const input = root.querySelector('textarea.veditor')
+    if (input && !input.dataset.treehouseCode) {
+      input.dataset.treehouseCode = 'true'
+      input.before(codeButton(input))
+    }
+    for (const pre of root.querySelectorAll('.vcontent pre')) {
+      const code = pre.querySelector('code')
+      if (code) formatCode(pre, code)
+    }
+    for (const card of root.querySelectorAll('.vcard')) {
+      const labels = [...card.querySelectorAll('.vsys')].filter(label => label.closest('.vcard') === card)
+      if (!labels.length || labels[0].classList.contains('comment-device')) continue
+      labels[0].textContent = deviceLabel(labels.map(label => label.textContent).join(' '))
+      labels[0].classList.add('comment-device')
+      for (const label of labels.slice(1)) label.remove()
+    }
+  }
+
   function setup () {
     visits()
     observer?.disconnect()
@@ -265,6 +367,7 @@
       scheduled = false
       if (section) catalog(section)
       commentAvatars()
+      valineTools()
     }
     observer = new MutationObserver(() => {
       if (!scheduled) { scheduled = true; requestAnimationFrame(enhance) }

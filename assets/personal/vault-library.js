@@ -1,16 +1,24 @@
 import { download, el } from './vault-crypto.js'
 import { openMedia } from './vault-media.js'
-import { richBody } from './vault-rich.js'
+import { richBody } from './vault-rich.js?v=5'
 import { localDay, period, validDay } from './todo-model.js'
 
 const kinds = { photo: '照片', journal: '日记', paper: '论文', video: '视频' }
+export const paperStages = {
+  writing: '写作中', submitted: '已投稿', reviewing: '审稿中', revising: '返修中',
+  accepted: '已录用', published: '已见刊', rejected: '已拒稿', withdrawn: '已撤稿'
+}
 
 export function paperDetails (record) {
+  const published = record.published ?? (record.paperStatus === 'published')
+  const accepted = record.accepted || (published ? 'yes' : 'pending')
   return {
     journal: record.journal || '—',
     submitted: record.submitted ?? (['submitted', 'published'].includes(record.paperStatus) ? record.date : ''),
-    accepted: record.accepted || (record.paperStatus === 'published' ? 'yes' : 'pending'),
-    published: record.published ?? (record.paperStatus === 'published')
+    accepted, published,
+    stage: Object.hasOwn(paperStages, record.stage) ? record.stage : published ? 'published' : accepted === 'yes' ? 'accepted'
+      : accepted === 'no' ? 'rejected' : record.paperStatus === 'submitted' ? 'submitted' : 'writing',
+    indexing: record.indexing || '—'
   }
 }
 
@@ -47,7 +55,7 @@ export function createLibrary (root, { controls, mediaOptions, editPaper } = {})
   filters.append(field('类型', type), field('统计范围', range), field('参照日期', date), field('分类', category), field('搜索', search))
   const stats = el('div', '', 'vault-stats')
   const listing = el('div', '', 'vault-records')
-  const urls = new Set()
+  const urls = new Map()
   const inlineImages = typeof IntersectionObserver === 'function' ? new IntersectionObserver(entries => {
     for (const entry of entries) {
       if (!entry.isIntersecting) continue
@@ -59,20 +67,22 @@ export function createLibrary (root, { controls, mediaOptions, editPaper } = {})
   let visible = false
   let limit = 18
   let revision = 0
+  let reader
 
   root.append(filters, stats, listing)
 
   function clearMedia () {
     revision++
+    if (reader?.open) reader.close()
     inlineImages?.disconnect()
-    for (const url of urls) URL.revokeObjectURL(url)
+    for (const url of urls.values()) URL.revokeObjectURL(url)
     urls.clear()
   }
 
-  function mediaControl (file, kind, alt) {
+  function mediaControl (file, kind, alt, label) {
     const box = el('div', '', 'vault-media-control')
     const status = el('span', '', 'muted')
-    const launch = button(kind === 'video' ? '加载并播放视频' : kind === 'image' ? '查看图片' : '下载 ' + file.name, async () => {
+    const launch = button(label || (kind === 'video' ? '加载并播放视频' : kind === 'image' ? '查看图片' : '下载 ' + file.name), async () => {
       const current = revision
       launch.disabled = true
       try {
@@ -86,7 +96,7 @@ export function createLibrary (root, { controls, mediaOptions, editPaper } = {})
           return
         }
         const url = URL.createObjectURL(blob)
-        urls.add(url)
+        urls.set(box, url)
         const player = el(kind === 'video' ? 'video' : 'img')
         player.src = url
         if (kind === 'video') {
@@ -102,6 +112,7 @@ export function createLibrary (root, { controls, mediaOptions, editPaper } = {})
         launch.disabled = false
       }
     })
+    if (label) launch.title = file.name
     box.append(launch, status)
     if (kind === 'image' && file.size <= 8_000_000) inlineImages?.observe(box)
     return box
@@ -135,10 +146,15 @@ export function createLibrary (root, { controls, mediaOptions, editPaper } = {})
   }
 
   function paperTable (papers) {
+    const section = el('section', '', 'vault-paper-section')
+    const titleBar = el('header', '', 'vault-section-head')
+    titleBar.append(el('h3', '论文档案'), el('p', `${papers.length} 篇 · 点击论文标题查看详情和笔记`, 'muted'))
     const box = el('div', '', 'vault-table-wrap')
+    box.tabIndex = 0
+    box.setAttribute('aria-label', '论文档案表格，可横向滚动')
     const table = el('table', '', 'vault-paper-table')
     const headers = el('tr')
-    for (const title of ['论文标题', '投稿期刊', '投稿日期', '是否录用', '是否见刊', ...(controls ? ['操作'] : []), '论文 PDF']) {
+    for (const title of ['论文标题', '期刊', '所处阶段', '检索', '论文PDF']) {
       const cell = el('th', title)
       cell.scope = 'col'
       headers.append(cell)
@@ -149,34 +165,58 @@ export function createLibrary (root, { controls, mediaOptions, editPaper } = {})
       const row = el('tr')
       const paper = paperDetails(record)
       const title = el('td')
-      title.append(paperLink(record.title, record.id))
-      row.append(title)
-      for (const value of [paper.journal, paper.submitted || '—', { yes: '已录用', no: '未录用', pending: '待定' }[paper.accepted] || '待定', paper.published ? '已见刊' : '未见刊']) {
-        row.append(el('td', value))
-      }
-      if (controls) {
-        const actions = el('td')
-        actions.append(controls(record))
-        row.append(actions)
-      }
+      const link = paperLink(record.title, record.id)
+      link.title = record.title
+      title.append(link)
+      const journal = el('td', paper.journal)
+      journal.title = paper.journal
+      const stage = el('td')
+      const badge = el('span', paperStages[paper.stage], 'vault-stage')
+      badge.dataset.stage = paper.stage
+      stage.append(badge)
+      const indexing = el('td', paper.indexing)
+      indexing.title = paper.indexing
+      row.append(title, journal, stage, indexing)
       const pdf = el('td', paper.published ? '待上传' : '—')
-      if (paper.published && record.pdf) pdf.replaceChildren(mediaControl(record.pdf, 'file'))
+      if (paper.published && record.pdf) pdf.replaceChildren(mediaControl(record.pdf, 'file', undefined, '下载 PDF'))
       row.append(pdf)
       table.tBodies[0].append(row)
     }
     box.append(table)
-    return box
+    section.append(titleBar, box)
+    return section
   }
 
   function paperPage (record) {
     const article = el('article', '', 'vault-paper-detail entry')
     article.append(paperLink('← 返回资料库', null), el('h3', record.title))
     const paper = paperDetails(record)
-    article.append(el('p', [paper.journal, paper.submitted || '未填投稿日期', paper.published ? '已见刊' : '未见刊'].join(' · '), 'entry-meta'))
+    article.append(el('p', [paper.journal, paper.submitted || '未填投稿日期', paperStages[paper.stage], paper.indexing].join(' · '), 'entry-meta'))
     if (paper.published && record.pdf) article.append(mediaControl(record.pdf, 'file'))
-    article.append(el('h4', '论文笔记'), notes(record))
+    if (controls) article.append(controls(record))
+    article.append(el('h4', '论文笔记'), record.note || record.attachments?.length ? notes(record) : el('p', '尚未填写笔记。', 'muted'))
     if (editPaper) article.append(button('编辑论文笔记', () => editPaper(record)))
     return article
+  }
+
+  function openJournal (record) {
+    const dialog = el('dialog', '', 'vault-dialog vault-reader-dialog')
+    dialog.setAttribute('aria-label', record.title)
+    const header = el('header', '', 'vault-dialog-head')
+    header.append(el('h2', record.title), button('关闭', () => dialog.close()))
+    const documentView = el('div', '', 'vault-reading-page')
+    documentView.append(el('p', [record.date, record.category].filter(Boolean).join(' · '), 'entry-meta'), notes(record))
+    dialog.append(header, documentView)
+    document.body.append(dialog)
+    reader = dialog
+    dialog.addEventListener('close', () => {
+      for (const [box, url] of urls) {
+        if (dialog.contains(box)) { URL.revokeObjectURL(url); urls.delete(box) }
+      }
+      dialog.remove()
+      if (reader === dialog) reader = undefined
+    }, { once: true })
+    dialog.showModal()
   }
 
   function card (record) {
@@ -197,15 +237,14 @@ export function createLibrary (root, { controls, mediaOptions, editPaper } = {})
     } else if (record.kind === 'video') {
       article.append(mediaControl(record.video, 'video'))
       if (record.note) article.append(el('p', record.note, 'entry-text'))
-    } else if (record.format === 'rich' || record.attachments?.length) {
-      const details = el('details')
-      details.append(el('summary', '打开日记正文'))
-      details.addEventListener('toggle', () => {
-        if (details.open && details.childElementCount === 1) details.append(notes(record))
-      })
-      article.append(details)
-    } else if (record.note) {
-      article.append(el('p', record.note, 'entry-text'))
+    } else {
+      if (record.note) {
+        const preview = document.createElement('template')
+        if (record.format === 'visual') preview.innerHTML = record.note.slice(0, 800)
+        const text = record.format === 'visual' ? preview.content.textContent : record.note.replace(/^[#>*+-]+\s*/gm, '')
+        if (text.trim()) article.append(el('p', text.trim().slice(0, 220), 'vault-journal-excerpt'))
+      }
+      article.append(button('打开日记正文', () => openJournal(record)))
     }
     if (controls) article.append(controls(record))
     return article
@@ -232,14 +271,18 @@ export function createLibrary (root, { controls, mediaOptions, editPaper } = {})
       stats.append(el('span', label + ' ' + filtered.filter(record => record.kind === key).length))
     }
     const papers = filtered.filter(record => record.kind === 'paper')
-    if (papers.length) {
+    if (scope && papers.length) {
       stats.append(el('span', '已录用 ' + papers.filter(record => paperDetails(record).accepted === 'yes').length))
       stats.append(el('span', '已见刊 ' + papers.filter(record => paperDetails(record).published).length))
     }
     if (!filtered.length) { listing.append(el('p', '暂无记录。', 'muted')); return }
     if (papers.length) listing.append(paperTable(papers))
     const cards = filtered.filter(record => record.kind !== 'paper')
-    listing.append(...cards.slice(0, limit).map(card))
+    if (cards.length) {
+      const grid = el('div', '', 'vault-grid')
+      grid.append(...cards.slice(0, limit).map(card))
+      listing.append(grid)
+    }
     if (cards.length > limit) listing.append(button('显示更多记录', () => { limit += 18; render() }))
   }
 

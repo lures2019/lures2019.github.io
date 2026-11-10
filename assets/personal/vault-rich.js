@@ -61,53 +61,84 @@ async function markdown () {
   return md
 }
 
+const allowedTags = new Set('p div br h1 h2 h3 h4 h5 h6 strong b em i u s strike ul ol li a blockquote pre code table thead tbody tfoot tr th td span hr'.split(' '))
+const blockedTags = new Set(['script', 'style', 'iframe', 'object', 'svg', 'math', 'template'])
+
+export function safeLink (value) {
+  try {
+    const url = new URL(value)
+    if (['http:', 'https:', 'mailto:'].includes(url.protocol)) return url.href
+  } catch { /* Empty or invalid links are kept as plain text. */ }
+  return ''
+}
+
+export function cleanDocument (html) {
+  const input = document.createElement('template')
+  input.innerHTML = html
+  const output = el('div')
+  function copy (from, to, depth = 0) {
+    if (depth > 40) return
+    for (const child of from.childNodes) {
+      if (child.nodeType === Node.TEXT_NODE) { to.append(child.textContent); continue }
+      if (child.nodeType !== Node.ELEMENT_NODE || blockedTags.has(child.localName)) continue
+      if (!allowedTags.has(child.localName)) { copy(child, to, depth + 1); continue }
+      const next = el(child.localName)
+      if (next.localName === 'a') {
+        const href = safeLink(child.getAttribute('href'))
+        if (href) {
+          next.href = href
+          next.target = '_blank'
+          next.rel = 'noopener noreferrer'
+        }
+      }
+      if (child.dataset?.math && child.dataset.math.length <= 2000) {
+        next.className = 'vault-math'
+        next.dataset.math = child.dataset.math
+        next.dataset.display = String(child.dataset.display === 'true')
+        next.textContent = child.dataset.math
+      } else if (/^[a-f0-9-]{36}$/.test(child.dataset?.inlineMedia)) {
+        next.dataset.inlineMedia = child.dataset.inlineMedia
+        next.textContent = (child.dataset.alt || child.textContent || '图片').slice(0, 200)
+      } else copy(child, next, depth + 1)
+      to.append(next)
+    }
+  }
+  copy(input.content, output)
+  return output.innerHTML
+}
+
+export async function editableDocument (record) {
+  if (record.format === 'visual') return cleanDocument(record.note)
+  if (record.format === 'rich' && record.note) {
+    try { return cleanDocument((await markdown()).render(record.note)) } catch { /* Preserve the readable original. */ }
+  }
+  const plain = el('div')
+  plain.textContent = record.note || ''
+  return plain.innerHTML.replace(/\r?\n/g, '<br>')
+}
+
+export async function renderEquations (root) {
+  const equations = [...root.querySelectorAll('[data-math]')].slice(0, 40)
+  if (!equations.length) return
+  await script('katex')
+  for (const equation of equations) {
+    window.katex.render(equation.dataset.math, equation, {
+      output: 'mathml', displayMode: equation.dataset.display === 'true', throwOnError: false, trust: false, maxExpand: 100
+    })
+  }
+}
+
 export function richBody (record, inlineMedia) {
-  const body = el('div', record.note, 'vault-rich-text')
+  const body = el('div', record.format === 'visual' ? '' : record.note, 'vault-rich-text')
   if (['serif', 'mono'].includes(record.font)) body.dataset.font = record.font
-  if (record.format !== 'rich' || !record.note) return body
+  if (!['rich', 'visual'].includes(record.format) || !record.note) return body
   void (async () => {
-    const md = await markdown()
-    body.innerHTML = md.render(record.note)
+    body.innerHTML = await editableDocument(record)
     for (const node of body.querySelectorAll('[data-inline-media]')) {
       const file = record.attachments?.find(item => item.id === node.dataset.inlineMedia && /^image\/(png|jpeg|gif|webp)$/.test(item.type))
       if (file) node.replaceWith(inlineMedia(file, node.textContent))
     }
-    const equations = [...body.querySelectorAll('[data-math]')].slice(0, 40)
-    if (!equations.length) return
-    await script('katex')
-    for (const equation of equations) {
-      window.katex.render(equation.dataset.math, equation, {
-        output: 'mathml', displayMode: equation.dataset.display === 'true', throwOnError: false, trust: false, maxExpand: 100
-      })
-    }
+    await renderEquations(body)
   })().catch(() => { /* The source text remains readable if a vendor asset is unavailable. */ })
   return body
-}
-
-export function insertText (input, before, after = '', fallback = '') {
-  const start = input.selectionStart
-  const end = input.selectionEnd
-  const content = before + (input.value.slice(start, end) || fallback) + after
-  if (input.value.length - (end - start) + content.length > input.maxLength) return
-  input.setRangeText(content, start, end, 'end')
-  input.focus()
-}
-
-export function richToolbar (container, input, preview) {
-  const tools = [
-    ['标题', '\n## ', '\n', '小标题'], ['加粗', '**', '**', '文字'], ['下划线', '++', '++', '文字'],
-    ['链接', '[', '](https://example.com/)', '链接文字'], ['表情', '🙂'],
-    ['公式', '$', '$', 'E=mc^2'], ['独立公式', '\n$$', '$$\n', '\\frac{a}{b}'],
-    ['表格', '\n| 项目 | 说明 |\n| --- | --- |\n| 内容 | 备注 |\n']
-  ]
-  for (const [label, before, after, fallback] of tools) {
-    const button = el('button', label, 'secondary compact')
-    button.type = 'button'
-    button.addEventListener('click', () => insertText(input, before, after, fallback))
-    container.append(button)
-  }
-  const button = el('button', '预览正文', 'secondary compact')
-  button.type = 'button'
-  button.addEventListener('click', preview)
-  container.append(button)
 }

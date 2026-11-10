@@ -8,8 +8,8 @@
   <meta http-equiv="Content-Security-Policy" content="default-src 'none'; script-src 'self'; style-src 'self'; img-src 'self' data: blob:; media-src blob:; connect-src 'self' https://treehouse-vault.vault-cloud.workers.dev; form-action 'none'; base-uri 'none'">
   <title>私密分享 · Zaydenの树屋</title>
   <link rel="icon" href="../img/favicon.png">
-  <link rel="stylesheet" href="../assets/personal/personal.css?v=4">
-  <script type="module" src="../assets/personal/vault-viewer.js?v=4"></script>
+  <link rel="stylesheet" href="../assets/personal/personal.css?v=5">
+  <script type="module" src="../assets/personal/vault-viewer.js?v=5"></script>
 </head>
 <body>
   <main class="shell vault-shell">
@@ -30,7 +30,7 @@
       </form>
     </section>
     <p class="status" id="reader-status" role="status" aria-live="polite"></p>
-    <section class="panel" id="reader-content" hidden>
+    <section class="panel vault-library-panel" id="reader-content" hidden>
       <div class="section-heading"><h2>分享的记录</h2><button type="button" id="reader-lock" class="secondary">锁定</button></div>
       <div id="reader-records"></div>
     </section>

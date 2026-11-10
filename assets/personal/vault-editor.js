@@ -1,8 +1,8 @@
 import { base64, deriveKey, download, el, localDay, randomBytes, seal, unseal } from './vault-crypto.js'
-import { createLibrary, paperDetails } from './vault-library.js'
+import { createLibrary, paperDetails, paperStages } from './vault-library.js?v=5'
 import { cacheImportedMedia, draftMedia, makeBundle, openBundle, syncImportedMedia, uploadMedia } from './vault-media.js'
 import { recordMedia } from './vault-media-model.js'
-import { insertText, richBody, richToolbar } from './vault-rich.js'
+import { openWriter } from './vault-writing.js?v=5'
 import {
   closeCloudShare, cloudConfigured, cloudConnected, connectCloud, disconnectCloud, emptyRevision, listCloudShares,
   loadCloudArchive, publishCloudShare, remoteRevision, resumeCloud, uploadCloudArchive
@@ -13,8 +13,13 @@ const gate = get('gate')
 const content = get('vault-content')
 const unlockForm = get('unlock-form')
 const entryForm = get('entry-form')
+const entryDialog = get('entry-dialog')
 const selected = new Set()
-const library = createLibrary(get('records'), { controls: recordControls, mediaOptions: () => ({ owner: true }), editPaper: beginEdit })
+const library = createLibrary(get('records'), { controls: recordControls, mediaOptions: () => ({ owner: true }), editPaper (record) {
+  beginEdit(record)
+  if (entryDialog.open) launchWriting()
+} })
+entryForm.elements.paperStage.append(...Object.entries(paperStages).map(([value, label]) => new Option(label, value)))
 let db
 let snapshot
 let owner
@@ -30,9 +35,13 @@ let preferCloud = false
 let attachments = []
 let paperPdfRemoved = false
 let importedMedia = []
+let writing
+let noteFormat
+let noteFont
 
 function notify (text) {
   get('vault-status').textContent = text
+  if (entryDialog.open) get('entry-status').textContent = text
 }
 
 function openDatabase () {
@@ -201,8 +210,8 @@ function showFields () {
   get('photo-fields').hidden = kind !== 'photo'
   get('video-fields').hidden = kind !== 'video'
   get('paper-fields').hidden = kind !== 'paper'
-  get('paper-pdf-fields').hidden = !entryForm.elements.paperPublished.checked
-  get('note-toolbar').hidden = !rich
+  get('paper-pdf-fields').hidden = entryForm.elements.paperStage.value !== 'published'
+  get('entry-note').hidden = rich
   get('rich-fields').hidden = !rich
   get('attachment-fields').hidden = kind === 'video'
   get('attachment-help').textContent = '每条记录最多 16 个附件。' + (rich ? '选择图片后可插入正文。' : '附件显示在照片配文下方。')
@@ -220,27 +229,48 @@ function edit (record) {
   entryForm.elements.title.value = record?.title || ''
   entryForm.elements.date.value = record?.date || localDay()
   entryForm.elements.note.value = record?.note || ''
+  noteFormat = record?.format
+  noteFont = record?.font || 'sans'
   entryForm.elements.category.value = record?.category || ''
-  entryForm.elements.noteFont.value = record?.font || 'sans'
   const paper = record?.kind === 'paper' ? paperDetails(record) : {}
   entryForm.elements.paperJournal.value = record?.journal || ''
   entryForm.elements.paperSubmitted.value = paper.submitted || ''
-  entryForm.elements.paperAccepted.value = paper.accepted || 'pending'
-  entryForm.elements.paperPublished.checked = Boolean(paper.published)
+  entryForm.elements.paperStage.value = paper.stage || 'writing'
+  entryForm.elements.paperIndexing.value = record?.indexing || ''
   attachments = (record?.attachments || []).map(ref => ({ ref }))
   paperPdfRemoved = false
-  get('note-preview').replaceChildren()
-  get('note-preview').hidden = true
+  get('writing-summary').textContent = record?.note ? '已有正文，可继续编辑' : '尚未填写正文'
+  get('entry-status').textContent = ''
   get('entry-heading').textContent = record ? '编辑记录' : '添加记录'
-  get('entry-cancel').hidden = !record
   showFields()
 }
 
 function beginEdit (record) {
-  if (get('entry-save').disabled) return
+  if (!owner || get('entry-save').disabled) return
   edit(record)
+  if (!entryDialog.open) entryDialog.showModal()
   entryForm.elements.title.focus()
 }
+
+function launchWriting (initialImage) {
+  if (!entryDialog.open || writing?.open) return
+  writing = openWriter({
+    record: { kind: entryForm.elements.kind.value, note: entryForm.elements.note.value, format: noteFormat, font: noteFont },
+    attachments, initialImage,
+    onApply (html, font, files) {
+      entryForm.elements.note.value = html
+      noteFormat = 'visual'
+      noteFont = font
+      attachments = files
+      get('writing-summary').textContent = '已应用正文，保存记录后生效'
+      showAttachments()
+    }
+  })
+  writing.addEventListener('close', () => { writing = undefined }, { once: true })
+}
+
+get('new-entry').addEventListener('click', () => beginEdit())
+get('open-writing').addEventListener('click', () => launchWriting())
 
 function showAttachments () {
   const pdf = !paperPdfRemoved && editing?.pdf
@@ -251,7 +281,7 @@ function showAttachments () {
     if (['journal', 'paper'].includes(entryForm.elements.kind.value) && /^image\/(png|jpeg|gif|webp)$/.test(item.ref.type)) {
       const insert = el('button', '插入正文', 'secondary compact')
       insert.type = 'button'
-      insert.onclick = () => insertText(entryForm.elements.note, '\n![图片](attachment:' + item.ref.id + ')\n')
+      insert.onclick = () => launchWriting(item)
       row.append(insert)
     }
     const remove = el('button', '移除', 'secondary compact')
@@ -261,13 +291,6 @@ function showAttachments () {
     return row
   }))
 }
-
-richToolbar(get('note-toolbar'), entryForm.elements.note, () => {
-  const preview = get('note-preview')
-  preview.hidden = false
-  preview.replaceChildren(richBody({ note: entryForm.elements.note.value, font: entryForm.elements.noteFont.value,
-    format: 'rich', attachments: attachments.map(item => item.ref) }, (file, alt) => el('span', `[${alt || file.name}]`)))
-})
 
 get('entry-attachments').addEventListener('change', event => {
   try {
@@ -294,6 +317,8 @@ function lock (feedback = '资料库已锁定。') {
   if (!owner) return
   clearTimeout(timer)
   owner = undefined
+  if (writing?.open) writing.close()
+  if (entryDialog.open) entryDialog.close()
   selected.clear()
   clearShare()
   edit()
@@ -437,10 +462,11 @@ entryForm.addEventListener('submit', async event => {
     if (kind === 'paper') {
       record.journal = form.paperJournal.value.trim()
       record.submitted = form.paperSubmitted.value
-      record.accepted = form.paperAccepted.value
-      record.published = form.paperPublished.checked
-      if (record.published) record.accepted = 'yes'
-      record.paperStatus = record.published ? 'published' : record.submitted ? 'submitted' : 'writing'
+      record.stage = form.paperStage.value
+      record.indexing = form.paperIndexing.value.trim()
+      record.published = record.stage === 'published'
+      record.accepted = ['published', 'accepted'].includes(record.stage) ? 'yes' : record.stage === 'rejected' ? 'no' : 'pending'
+      record.paperStatus = record.published ? 'published' : record.stage === 'writing' ? 'writing' : 'submitted'
       const file = record.published && form.paperPdf.files[0]
       if (file && await file.slice(0, 5).text() !== '%PDF-') throw new Error('请选择有效的 PDF 文件。')
       if (file) record.pdf = await uploadMedia(file, progress)
@@ -458,8 +484,8 @@ entryForm.addEventListener('submit', async event => {
       if (!record.video) throw new Error('请选择视频。')
     }
     if (kind === 'journal' || kind === 'paper') {
-      record.format = 'rich'
-      record.font = form.noteFont.value
+      record.format = noteFormat
+      record.font = noteFont
     }
     if (kind !== 'video' && files.length) {
       record.attachments = []
@@ -471,6 +497,7 @@ entryForm.addEventListener('submit', async event => {
     if (owner !== unlocked) return
     const records = unlocked.records.filter(item => item.id !== record.id)
     if (await persist([...records, record])) {
+      entryDialog.close()
       edit()
       notify('已加密保存记录。')
     }
@@ -619,9 +646,18 @@ get('backup').addEventListener('click', event => {
 })
 get('share-paper-notes').addEventListener('change', clearShare)
 get('lock').addEventListener('click', () => lock())
-get('entry-cancel').addEventListener('click', () => edit())
-entryForm.elements.kind.addEventListener('change', showFields)
-entryForm.elements.paperPublished.addEventListener('change', showFields)
+get('entry-cancel').addEventListener('click', () => { if (!get('entry-save').disabled) entryDialog.close() })
+entryDialog.addEventListener('cancel', event => { if (get('entry-save').disabled) event.preventDefault() })
+entryForm.elements.kind.addEventListener('change', () => {
+  if (noteFormat === 'visual' && !['journal', 'paper'].includes(entryForm.elements.kind.value)) {
+    const note = document.createElement('template')
+    note.innerHTML = entryForm.elements.note.value
+    entryForm.elements.note.value = note.content.textContent
+    noteFormat = undefined
+  }
+  showFields()
+})
+entryForm.elements.paperStage.addEventListener('change', showFields)
 for (const event of ['keydown', 'pointerdown']) document.addEventListener(event, activity)
 window.addEventListener('pagehide', () => lock())
 

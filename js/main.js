@@ -820,6 +820,11 @@ document.addEventListener('DOMContentLoaded', function () {
       const today = new Date()
       const month = String(today.getMonth() + 1).padStart(2, '0')
       const day = String(today.getDate()).padStart(2, '0')
+      const dateBadge = list.parentElement.querySelector('.history-day')
+      if (dateBadge) {
+        dateBadge.textContent = `${today.getMonth() + 1} 月 ${today.getDate()} 日`
+        dateBadge.dateTime = `${today.getFullYear()}-${month}-${day}`
+      }
       const url = list.dataset.historyUrl + month + '.json'
       try {
         if (historyUrl !== url || !historyRequest) {
@@ -837,13 +842,16 @@ document.addEventListener('DOMContentLoaded', function () {
         }
         list.replaceChildren(...events.map(({ year, title }) => {
           const item = document.createElement('li')
-          const date = document.createElement('span')
-          date.textContent = year + ' 年'
+          const date = document.createElement('time')
+          date.className = 'history-year'
+          date.textContent = year
           const template = document.createElement('template')
           template.innerHTML = typeof title === 'string' ? title : ''
           const text = template.content.textContent.trim()
           const href = template.content.querySelector('a[href]')?.getAttribute('href')
-          item.append(date, ' · ')
+          const detail = document.createElement('div')
+          detail.className = 'history-detail'
+          item.append(date, detail)
           if (href) {
             try {
               const url = new URL(href, 'https://baike.baidu.com/')
@@ -853,14 +861,14 @@ document.addEventListener('DOMContentLoaded', function () {
                 link.target = '_blank'
                 link.rel = 'noopener noreferrer'
                 link.textContent = text
-                item.append(link)
+                detail.append(link)
                 return item
               }
             } catch {
               // Keep the title if the upstream link is malformed.
             }
           }
-          item.append(text)
+          detail.textContent = text
           return item
         }))
       } catch {

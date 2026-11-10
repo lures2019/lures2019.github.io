@@ -8,8 +8,8 @@
   <meta http-equiv="Content-Security-Policy" content="default-src 'none'; script-src 'self'; style-src 'self'; img-src 'self' data: blob:; media-src blob:; connect-src 'self' https://treehouse-vault.vault-cloud.workers.dev; form-action 'none'; base-uri 'none'">
   <title>私密空间 · Zaydenの树屋</title>
   <link rel="icon" href="../img/favicon.png">
-  <link rel="stylesheet" href="../assets/personal/personal.css?v=4">
-  <script type="module" src="../assets/personal/vault-editor.js?v=4"></script>
+  <link rel="stylesheet" href="../assets/personal/personal.css?v=5">
+  <script type="module" src="../assets/personal/vault-editor.js?v=5"></script>
 </head>
 <body>
   <main class="shell vault-shell">
@@ -55,10 +55,11 @@
         <a href="https://github.com/lures2019/treehouse-vault" target="_blank" rel="noopener noreferrer">打开 GitHub 私仓 ↗</a>
       </div>
       <p class="muted" id="vault-storage-note">加密备份可提交到自己的 GitHub 私人仓库。工作副本保存在当前浏览器，十分钟无操作会锁定。</p>
-      <div class="layout vault-layout">
-        <section class="panel" aria-labelledby="entry-heading">
-          <h2 id="entry-heading">添加记录</h2>
+      <dialog class="vault-dialog vault-entry-dialog" id="entry-dialog" aria-labelledby="entry-heading">
+          <header class="vault-dialog-head"><h2 id="entry-heading">添加记录</h2><button type="button" class="secondary compact" id="entry-cancel">关闭</button></header>
+          <p id="entry-status" class="status" role="status"></p>
           <form id="entry-form">
+            <div class="vault-form-grid">
             <label for="entry-kind">类型</label>
             <select id="entry-kind" name="kind">
               <option value="photo">照片</option><option value="video">视频</option><option value="journal">日记</option><option value="paper">论文</option>
@@ -69,6 +70,7 @@
             <input id="entry-date" name="date" type="date" required>
             <label for="entry-category">分类（可选）</label>
             <input id="entry-category" name="category" maxlength="60" placeholder="例如旅行、日常或研究">
+            </div>
             <div id="photo-fields">
               <label for="entry-photo">照片文件</label>
               <input id="entry-photo" name="photo" type="file" accept="image/jpeg,image/png,image/webp">
@@ -84,11 +86,11 @@
               <input id="paper-journal" name="paperJournal" maxlength="160">
               <label for="paper-submitted">投稿日期</label>
               <input id="paper-submitted" name="paperSubmitted" type="date">
-              <label for="paper-accepted">录用状态</label>
-              <select id="paper-accepted" name="paperAccepted">
-                <option value="pending">待定</option><option value="yes">已录用</option><option value="no">未录用</option>
-              </select>
-              <label><input name="paperPublished" type="checkbox"> 已见刊</label>
+              <label for="paper-stage">所处阶段</label>
+              <select id="paper-stage" name="paperStage"></select>
+              <label for="paper-indexing">检索（可选）</label>
+              <input id="paper-indexing" name="paperIndexing" list="paper-index-options" maxlength="80" placeholder="例如 SCI、EI、Scopus">
+              <datalist id="paper-index-options"><option value="SCI / SCIE"><option value="SSCI"><option value="EI"><option value="Scopus"><option value="CSCD"><option value="CSSCI"><option value="北大核心"><option value="暂未检索"></datalist>
               <div id="paper-pdf-fields" hidden>
                 <label for="paper-pdf">已见刊 PDF（可稍后上传）</label>
                 <input id="paper-pdf" name="paperPdf" type="file" accept="application/pdf,.pdf">
@@ -97,12 +99,10 @@
               </div>
             </div>
             <label id="entry-note-label" for="entry-note">说明</label>
-            <div id="note-toolbar" class="note-toolbar" hidden></div>
             <textarea id="entry-note" name="note" maxlength="50000" rows="7"></textarea>
-            <div id="rich-fields" hidden>
-              <div id="note-preview" class="note-preview" hidden></div>
-              <label for="note-font">正文字体</label>
-              <select id="note-font" name="noteFont"><option value="sans">默认</option><option value="serif">衬线</option><option value="mono">等宽</option></select>
+            <div id="rich-fields" class="vault-writing-launch" hidden>
+              <button type="button" id="open-writing" class="secondary">打开写作窗口</button>
+              <span id="writing-summary" class="muted"></span>
             </div>
             <div id="attachment-fields" hidden>
               <label for="entry-attachments">图片或文档附件</label>
@@ -112,16 +112,14 @@
             </div>
             <div class="actions">
               <button id="entry-save" type="submit">保存记录</button>
-              <button id="entry-cancel" class="secondary" type="button" hidden>取消编辑</button>
             </div>
           </form>
-        </section>
-        <section class="panel" aria-labelledby="records-heading">
-          <h2 id="records-heading">我的记录</h2>
-          <p class="muted">勾选愿意分享的记录，再生成分享。</p>
+      </dialog>
+      <section class="panel vault-library-panel" aria-labelledby="records-heading">
+          <header class="vault-library-head"><div><p class="eyebrow">YOUR COLLECTION</p><h2 id="records-heading">我的记录</h2></div>
+          <div class="actions"><a href="#share-title">管理分享</a><button id="new-entry" type="button">＋ 添加记录</button></div></header>
           <div id="records"></div>
-        </section>
-      </div>
+      </section>
       <section class="panel review" aria-labelledby="share-title">
         <h2 id="share-title">生成密码分享</h2>
         <p class="muted" id="share-help">每个分享使用独立密码。将加密文件发布到博客后，再把链接和密码交给对方。</p>
