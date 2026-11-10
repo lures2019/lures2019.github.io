@@ -5,14 +5,14 @@
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <meta name="robots" content="noindex, nofollow">
   <meta name="referrer" content="no-referrer">
-  <meta http-equiv="Content-Security-Policy" content="default-src 'none'; script-src 'self'; style-src 'self'; img-src 'self' data:; connect-src 'self' https://treehouse-vault.vault-cloud.workers.dev; form-action 'none'; base-uri 'none'">
+  <meta http-equiv="Content-Security-Policy" content="default-src 'none'; script-src 'self'; style-src 'self'; img-src 'self' data: blob:; media-src blob:; connect-src 'self' https://treehouse-vault.vault-cloud.workers.dev; form-action 'none'; base-uri 'none'">
   <title>私密分享 · Zaydenの树屋</title>
   <link rel="icon" href="../img/favicon.png">
-  <link rel="stylesheet" href="../assets/personal/personal.css">
-  <script type="module" src="../assets/personal/vault-viewer.js"></script>
+  <link rel="stylesheet" href="../assets/personal/personal.css?v=4">
+  <script type="module" src="../assets/personal/vault-viewer.js?v=4"></script>
 </head>
 <body>
-  <main class="shell narrow">
+  <main class="shell vault-shell">
     <header class="page-intro">
       <a class="back" href="../">← 返回树屋</a>
       <p class="eyebrow">ZAYDEN’S TREEHOUSE</p>
@@ -25,6 +25,7 @@
         <input id="reader-password" name="password" type="password" maxlength="512" autocomplete="off" required>
         <label for="reader-file">使用加密文件（可选）</label>
         <input id="reader-file" name="file" type="file" accept=".vault">
+        <p class="muted">如果当前网络无法打开在线分享，请让分享者发加密文件，选中它后用同一个分享密码解锁。</p>
         <div class="actions"><button type="submit">解锁分享</button></div>
       </form>
     </section>

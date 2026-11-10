@@ -108,7 +108,38 @@ button:disabled { opacity: .65; cursor: default; }
 .entry img { display: block; max-width: 100%; height: auto; border-radius: 8px; }
 .entry .entry-meta { color: var(--muted); font-size: .88rem; }
 .share-result { overflow-wrap: anywhere; }
+.vault-shell { max-width: 1340px; }
+.vault-layout { grid-template-columns: minmax(260px, .8fr) minmax(0, 1.6fr); }
+.vault-layout > section { min-width: 0; }
+.vault-layout input[type="checkbox"], #share-paper-notes { vertical-align: middle; }
+.vault-status:not(:empty) { position: sticky; top: 8px; z-index: 2; padding: 10px 14px; border: 1px solid var(--line); border-radius: 9px; background: var(--surface); }
+.vault-filters { display: grid; grid-template-columns: repeat(auto-fit, minmax(130px, 1fr)); gap: 10px; }
+.vault-stats { display: flex; flex-wrap: wrap; gap: 6px; margin: 14px 0; }
+.vault-stats span { padding: 3px 10px; border-radius: 999px; background: var(--wash); color: var(--ink); font-size: .85rem; }
+.vault-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(min(100%, 250px), 1fr)); gap: 14px; }
+.vault-grid .entry { min-width: 0; overflow-wrap: anywhere; border: 1px solid var(--line); border-radius: 14px; padding: 14px; background: var(--surface); }
+.vault-grid .entry h3 { margin-top: 0; }
+.vault-grid figure { margin: 12px 0 0; }
+.vault-grid figure img { width: 100%; aspect-ratio: 4 / 5; object-fit: contain; background: var(--wash); }
+.vault-grid figcaption { padding: 10px 0 4px; white-space: pre-wrap; }
+.vault-grid video { width: 100%; max-height: 65vh; border-radius: 10px; background: #121714; }
+.vault-table-wrap { overflow: auto; margin: 12px 0 18px; }
+.vault-paper-table { border-collapse: collapse; min-width: 620px; width: 100%; font-size: .88rem; }
+.vault-paper-table th, .vault-paper-table td, .vault-rich-text th, .vault-rich-text td { padding: 8px 10px; border: 1px solid var(--line); text-align: left; }
+.vault-paper-table th, .vault-rich-text th { background: var(--wash); }
+.vault-paper-table .actions { margin: 0; }
+.vault-rich-text { white-space: pre-wrap; overflow: auto; overflow-wrap: anywhere; }
+.vault-rich-text:has(> *) { white-space: normal; }
+.vault-rich-text[data-font="serif"] { font-family: Georgia, 'Noto Serif SC', serif; }
+.vault-rich-text[data-font="mono"] { font-family: ui-monospace, Consolas, monospace; }
+.vault-rich-text table { border-collapse: collapse; margin: 12px 0; }
+.vault-rich-text math[display="block"] { display: block; padding: 6px 0; }
+.note-toolbar { display: flex; flex-wrap: wrap; gap: 5px; margin: 6px 0; }
+.note-preview { padding: 8px 10px; margin-top: 8px; border-radius: 8px; background: var(--wash); }
+.vault-attachments { padding-left: 18px; overflow-wrap: anywhere; }
+.vault-attachments button { margin: 3px 0 3px 6px; }
+#share-paper-notes { margin-bottom: 8px; }
 @media (max-width: 650px) {
-  .layout { grid-template-columns: 1fr; }
+  .layout, .vault-layout { grid-template-columns: 1fr; }
   .task .actions { grid-column: 2; }
 }

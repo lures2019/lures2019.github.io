@@ -1,3 +1,5 @@
+import { validMedia } from './vault-media-model.js'
+
 const encoder = new TextEncoder()
 const decoder = new TextDecoder('utf-8', { fatal: true })
 const signature = { owner: 'ZTOWNER1', share: 'ZTSHARE1' }
@@ -54,9 +56,13 @@ export async function unseal (kind, password, blob) {
   const ids = new Set()
   for (const record of archive.records) {
     if (!record || typeof record.id !== 'string' || ids.has(record.id) ||
-        !['photo', 'journal', 'paper'].includes(record.kind) || typeof record.title !== 'string' ||
+        !['photo', 'journal', 'paper', 'video'].includes(record.kind) || typeof record.title !== 'string' ||
         typeof record.note !== 'string' || !/^\d{4}-\d{2}-\d{2}$/.test(record.date) ||
         (record.kind === 'paper' && !['writing', 'submitted', 'published'].includes(record.paperStatus)) ||
+        (record.kind === 'video' && (!validMedia(record.video) || !/^video\/(mp4|webm)$/.test(record.video.type))) ||
+        (record.pdf !== undefined && (!validMedia(record.pdf) || record.pdf.type !== 'application/pdf')) ||
+        (record.attachments !== undefined && (!Array.isArray(record.attachments) || record.attachments.length > 16 ||
+          !record.attachments.every(validMedia))) ||
         (record.kind === 'photo' && (typeof record.photo !== 'string' ||
           !record.photo.startsWith('UklGR') || !/^[A-Za-z0-9+/]+={0,2}$/.test(record.photo)))) {
       throw new Error('资料包中的记录格式无效。')

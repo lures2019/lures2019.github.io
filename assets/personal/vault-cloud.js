@@ -26,7 +26,7 @@ async function request (path, options = {}, authenticated = true) {
     response = await fetch(service + '/api/' + path, {
       method, headers: { ...headers, ...(authenticated && { Authorization: 'Bearer ' + session }) },
       body, cache: 'no-store', credentials: 'omit', redirect: 'error',
-      signal: AbortSignal.timeout(timeout)
+      signal: typeof AbortSignal.timeout === 'function' ? AbortSignal.timeout(timeout) : undefined
     })
   } catch {
     throw new Error('无法连接云备份服务，请检查网络。')
@@ -96,9 +96,23 @@ export async function uploadCloudArchive (archive) {
   return (await response.json()).revision
 }
 
-export async function publishCloudShare (id, blob) {
-  const response = await request('shares/' + id, { method: 'PUT', body: blob, headers: { 'Content-Type': 'application/octet-stream' } })
+export async function publishCloudShare (id, blob, media = []) {
+  const response = await request('shares/' + id, {
+    method: 'PUT', body: blob,
+    headers: { 'Content-Type': 'application/octet-stream', ...(media.length && { 'X-Vault-Media': media.join(',') }) }
+  })
   return (await response.json()).proof
+}
+
+export async function writeMediaChunk (id, part, body) {
+  await request('media/' + id + '/' + part, {
+    method: 'PUT', body, headers: { 'Content-Type': 'application/octet-stream' }
+  })
+}
+
+export async function readMediaChunk (id, part, shareKey) {
+  const path = (shareKey ? 'shares/' + shareKey + '/' : '') + 'media/' + id + '/' + part
+  return (await request(path, { timeout: 35_000 }, !shareKey)).blob()
 }
 
 export async function readCloudShare (key) {

@@ -3,6 +3,9 @@ import { connectOwner, loadTasks, writeTasks } from './todo-repo.js'
 import { bindTimer } from './todo-timer.js'
 
 const storageKey = 'zayden-todo-v1'
+const authKey = 'zayden-todo-auth-v1'
+const draftKey = 'zayden-todo-draft-v1'
+const viewKey = 'zayden-todo-view-v1'
 const get = id => document.getElementById(id)
 const form = get('task-form')
 const login = get('owner-connect')
@@ -16,6 +19,40 @@ let token
 let revision
 let busy = false
 let timer
+let persistentLogin = false
+
+function stored (storage, key) {
+  try { return JSON.parse(storage.getItem(key) || 'null') } catch { return null }
+}
+
+function remember (storage, key, value) {
+  try {
+    if (value === null) storage.removeItem(key)
+    else storage.setItem(key, JSON.stringify(value))
+  } catch { /* Browsers with storage disabled can still edit in memory. */ }
+}
+
+function forgetLogin () {
+  token = undefined
+  persistentLogin = false
+  remember(sessionStorage, authKey, null)
+  remember(localStorage, authKey, null)
+}
+
+function rememberView () {
+  remember(localStorage, viewKey, Object.fromEntries(
+    ['focus-date', 'view', 'filter', 'focus-scope', 'review-year'].map(id => [id, get(id).value])
+  ))
+}
+
+function rememberDraft () {
+  if (!token) return
+  const draft = { editing, fields: Object.fromEntries(
+    ['title', 'note', 'date', 'repeat', 'endDate'].map(name => [name, form.elements[name].value])
+  ) }
+  remember(sessionStorage, draftKey, draft)
+  if (persistentLogin) remember(localStorage, draftKey, draft)
+}
 
 function node (tag, text = '', className = '') {
   const element = document.createElement(tag)
@@ -73,7 +110,7 @@ async function save (change, feedback) {
     return true
   } catch (error) {
     if (error.status === 401) {
-      token = undefined
+      forgetLogin()
       setEditor()
     } else if (next && [undefined, 409, 422].includes(error.status)) {
       try {
@@ -104,6 +141,7 @@ function setEditor (task) {
   get('task-form-title').textContent = task ? '编辑待办' : '新建待办'
   get('task-save').textContent = task ? '保存修改' : '添加待办'
   get('task-cancel').hidden = !task
+  rememberDraft()
   controls()
 }
 
@@ -324,6 +362,8 @@ dateFilter.addEventListener('change', () => {
   render()
 })
 for (const id of ['view', 'filter']) get(id).addEventListener('change', render)
+for (const id of ['focus-date', 'view', 'filter', 'focus-scope', 'review-year']) get(id).addEventListener('change', rememberView)
+form.addEventListener('input', rememberDraft)
 get('focus-scope').addEventListener('change', renderFocus)
 yearPicker.addEventListener('change', renderReview)
 get('download-review').addEventListener('click', () => download(report, `todo-review-${yearPicker.value}.html`))
@@ -374,7 +414,7 @@ async function refresh () {
     message(token ? '已刷新 GitHub 待办。' : '访客可以查看待办和年度回顾。')
   } catch (error) {
     if (error.status === 401) {
-      token = undefined
+      forgetLogin()
       setEditor()
     }
     revision = undefined
@@ -385,11 +425,7 @@ async function refresh () {
   }
 }
 
-login.addEventListener('submit', async event => {
-  event.preventDefault()
-  if (busy || token) return
-  const value = login.elements.token.value.trim()
-  login.reset()
+async function signIn (value, persistent, restore = false) {
   if (!window.isSecureContext) return message('请从 HTTPS 页面连接 GitHub。')
   busy = true
   controls()
@@ -397,18 +433,44 @@ login.addEventListener('submit', async event => {
   try {
     useSnapshot(await connectOwner(value))
     token = value
+    persistentLogin = persistent
+    if (!restore) {
+      const auth = { value, until: Date.now() + 90 * 86400_000 }
+      remember(sessionStorage, authKey, auth)
+      remember(localStorage, authKey, persistent ? auth : null)
+    }
+    const draft = stored(sessionStorage, draftKey) || (persistent && stored(localStorage, draftKey))
+    if (draft?.fields && (!draft.editing || tasks.some(task => task.id === draft.editing))) {
+      setEditor(tasks.find(task => task.id === draft.editing))
+      for (const name of ['title', 'note', 'date', 'repeat', 'endDate']) {
+        if (typeof draft.fields[name] === 'string') form.elements[name].value = draft.fields[name]
+      }
+      rememberDraft()
+    }
     message('已开启编辑，保存后会自动同步到 GitHub。')
   } catch (error) {
+    if (error.status === 401) forgetLogin()
     message(error.message || '连接 GitHub 失败。')
   } finally {
     busy = false
     render()
     if (token) form.elements.title.focus()
   }
+}
+
+login.addEventListener('submit', event => {
+  event.preventDefault()
+  if (busy || token) return
+  const value = login.elements.token.value.trim()
+  const persistent = login.elements.remember.checked
+  login.reset()
+  signIn(value, persistent)
 })
 
 function disconnect () {
-  token = undefined
+  forgetLogin()
+  remember(sessionStorage, draftKey, null)
+  remember(localStorage, draftKey, null)
   login.reset()
   setEditor()
   render()
@@ -418,7 +480,7 @@ get('todo-disconnect').addEventListener('click', () => {
   disconnect()
   message('已退出编辑。')
 })
-window.addEventListener('pagehide', disconnect)
+window.addEventListener('pagehide', () => { rememberView(); rememberDraft() })
 document.addEventListener('visibilitychange', () => {
   if (document.visibilityState === 'visible') render()
 })
@@ -433,6 +495,25 @@ timer = bindTimer({
     return [...items, { id, title, date: day, note: '', focusSessions: [session] }]
   }, '学习时长已保存到 GitHub。')
 })
-dateFilter.value = localDay()
+const savedView = stored(localStorage, viewKey) || {}
+dateFilter.value = validDay(savedView['focus-date']) ? savedView['focus-date'] : localDay()
+for (const id of ['view', 'filter', 'focus-scope']) {
+  if ([...get(id).options].some(option => option.value === savedView[id])) get(id).value = savedView[id]
+}
 setEditor()
-refresh()
+function validLogin (storage) {
+  const login = stored(storage, authKey)
+  if (typeof login?.value === 'string' && login.until > Date.now()) return login
+  remember(storage, authKey, null)
+  if (storage === localStorage) remember(storage, draftKey, null)
+}
+const persistentAuth = validLogin(localStorage)
+const savedLogin = validLogin(sessionStorage) || persistentAuth
+if (savedLogin) {
+  await signIn(savedLogin.value, savedLogin.value === persistentAuth?.value, true)
+  if (!token) await refresh()
+} else await refresh()
+if ([...yearPicker.options].some(option => option.value === savedView['review-year'])) {
+  yearPicker.value = savedView['review-year']
+  renderReview()
+}

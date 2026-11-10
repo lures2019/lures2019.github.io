@@ -1,6 +1,7 @@
 import { idPattern, localDay, maxFocusMs, studyDays, validDay } from './todo-model.js'
 
 const storage = 'zayden-focus-v1'
+const draftStorage = 'zayden-focus-draft-v1'
 const modes = ['countdown', 'stopwatch']
 const closedTime = timer => timer.segments.reduce((sum, [from, to]) => sum + to - from, 0)
 
@@ -55,6 +56,12 @@ export function bindTimer ({ canSave, save, notify }) {
   let current = loadTimer()
   let saving = false
 
+  function rememberDraft () {
+    try {
+      sessionStorage.setItem(draftStorage, JSON.stringify({ title: title.value, mode: mode.value, minutes: minutes.value, selected }))
+    } catch { /* The timer remains usable when session storage is unavailable. */ }
+  }
+
   function persist () {
     try {
       if (current) sessionStorage.setItem(storage, JSON.stringify(current))
@@ -93,6 +100,7 @@ export function bindTimer ({ canSave, save, notify }) {
     selected = undefined
     title.value = ''
     persist()
+    rememberDraft()
     render()
   }
 
@@ -146,13 +154,21 @@ export function bindTimer ({ canSave, save, notify }) {
   discard.addEventListener('click', () => {
     if (current && !saving && confirm('放弃本次计时记录？')) reset()
   })
-  title.addEventListener('input', () => { selected = undefined })
-  mode.addEventListener('change', render)
-  minutes.addEventListener('input', render)
+  title.addEventListener('input', () => { selected = undefined; rememberDraft() })
+  mode.addEventListener('change', () => { rememberDraft(); render() })
+  minutes.addEventListener('input', () => { rememberDraft(); render() })
   if (current) {
     title.value = current.title
     mode.value = current.mode
     if (current.mode === 'countdown') minutes.value = String(current.limit / 60_000)
+  } else {
+    try {
+      const draft = JSON.parse(sessionStorage.getItem(draftStorage) || 'null')
+      if (typeof draft?.title === 'string') title.value = draft.title.slice(0, 160)
+      if (modes.includes(draft?.mode)) mode.value = draft.mode
+      if (/^\d{1,4}$/.test(draft?.minutes)) minutes.value = draft.minutes
+      if (idPattern.test(draft?.selected?.id) && validDay(draft.selected.due)) selected = draft.selected
+    } catch { /* A malformed draft can be discarded without affecting saved time. */ }
   }
   setInterval(tick, 250)
   render()
@@ -163,6 +179,7 @@ export function bindTimer ({ canSave, save, notify }) {
       if (current) return notify('请先结束并保存当前计时。')
       selected = { id: task.id, due }
       title.value = task.title
+      rememberDraft()
       title.focus()
     }
   }

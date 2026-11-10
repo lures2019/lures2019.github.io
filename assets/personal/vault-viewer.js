@@ -1,5 +1,7 @@
-import { maxPackageSize, renderRecords, unseal } from './vault-crypto.js'
+import { maxPackageSize, unseal } from './vault-crypto.js'
 import { readCloudShare, shareIdPattern } from './vault-cloud.js'
+import { createLibrary } from './vault-library.js'
+import { openBundle } from './vault-media.js'
 
 const form = document.getElementById('read-share')
 const status = document.getElementById('reader-status')
@@ -7,15 +9,21 @@ const gate = document.getElementById('reader-gate')
 const content = document.getElementById('reader-content')
 const records = document.getElementById('reader-records')
 const submit = form.querySelector('button')
+const library = createLibrary(records, { mediaOptions: () => ({ bundle, shareKey }) })
 let ciphertext
+let bundle
+let shareKey
 let timer
 let revision = 0
 
 function lock () {
   revision++
   clearTimeout(timer)
-  records.replaceChildren()
+  library.clear()
   ciphertext = undefined
+  bundle = undefined
+  shareKey = undefined
+  form.elements.file.value = ''
   content.hidden = true
   gate.hidden = false
   status.textContent = '已锁定分享。'
@@ -55,15 +63,19 @@ form.addEventListener('submit', async event => {
       if (request !== revision) return
       ciphertext = payload
     }
-    const archive = await unseal('share', password, file || ciphertext)
+    const payload = await openBundle(file || ciphertext)
+    const archive = await unseal('share', password, payload.archive)
     if (request !== revision) return
-    renderRecords(records, archive.records)
+    bundle = payload
+    shareKey = !file && cloud ? id.slice(6) : undefined
+    library.show(archive.records)
     status.textContent = ''
     gate.hidden = true
     content.hidden = false
     activity()
   } catch (error) {
-    if (request === revision) status.textContent = error.message || '无法打开分享。'
+    if (request === revision) status.textContent = (error.message || '无法打开分享。') +
+      (!file && id.startsWith('cloud-') && (!error.status || error.status >= 500) && !ciphertext ? ' 也可以选择分享者发来的 .vault 文件离线解锁。' : '')
   } finally {
     submit.disabled = false
   }

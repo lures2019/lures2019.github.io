@@ -9,7 +9,7 @@
   <title>每日待办 · Zaydenの树屋</title>
   <link rel="icon" href="../img/favicon.png">
   <link rel="stylesheet" href="../assets/personal/personal.css">
-  <script type="module" src="../assets/personal/todo.js?v=2"></script>
+  <script type="module" src="../assets/personal/todo.js?v=3"></script>
 </head>
 <body>
   <main class="shell">
@@ -25,7 +25,8 @@
       <form id="owner-connect">
         <label for="todo-token">GitHub Fine-grained 令牌</label>
         <input id="todo-token" name="token" type="password" autocomplete="off" maxlength="255" required>
-        <p class="muted">仅 lures2019 可以编辑。令牌只在本次打开的页面中使用。</p>
+        <label class="todo-remember"><input name="remember" type="checkbox"> 在这台私人设备上记住编辑登录（最多 90 天）</label>
+        <p class="muted">刷新会保持当前标签页登录。长期记住会将令牌保存在这个浏览器中。公共电脑请保持未勾选。</p>
         <button id="todo-connect" type="submit">连接 GitHub</button>
       </form>
       <div id="owner-connected" hidden>

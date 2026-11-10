@@ -1,4 +1,8 @@
-import { base64, deriveKey, download, el, localDay, maxPackageSize, randomBytes, renderRecords, seal, unseal } from './vault-crypto.js'
+import { base64, deriveKey, download, el, localDay, randomBytes, seal, unseal } from './vault-crypto.js'
+import { createLibrary, paperDetails } from './vault-library.js'
+import { cacheImportedMedia, draftMedia, makeBundle, openBundle, syncImportedMedia, uploadMedia } from './vault-media.js'
+import { recordMedia } from './vault-media-model.js'
+import { insertText, richBody, richToolbar } from './vault-rich.js'
 import {
   closeCloudShare, cloudConfigured, cloudConnected, connectCloud, disconnectCloud, emptyRevision, listCloudShares,
   loadCloudArchive, publishCloudShare, remoteRevision, resumeCloud, uploadCloudArchive
@@ -9,9 +13,8 @@ const gate = get('gate')
 const content = get('vault-content')
 const unlockForm = get('unlock-form')
 const entryForm = get('entry-form')
-const filter = get('entry-filter')
-const paperYear = get('paper-year')
 const selected = new Set()
+const library = createLibrary(get('records'), { controls: recordControls, mediaOptions: () => ({ owner: true }), editPaper: beginEdit })
 let db
 let snapshot
 let owner
@@ -24,6 +27,9 @@ let backupAllowed = false
 let syncTimer
 let cloudConflict = false
 let preferCloud = false
+let attachments = []
+let paperPdfRemoved = false
+let importedMedia = []
 
 function notify (text) {
   get('vault-status').textContent = text
@@ -114,6 +120,8 @@ async function syncBackup () {
   let retryDelay = 350
   let retry = true
   try {
+    await syncImportedMedia(importedMedia)
+    importedMedia = []
     const base = await uploadCloudArchive(sent)
     await recordBackup(sent, base)
     updateCloud(snapshot.pending ? '有新改动，准备继续备份。' : '已备份到 GitHub 私仓。')
@@ -164,8 +172,10 @@ async function openVault (password, confirmation, backup) {
     return unlocked
   }
   if (backup) {
-    const unlocked = await unseal('owner', password, backup)
-    snapshot = await writeArchive(backup, 0)
+    const bundle = await openBundle(backup)
+    const unlocked = await unseal('owner', password, bundle.archive)
+    await cacheImportedMedia(bundle, recordMedia(unlocked.records))
+    snapshot = await writeArchive(bundle.archive, 0)
     return unlocked
   }
   if (password.length < 16 || password !== confirmation) throw new Error('两次密码须一致，并且至少 16 位。')
@@ -187,9 +197,19 @@ function updateGate () {
 
 function showFields () {
   const kind = entryForm.elements.kind.value
+  const rich = kind === 'journal' || kind === 'paper'
   get('photo-fields').hidden = kind !== 'photo'
+  get('video-fields').hidden = kind !== 'video'
   get('paper-fields').hidden = kind !== 'paper'
+  get('paper-pdf-fields').hidden = !entryForm.elements.paperPublished.checked
+  get('note-toolbar').hidden = !rich
+  get('rich-fields').hidden = !rich
+  get('attachment-fields').hidden = kind === 'video'
+  get('attachment-help').textContent = '每条记录最多 16 个附件。' + (rich ? '选择图片后可插入正文。' : '附件显示在照片配文下方。')
+  get('entry-note-label').textContent = { photo: '照片配文', video: '视频配文', journal: '日记正文', paper: '论文笔记' }[kind]
   entryForm.elements.photo.required = kind === 'photo' && !editing
+  entryForm.elements.video.required = kind === 'video' && !editing
+  showAttachments()
 }
 
 function edit (record) {
@@ -200,11 +220,68 @@ function edit (record) {
   entryForm.elements.title.value = record?.title || ''
   entryForm.elements.date.value = record?.date || localDay()
   entryForm.elements.note.value = record?.note || ''
-  entryForm.elements.paperStatus.value = record?.paperStatus || 'writing'
+  entryForm.elements.category.value = record?.category || ''
+  entryForm.elements.noteFont.value = record?.font || 'sans'
+  const paper = record?.kind === 'paper' ? paperDetails(record) : {}
+  entryForm.elements.paperJournal.value = record?.journal || ''
+  entryForm.elements.paperSubmitted.value = paper.submitted || ''
+  entryForm.elements.paperAccepted.value = paper.accepted || 'pending'
+  entryForm.elements.paperPublished.checked = Boolean(paper.published)
+  attachments = (record?.attachments || []).map(ref => ({ ref }))
+  paperPdfRemoved = false
+  get('note-preview').replaceChildren()
+  get('note-preview').hidden = true
   get('entry-heading').textContent = record ? '编辑记录' : '添加记录'
   get('entry-cancel').hidden = !record
   showFields()
 }
+
+function beginEdit (record) {
+  if (get('entry-save').disabled) return
+  edit(record)
+  entryForm.elements.title.focus()
+}
+
+function showAttachments () {
+  const pdf = !paperPdfRemoved && editing?.pdf
+  get('paper-pdf-name').textContent = pdf ? '当前文件：' + pdf.name : ''
+  get('remove-paper-pdf').hidden = !pdf
+  get('attachment-list').replaceChildren(...attachments.map(item => {
+    const row = el('li', item.ref.name)
+    if (['journal', 'paper'].includes(entryForm.elements.kind.value) && /^image\/(png|jpeg|gif|webp)$/.test(item.ref.type)) {
+      const insert = el('button', '插入正文', 'secondary compact')
+      insert.type = 'button'
+      insert.onclick = () => insertText(entryForm.elements.note, '\n![图片](attachment:' + item.ref.id + ')\n')
+      row.append(insert)
+    }
+    const remove = el('button', '移除', 'secondary compact')
+    remove.type = 'button'
+    remove.onclick = () => { attachments = attachments.filter(file => file !== item); showAttachments() }
+    row.append(remove)
+    return row
+  }))
+}
+
+richToolbar(get('note-toolbar'), entryForm.elements.note, () => {
+  const preview = get('note-preview')
+  preview.hidden = false
+  preview.replaceChildren(richBody({ note: entryForm.elements.note.value, font: entryForm.elements.noteFont.value,
+    format: 'rich', attachments: attachments.map(item => item.ref) }, (file, alt) => el('span', `[${alt || file.name}]`)))
+})
+
+get('entry-attachments').addEventListener('change', event => {
+  try {
+    const files = [...event.target.files]
+    if (attachments.length + files.length > 16) throw new Error('每条记录最多 16 个附件。')
+    attachments = [...attachments, ...files.map(file => ({ file, ref: draftMedia(file) }))]
+    showAttachments()
+  } catch (error) {
+    notify(error.message)
+  } finally {
+    event.target.value = ''
+  }
+})
+get('remove-paper-pdf').addEventListener('click', () => { paperPdfRemoved = true; showAttachments() })
 
 function clearShare () {
   share = undefined
@@ -220,8 +297,7 @@ function lock (feedback = '资料库已锁定。') {
   selected.clear()
   clearShare()
   edit()
-  get('records').replaceChildren()
-  get('paper-summary').textContent = ''
+  library.clear()
   content.hidden = true
   gate.hidden = false
   updateGate()
@@ -237,21 +313,7 @@ function activity () {
   timer = setTimeout(() => lock(), 10 * 60 * 1000)
 }
 
-function render () {
-  if (!owner) return
-  const papers = owner.records.filter(record => record.kind === 'paper')
-  const thisYear = localDay().slice(0, 4)
-  const oldYear = paperYear.value
-  const years = [...new Set([thisYear, ...papers.map(record => record.date.slice(0, 4))])].sort().reverse()
-  paperYear.replaceChildren(...years.map(year => new Option(year + ' 年', year)))
-  paperYear.value = years.includes(oldYear) ? oldYear : thisYear
-  const annual = papers.filter(record => record.date.startsWith(paperYear.value + '-'))
-  const count = status => annual.filter(record => record.paperStatus === status).length
-  get('paper-summary').textContent =
-    `论文 ${annual.length} 篇 · 已发表 ${count('published')} · 已投稿 ${count('submitted')} · 写作中 ${count('writing')}`
-
-  const visible = owner.records.filter(record => filter.value === 'all' || record.kind === filter.value)
-  renderRecords(get('records'), visible, record => {
+function recordControls (record) {
     const actions = el('div', '', 'actions')
     const check = el('input')
     check.type = 'checkbox'
@@ -265,13 +327,10 @@ function render () {
     const label = el('label', '加入分享')
     label.htmlFor = check.id
     const change = el('button', '编辑', 'secondary compact')
-    change.addEventListener('click', () => {
-      edit(record)
-      entryForm.elements.title.focus()
-    })
+    change.addEventListener('click', () => beginEdit(record))
     const remove = el('button', '删除', 'secondary compact')
     remove.addEventListener('click', async () => {
-      if (saving || !owner || !confirm(`删除「${record.title}」？`)) return
+      if (get('entry-save').disabled || !owner || !confirm(`删除「${record.title}」？`)) return
       if (await persist(owner.records.filter(item => item.id !== record.id))) {
         selected.delete(record.id)
         if (editing?.id === record.id) edit()
@@ -280,7 +339,6 @@ function render () {
     })
     actions.append(check, label, change, remove)
     return actions
-  })
 }
 
 async function persist (records) {
@@ -296,7 +354,7 @@ async function persist (records) {
     if (owner !== unlocked) return false
     unlocked.records = records
     clearShare()
-    render()
+    library.show(records)
     if (cloudConfigured && !cloudConflict) {
       updateCloud(cloudConnected() ? '已保存在本机，准备备份。' : '已保存在本机。连接 GitHub 后会继续备份。')
     }
@@ -341,11 +399,12 @@ unlockForm.addEventListener('submit', async event => {
   notify('正在打开资料库…')
   try {
     owner = await openVault(password, confirmation, backup)
+    importedMedia = snapshot.pending ? recordMedia(owner.records).map(({ id, size }) => ({ id, size })) : []
     backupAllowed = true
     gate.hidden = true
     content.hidden = false
     edit()
-    render()
+    library.show(owner.records)
     activity()
     updateCloud()
     queueBackup()
@@ -369,14 +428,45 @@ entryForm.addEventListener('submit', async event => {
   const date = entryForm.elements.date.value
   if (!title || !/^\d{4}-\d{2}-\d{2}$/.test(date)) return notify('请输入标题和有效日期。')
   const kind = entryForm.elements.kind.value
-  const record = { id: editing?.id || crypto.randomUUID(), kind, date, title, note: entryForm.elements.note.value.trim() }
+  const form = entryForm.elements
+  const record = { id: editing?.id || crypto.randomUUID(), kind, date, title, note: form.note.value.trim(), category: form.category.value.trim() }
+  const files = attachments.slice()
+  const progress = message => { if (owner === unlocked) { activity(); notify(message) } }
   button.disabled = true
   try {
-    if (kind === 'paper') record.paperStatus = entryForm.elements.paperStatus.value
+    if (kind === 'paper') {
+      record.journal = form.paperJournal.value.trim()
+      record.submitted = form.paperSubmitted.value
+      record.accepted = form.paperAccepted.value
+      record.published = form.paperPublished.checked
+      if (record.published) record.accepted = 'yes'
+      record.paperStatus = record.published ? 'published' : record.submitted ? 'submitted' : 'writing'
+      const file = record.published && form.paperPdf.files[0]
+      if (file && await file.slice(0, 5).text() !== '%PDF-') throw new Error('请选择有效的 PDF 文件。')
+      if (file) record.pdf = await uploadMedia(file, progress)
+      else if (!paperPdfRemoved && editing?.pdf) record.pdf = editing.pdf
+    }
     if (kind === 'photo') {
-      const file = entryForm.elements.photo.files[0]
+      const file = form.photo.files[0]
       record.photo = file ? await compressPhoto(file) : editing?.photo
       if (!record.photo) throw new Error('请选择一张照片。')
+    }
+    if (kind === 'video') {
+      const file = form.video.files[0]
+      if (file && !['video/mp4', 'video/webm'].includes(file.type)) throw new Error('请选择 MP4 或 WebM 视频。')
+      record.video = file ? await uploadMedia(file, progress) : editing?.video
+      if (!record.video) throw new Error('请选择视频。')
+    }
+    if (kind === 'journal' || kind === 'paper') {
+      record.format = 'rich'
+      record.font = form.noteFont.value
+    }
+    if (kind !== 'video' && files.length) {
+      record.attachments = []
+      for (const { file, ref } of files) {
+        if (owner !== unlocked) return
+        record.attachments.push(file ? await uploadMedia(file, progress) : ref)
+      }
     }
     if (owner !== unlocked) return
     const records = unlocked.records.filter(item => item.id !== record.id)
@@ -464,7 +554,12 @@ window.addEventListener('online', () => queueBackup())
 get('make-share').addEventListener('click', async event => {
   const unlocked = owner
   if (!unlocked) return
-  const records = unlocked.records.filter(record => selected.has(record.id))
+  const includeNotes = get('share-paper-notes').checked
+  const records = unlocked.records.filter(record => selected.has(record.id)).map(record => {
+    if (record.kind !== 'paper') return record
+    return { ...record, ...(includeNotes ? {} : { note: '', attachments: [] }),
+      pdf: paperDetails(record).published ? record.pdf : undefined }
+  })
   if (!records.length) return notify('请勾选至少一条要分享的记录。')
   if (cloudConfigured && !cloudConnected()) return notify('请先连接 GitHub，再生成在线分享。')
   const button = event.currentTarget
@@ -476,14 +571,16 @@ get('make-share').addEventListener('click', async event => {
     const id = crypto.randomUUID()
     const key = await deriveKey(password, salt)
     const blob = await seal('share', key, salt, records)
+    const files = recordMedia(records)
     if (owner !== unlocked) return
     let proof
     if (cloudConfigured) {
       notify('正在发布加密分享…')
-      proof = await publishCloudShare(id, blob)
+      await syncImportedMedia(files)
+      proof = await publishCloudShare(id, blob, files.map(file => file.id))
       if (owner !== unlocked) return
     }
-    share = { blob, id }
+    share = { blob, id, files }
     get('share-link').value = shareLink(id, proof)
     get('share-password').value = password
     get('share-result').hidden = false
@@ -498,17 +595,33 @@ get('make-share').addEventListener('click', async event => {
   }
 })
 
-get('save-share').addEventListener('click', () => {
-  if (share) download(share.blob, share.id + '.vault')
+async function downloadBundle (button, archive, files, name) {
+  const unlocked = owner
+  if (!unlocked || !archive) return
+  button.disabled = true
+  try {
+    const blob = await makeBundle(archive, files, { owner: true, progress (file, part, total) {
+      if (owner === unlocked) { activity(); notify(`正在准备 ${file.name} · ${part}/${total}`) }
+    } })
+    if (owner === unlocked) { download(blob, name); notify('已准备好加密文件。') }
+  } catch (error) {
+    if (owner === unlocked) notify(error.message)
+  } finally {
+    button.disabled = false
+  }
+}
+
+get('save-share').addEventListener('click', event => {
+  if (share) void downloadBundle(event.currentTarget, share.blob, share.files, share.id + '.vault')
 })
-get('backup').addEventListener('click', () => {
-  if (owner && snapshot.blob.size <= maxPackageSize) download(snapshot.blob, 'treehouse-owner-' + localDay() + '.vault')
+get('backup').addEventListener('click', event => {
+  if (owner) void downloadBundle(event.currentTarget, snapshot.blob, recordMedia(owner.records), 'treehouse-owner-' + localDay() + '.vault')
 })
+get('share-paper-notes').addEventListener('change', clearShare)
 get('lock').addEventListener('click', () => lock())
 get('entry-cancel').addEventListener('click', () => edit())
 entryForm.elements.kind.addEventListener('change', showFields)
-filter.addEventListener('change', render)
-paperYear.addEventListener('change', render)
+entryForm.elements.paperPublished.addEventListener('change', showFields)
 for (const event of ['keydown', 'pointerdown']) document.addEventListener(event, activity)
 window.addEventListener('pagehide', () => lock())
 

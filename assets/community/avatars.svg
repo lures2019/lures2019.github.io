@@ -1,0 +1,15 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="384" height="48" viewBox="0 0 384 48">
+  <view id="a0" viewBox="0 0 48 48"/><view id="a1" viewBox="48 0 48 48"/>
+  <view id="a2" viewBox="96 0 48 48"/><view id="a3" viewBox="144 0 48 48"/>
+  <view id="a4" viewBox="192 0 48 48"/><view id="a5" viewBox="240 0 48 48"/>
+  <view id="a6" viewBox="288 0 48 48"/><view id="a7" viewBox="336 0 48 48"/>
+  <defs><g id="face"><circle cx="18" cy="24" r="1.8"/><circle cx="30" cy="24" r="1.8"/><path d="M21 30q3 3 6 0" stroke="#28373a" stroke-width="1.6" fill="none" stroke-linecap="round"/></g></defs>
+  <g><circle cx="24" cy="24" r="24" fill="#e6f0df"/><path d="M8 24 11 9l11 8h5L38 9l2 15q0 14-16 14T8 24" fill="#8aba8b"/><use href="#face" fill="#28373a"/></g>
+  <g transform="translate(48)"><circle cx="24" cy="24" r="24" fill="#f7e6d7"/><circle cx="12" cy="15" r="6" fill="#c58f67"/><circle cx="36" cy="15" r="6" fill="#c58f67"/><ellipse cx="24" cy="26" rx="15" ry="12" fill="#e1ae87"/><use href="#face" fill="#28373a"/></g>
+  <g transform="translate(96)"><circle cx="24" cy="24" r="24" fill="#e6e1f6"/><path d="M14 22Q7 7 14 7q7 0 7 14m6 0q0-14 7-14t0 15" fill="#aa9ad0"/><ellipse cx="24" cy="27" rx="15" ry="11" fill="#c2b3e2"/><use href="#face" fill="#28373a"/></g>
+  <g transform="translate(144)"><circle cx="24" cy="24" r="24" fill="#d9edf2"/><path d="M8 32V19l16-9 16 9v13l-16 7z" fill="#8ebdcc"/><path d="M24 10v29l16-7V19z" fill="#a3cbd6"/><use href="#face" fill="#28373a"/></g>
+  <g transform="translate(192)"><circle cx="24" cy="24" r="24" fill="#f9e1e8"/><path d="M24 38Q5 27 10 17t14 0q9-10 14 0t-14 21" fill="#dc9daf"/><use href="#face" fill="#28373a"/></g>
+  <g transform="translate(240)"><circle cx="24" cy="24" r="24" fill="#fcf0d6"/><path d="m24 7 5 10 11 2-8 8 2 11-10-5-10 5 2-11-8-8 11-2z" fill="#edc566"/><use href="#face" fill="#28373a"/></g>
+  <g transform="translate(288)"><circle cx="24" cy="24" r="24" fill="#e3ebf5"/><path d="M24 10Q9 24 9 29t15 10q15 0 15-10t-15-19" fill="#98abc9"/><use href="#face" fill="#28373a"/></g>
+  <g transform="translate(336)"><circle cx="24" cy="24" r="24" fill="#ddefe9"/><path d="M10 27q1-17 13-16 14 0 15 16t-14 11q-15 0-14-11" fill="#89bcaa"/><path d="M22 14q4-8 13-7-3 7-13 7" fill="#487d6b"/><use href="#face" fill="#28373a"/></g>
+</svg>
