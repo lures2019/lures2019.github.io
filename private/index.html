@@ -1,11 +1,11 @@
 <!doctype html>
-<html lang="zh-CN">
+<html lang="zh-CN" data-vault-cloud="">
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <meta name="robots" content="noindex, nofollow">
   <meta name="referrer" content="no-referrer">
-  <meta http-equiv="Content-Security-Policy" content="default-src 'none'; script-src 'self'; style-src 'self'; img-src 'self' data:; form-action 'none'; base-uri 'none'">
+  <meta http-equiv="Content-Security-Policy" content="default-src 'none'; script-src 'self'; style-src 'self'; img-src 'self' data:; connect-src 'self'; form-action 'none'; base-uri 'none'">
   <title>私密空间 · Zaydenの树屋</title>
   <link rel="icon" href="../img/favicon.png">
   <link rel="stylesheet" href="../assets/personal/personal.css">
@@ -20,6 +20,18 @@
       <p>把照片、日记和论文进度整理在一起，选择要分享的内容。</p>
     </header>
     <noscript><p class="panel">启用 JavaScript 后即可在浏览器中解锁资料。</p></noscript>
+    <p id="cloud-pending" class="muted">自动备份尚未启用。资料仍可在当前浏览器加密保存，也可以下载加密备份。</p>
+    <section id="vault-cloud" class="panel" aria-labelledby="cloud-title" hidden>
+      <h2 id="cloud-title">私仓自动备份</h2>
+      <p class="muted">首次或换设备时，先连接 GitHub，再输入原来的资料库密码。保存后自动上传加密备份。</p>
+      <div class="actions">
+        <button id="cloud-connect" type="button">使用 GitHub 连接</button>
+        <button id="cloud-disconnect" type="button" class="secondary" hidden>断开连接</button>
+        <button id="cloud-retry" type="button" class="secondary" hidden>立即重试备份</button>
+        <button id="cloud-restore" type="button" class="secondary" hidden>使用私仓版本</button>
+      </div>
+      <p id="cloud-status" class="status" role="status" aria-live="polite"></p>
+    </section>
     <section id="gate" class="panel" aria-labelledby="gate-title">
       <h2 id="gate-title">打开资料库</h2>
       <form id="unlock-form">
@@ -42,7 +54,7 @@
         <button id="lock" type="button" class="secondary">锁定</button>
         <a href="https://github.com/lures2019/treehouse-vault" target="_blank" rel="noopener noreferrer">打开 GitHub 私仓 ↗</a>
       </div>
-      <p class="muted">加密备份可提交到自己的 GitHub 私人仓库。工作副本保存在当前浏览器，十分钟无操作会锁定。</p>
+      <p class="muted" id="vault-storage-note">加密备份可提交到自己的 GitHub 私人仓库。工作副本保存在当前浏览器，十分钟无操作会锁定。</p>
       <div class="layout">
         <section class="panel" aria-labelledby="entry-heading">
           <h2 id="entry-heading">添加记录</h2>
@@ -83,13 +95,13 @@
             <label>论文统计年份 <select id="paper-year"></select></label>
           </div>
           <p id="paper-summary" class="muted"></p>
-          <p class="muted">勾选愿意分享的记录，再生成分享文件。</p>
+          <p class="muted">勾选愿意分享的记录，再生成分享。</p>
           <div id="records"></div>
         </section>
       </div>
       <section class="panel review" aria-labelledby="share-title">
         <h2 id="share-title">生成密码分享</h2>
-        <p class="muted">每个分享使用独立密码。将加密文件发布到博客后，再把链接和密码交给对方。</p>
+        <p class="muted" id="share-help">每个分享使用独立密码。将加密文件发布到博客后，再把链接和密码交给对方。</p>
         <button id="make-share" type="button">生成分享文件和密码</button>
         <div id="share-result" class="share-result" hidden>
           <label for="share-link">分享链接</label>
@@ -98,6 +110,11 @@
           <input id="share-password" readonly>
           <div class="actions"><button id="save-share" type="button" class="secondary">下载加密分享文件</button></div>
         </div>
+        <details id="cloud-share-manager" hidden>
+          <summary>管理已生成的链接</summary>
+          <p class="muted">关闭链接后，访客无法再从链接下载。已经下载的文件仍能用原密码打开。</p>
+          <div id="cloud-shares"></div>
+        </details>
       </section>
     </div>
   </main>

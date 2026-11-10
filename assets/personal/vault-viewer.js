@@ -1,4 +1,5 @@
 import { maxPackageSize, renderRecords, unseal } from './vault-crypto.js'
+import { readCloudShare, shareIdPattern } from './vault-cloud.js'
 
 const form = document.getElementById('read-share')
 const status = document.getElementById('reader-status')
@@ -14,6 +15,7 @@ function lock () {
   revision++
   clearTimeout(timer)
   records.replaceChildren()
+  ciphertext = undefined
   content.hidden = true
   gate.hidden = false
   status.textContent = '已锁定分享。'
@@ -37,12 +39,19 @@ form.addEventListener('submit', async event => {
   submit.disabled = true
   status.textContent = '正在解锁…'
   try {
-    if (!file && !ciphertext) {
-      if (!/^[0-9a-f]{8}(?:-[0-9a-f]{4}){3}-[0-9a-f]{12}$/i.test(id)) throw new Error('请打开有效的分享链接，或选择加密文件。')
-      const response = await fetch('./shares/' + id + '.vault', { cache: 'no-store' })
-      if (!response.ok) throw new Error('分享文件尚未发布，或链接已经失效。')
-      if (Number(response.headers.get('Content-Length')) > maxPackageSize) throw new Error('分享文件过大。')
-      const payload = await response.blob()
+    const cloud = id.startsWith('cloud-')
+    if (!file && (cloud || !ciphertext)) {
+      const shareId = cloud ? id.slice(6) : id
+      let payload
+      if (cloud) {
+        payload = await readCloudShare(shareId)
+      } else {
+        if (!shareIdPattern.test(shareId.toLowerCase())) throw new Error('请打开有效的分享链接，或选择加密文件。')
+        const response = await fetch('./shares/' + shareId + '.vault', { cache: 'no-store' })
+        if (!response.ok) throw new Error('分享文件尚未发布，或链接已经失效。')
+        if (Number(response.headers.get('Content-Length')) > maxPackageSize) throw new Error('分享文件过大。')
+        payload = await response.blob()
+      }
       if (request !== revision) return
       ciphertext = payload
     }
@@ -63,7 +72,6 @@ form.addEventListener('submit', async event => {
 document.getElementById('reader-lock').addEventListener('click', lock)
 for (const event of ['keydown', 'pointerdown']) document.addEventListener(event, activity)
 window.addEventListener('hashchange', () => {
-  ciphertext = undefined
   form.reset()
   lock()
 })
