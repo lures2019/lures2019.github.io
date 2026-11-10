@@ -1,6 +1,6 @@
 (() => {
   const service = document.currentScript.dataset.service
-  const avatarPath = '/assets/community/avatars.svg'
+  const avatarPath = '/assets/community/avatars.svg?v=2'
   const avatarCount = 64
   const commentPath = /^\/(books|movies|music)\/?(?:index\.html)?$/
   const dateFormat = new Intl.DateTimeFormat('zh-CN', { dateStyle: 'medium', timeStyle: 'short', timeZone: 'Asia/Shanghai' })
