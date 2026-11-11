@@ -2,8 +2,8 @@ import { el } from './vault-crypto.js?v=9'
 
 export const fonts = {
   mixed: ['中文宋体 / 西文 Times New Roman', '"Times New Roman", "Liberation Serif", SimSun, "Songti SC", "Noto Serif CJK SC", serif', 'Times New Roman'],
-  sans: ['默认无衬线', '"Segoe UI", "Microsoft YaHei", sans-serif', 'Microsoft YaHei'],
-  serif: ['默认衬线', 'Georgia, "Noto Serif SC", SimSun, serif', 'Georgia'],
+  sans: ['无衬线', '"Segoe UI", "Microsoft YaHei", sans-serif', 'Microsoft YaHei'],
+  serif: ['衬线', 'Georgia, "Noto Serif SC", SimSun, serif', 'Georgia'],
   mono: ['等宽字体', 'Consolas, "Cascadia Code", monospace', 'Consolas'],
   times: ['Times New Roman', '"Times New Roman", SimSun, serif', 'Times New Roman'],
   song: ['宋体', 'SimSun, "Songti SC", "Noto Serif SC", serif', 'SimSun'],
@@ -27,6 +27,25 @@ export const numberingStyles = {
   'simp-chinese-informal': '一、二、三（简体）', 'simp-chinese-formal': '壹、贰、叁', 'lower-greek': 'α、β、γ'
 }
 export const alignments = { left: '左对齐', center: '居中', right: '右对齐', justify: '两端对齐' }
+export const underlines = {
+  single: ['单实线', 'solid'],
+  double: ['双线', 'double'],
+  thick: ['粗实线', 'solid', true],
+  dotted: ['点线', 'dotted'],
+  dottedHeavy: ['粗点线', 'dotted', true],
+  dash: ['虚线', 'dashed'],
+  dashedHeavy: ['粗虚线', 'dashed', true],
+  wave: ['波浪线', 'wavy'],
+  wavyHeavy: ['粗波浪线', 'wavy', true]
+}
+
+export function setUnderline (node, key) {
+  const [, style, thick] = underlines[key]
+  node.dataset.underline = key
+  node.style.textDecorationLine = 'underline'
+  node.style.textDecorationStyle = style
+  if (thick) node.style.textDecorationThickness = '.13em'
+}
 
 export function bounded (value, min, max, fallback) {
   const number = Number(value)
@@ -70,6 +89,12 @@ export function copyFormatting (from, to) {
   const style = from.style
   const font = from.dataset?.font
   if (Object.hasOwn(fonts, font)) setFont(to, font)
+  const underline = from.dataset?.underline
+  if (Object.hasOwn(underlines, underline)) setUnderline(to, underline)
+  else if (style.textDecorationLine.split(' ').includes('underline')) setUnderline(to, 'single')
+  if (style.textDecorationLine.split(' ').includes('line-through')) {
+    to.style.textDecorationLine = [to.style.textDecorationLine, 'line-through'].filter(Boolean).join(' ')
+  }
   const size = dimension(style.fontSize, 'pt', sizeLimits.min, sizeLimits.max)
   if (size) to.style.fontSize = size
   if (['super', 'sub'].includes(style.verticalAlign)) to.style.verticalAlign = style.verticalAlign

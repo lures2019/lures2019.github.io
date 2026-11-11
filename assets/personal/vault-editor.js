@@ -1,9 +1,9 @@
 import { base64, deriveKey, download, el, localDay, randomBytes, seal, unseal } from './vault-crypto.js?v=9'
-import { createLibrary, paperDetails, paperStages } from './vault-library.js?v=9'
+import { createLibrary, paperDetails, paperStages } from './vault-library.js?v=10'
 import { cacheImportedMedia, draftMedia, makeBundle, openBundle, syncImportedMedia, uploadMedia } from './vault-media.js?v=8'
 import { isImageType, isVideoType, maxAttachments, maxSharedMedia, recordMedia } from './vault-media-model.js?v=8'
 import { prepareAttachments, prepareImage, prepareVideo } from './vault-transcode.js?v=8'
-import { openWriter } from './vault-writing.js?v=9'
+import { openWriter } from './vault-writing.js?v=10'
 import { forgetVaultSession, rememberVaultSession, resumeVaultSession, touchVaultSession, vaultIdleMs } from './vault-session.js'
 import {
   closeCloudShare, cloudConfigured, cloudConnected, connectCloud, disconnectCloud, emptyRevision, listCloudShares,
@@ -594,7 +594,7 @@ entryForm.addEventListener('submit', async event => {
       record.attachments = []
       for (const { file, ref } of files) {
         if (owner !== unlocked) return
-        record.attachments.push(file ? await uploadMedia(file, progress) : ref)
+        record.attachments.push(file ? { ...ref, ...await uploadMedia(file, progress) } : ref)
       }
     }
     if (owner !== unlocked) return

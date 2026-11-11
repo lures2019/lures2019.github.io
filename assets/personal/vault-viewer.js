@@ -1,6 +1,6 @@
 import { maxPackageSize, unseal } from './vault-crypto.js?v=9'
 import { readCloudShare, shareIdPattern } from './vault-cloud.js'
-import { createLibrary } from './vault-library.js?v=9'
+import { createLibrary } from './vault-library.js?v=10'
 import { openBundle } from './vault-media.js?v=8'
 
 const form = document.getElementById('read-share')

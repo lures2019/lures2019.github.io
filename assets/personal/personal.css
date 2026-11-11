@@ -247,7 +247,7 @@ button:disabled { opacity: .65; cursor: default; }
 .vault-paper-table td a { display: block; overflow: hidden; text-overflow: ellipsis; font-weight: 650; }
 .vault-paper-table tbody tr:last-child td { border-bottom: 0; }
 .vault-paper-table tbody tr:nth-child(even), .vault-paper-table tbody tr:hover { background: color-mix(in srgb, var(--wash) 65%, var(--surface)); }
-.vault-rich-text th, .vault-rich-text td { padding: 8px 12px; border: 1px solid var(--line); text-align: left; }
+.vault-rich-text th, .vault-rich-text td { padding: 8px 12px; border: 1px solid var(--line); text-align: center; }
 .vault-paper-table th, .vault-rich-text th { background: var(--wash); }
 .vault-stage { display: inline-block; padding: 3px 10px; border-radius: 99px; background: var(--wash); color: var(--accent); font-weight: 650; }
 .vault-stage[data-stage="published"] { background: #d7ecdb; color: #205b36; }
@@ -262,8 +262,7 @@ button:disabled { opacity: .65; cursor: default; }
 .vault-rich-text table { border-collapse: collapse; margin: 12px auto; max-width: 100%; }
 .vault-rich-text table:has(> colgroup), .vault-writing-page table { width: 100%; }
 .vault-rich-text table:has(> colgroup) { table-layout: fixed; }
-.vault-rich-text th, .vault-rich-text td { text-align: center; }
-.vault-rich-text :is(td,th) { min-width: 18px; overflow-wrap: anywhere; vertical-align: top; }
+.vault-rich-text :is(td,th) { min-width: 18px; overflow-wrap: anywhere; vertical-align: middle; }
 .vault-rich-text [data-vault-table-selected] { background: var(--wash); box-shadow: inset 0 0 0 2px var(--accent); }
 .vault-column-resize, .vault-column-resize * { cursor: col-resize !important; }
 .vault-rich-text ul { padding-inline-start: 1.7em; }
@@ -314,6 +313,14 @@ button.vault-resize-handle { position: absolute; right: 2px; bottom: 2px; width:
 .vault-ribbon { display: flex; flex-wrap: wrap; gap: 5px; max-height: min(26dvh, 148px); overflow: auto; padding: 10px 14px; background: var(--wash); border-bottom: 1px solid var(--line); }
 .vault-ribbon select { width: auto; min-height: 34px; padding-block: 0; font-size: .85rem; }
 .vault-ribbon input[type="color"] { width: 32px; min-height: 34px; padding: 3px; cursor: pointer; }
+.vault-text-palette {
+  position: fixed; inset: auto; margin: 0; width: min(250px, calc(100vw - 16px)); max-height: min(220px, 45dvh);
+  padding: 6px; overflow: auto; border: 1px solid var(--line); border-radius: 10px;
+  background: var(--surface); box-shadow: 0 6px 22px #11271826; color: var(--ink);
+}
+.vault-text-palette:popover-open { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 4px; }
+.vault-text-palette button { display: flex; justify-content: space-between; align-items: center; gap: 6px; }
+.vault-color-swatch { width: 1em; height: 1em; border: 1px solid #808080; border-radius: 4px; }
 .vault-writing-prompt { display: flex; flex-wrap: wrap; align-items: end; gap: 8px; padding: 8px 14px; }
 .vault-writing-prompt label { flex: 1 1 110px; margin-top: 0 !important; }
 .vault-code-form label:has(textarea) { flex-basis: 100%; }

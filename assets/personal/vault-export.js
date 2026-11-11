@@ -1,8 +1,8 @@
 import { download, el } from './vault-crypto.js?v=9'
 import { openMedia } from './vault-media.js?v=8'
 import { isImageType } from './vault-media-model.js?v=8'
-import { renderCodeBlocks, renderEquations } from './vault-rich.js?v=9'
-import { setFont } from './vault-layout.js?v=9'
+import { renderCodeBlocks, renderEquations } from './vault-rich.js?v=10'
+import { setFont } from './vault-layout.js?v=10'
 
 const libraries = new Map()
 let printCleanup
@@ -152,7 +152,7 @@ export async function exportNote (options) {
     const { Document, Packer } = window.docx
     const children = window.docxHtml.htmlToContent(sheet.innerHTML, {
       maxImageWidth: 620,
-      stylesheet: 'table { margin: 0 auto; border-collapse: collapse; } td, th { border: 1px solid #9baaa0; padding: 6px; text-align: center; } pre { background-color: #142033; color: #e9edf6; padding: 10px; white-space: pre; } pre, pre code { font-family: Consolas, monospace; }'
+      stylesheet: 'table { margin: 0 auto; border-collapse: collapse; } td, th { border: 1px solid #9baaa0; padding: 6px; text-align: center; vertical-align: middle; } pre { background-color: #142033; color: #e9edf6; padding: 10px; white-space: pre; } pre, pre code { font-family: Consolas, monospace; }'
     })
     const blob = await Packer.toBlob(new Document({ title, sections: [{ children }] }))
     if (alive()) download(blob, `${name}.docx`)

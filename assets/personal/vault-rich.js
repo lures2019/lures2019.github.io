@@ -1,5 +1,5 @@
 import { el } from './vault-crypto.js?v=9'
-import { copyFormatting, fonts, outline, setFont, updateWordCount } from './vault-layout.js?v=9'
+import { copyFormatting, fonts, outline, setFont, updateWordCount } from './vault-layout.js?v=10'
 import { tableLimits } from './vault-table.js'
 
 const assets = new Map()

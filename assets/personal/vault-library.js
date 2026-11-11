@@ -1,6 +1,6 @@
 import { download, el } from './vault-crypto.js?v=9'
 import { openMedia } from './vault-media.js?v=8'
-import { editableDocument, richBody } from './vault-rich.js?v=9'
+import { editableDocument, richBody } from './vault-rich.js?v=10'
 import { localDay, period, validDay } from './todo-model.js'
 import { isImageType, isVideoType } from './vault-media-model.js?v=8'
 
@@ -159,7 +159,7 @@ export function createLibrary (root, { controls, mediaOptions, editPaper, upload
       menu.disabled = true
       status.textContent = '正在准备文档…'
       try {
-        const { exportNote } = await import('./vault-export.js?v=9')
+        const { exportNote } = await import('./vault-export.js?v=10')
         await exportNote({ format, title: record.title, font: record.font, html: await editableDocument(record),
           files: (record.attachments || []).map(ref => ({ ref })), mediaOptions: mediaOptions?.(), alive: () => visible && actions.isConnected })
         status.textContent = ['print', 'pdf'].includes(format) ? '请在浏览器打印窗口选择输出位置。' : '文档已生成。'

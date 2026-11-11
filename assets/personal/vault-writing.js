@@ -2,8 +2,8 @@ import { el } from './vault-crypto.js?v=9'
 import { draftMedia, openMedia } from './vault-media.js?v=8'
 import { isImageType, isVideoType, maxAttachments } from './vault-media-model.js?v=8'
 import { prepareAttachments } from './vault-transcode.js?v=8'
-import { cleanDocument, codeLanguages, editableDocument, renderCodeBlocks, renderEquations, safeLink } from './vault-rich.js?v=9'
-import { alignments, bounded, bulletStyles, fonts, imageLimits, numberingStyles, outline, setFont, setImageSize, sizeLimits, updateWordCount } from './vault-layout.js?v=9'
+import { cleanDocument, codeLanguages, editableDocument, renderCodeBlocks, renderEquations, safeLink } from './vault-rich.js?v=10'
+import { alignments, bounded, bulletStyles, fonts, imageLimits, numberingStyles, outline, setFont, setImageSize, setUnderline, sizeLimits, underlines, updateWordCount } from './vault-layout.js?v=10'
 import { historyState, sameHistoryState, setHistorySelection } from './vault-history.js'
 import { cellsInRange, changeTable, columnWidths, mergeCells, setColumnWidths, splitCell, tableGrid, tableLimits } from './vault-table.js'
 
@@ -20,6 +20,45 @@ const textColors = { '#000000': '黑色', '#404040': '深灰', '#808080': '灰�
   '#008080': '青色', '#0070c0': '蓝色', '#203864': '深蓝', '#7030a0': '紫色', '#c43c7d': '玫红' }
 const blockSelector = 'p,h1,h2,h3,h4,h5,h6,li,blockquote,td,th,div:not([data-math])'
 const parentElement = node => node?.nodeType === Node.ELEMENT_NODE ? node : node?.parentElement
+const hasUnderline = node => node.matches('u,[data-underline]') || node.style.textDecorationLine.split(' ').includes('underline')
+
+function isolateInline (node) {
+  const parent = node.parentElement
+  for (const side of ['before', 'after']) {
+    const sibling = parent.cloneNode(false)
+    const next = () => side === 'before' ? parent.firstChild : node.nextSibling
+    while (next() && next() !== node) {
+      const child = next()
+      if (child.nodeType === Node.TEXT_NODE && !child.length) child.remove()
+      else sibling.append(child)
+    }
+    if (sibling.hasChildNodes()) parent[side](sibling)
+  }
+  return parent
+}
+
+function clearInheritedUnderline (span) {
+  let current = span
+  for (let ancestor = current.parentElement; ancestor && !ancestor.matches(blockSelector);) {
+    if (hasUnderline(ancestor)) {
+      while (current !== ancestor) current = isolateInline(current)
+      if (current.localName === 'u') {
+        const plain = el('span')
+        for (const { name, value } of current.attributes) plain.setAttribute(name, value)
+        plain.append(...current.childNodes)
+        current.replaceWith(plain)
+        current = plain
+      }
+      delete current.dataset.underline
+      current.style.textDecorationLine = current.style.textDecorationLine.split(' ').filter(line => line !== 'underline').join(' ')
+      if (!current.style.textDecorationLine) {
+        current.style.textDecorationStyle = ''
+        current.style.textDecorationThickness = ''
+      }
+      ancestor = current.parentElement
+    } else ancestor = ancestor.parentElement
+  }
+}
 
 export function openWriter ({ record, attachments, initialImage, onApply, onActivity }) {
   const dialog = el('dialog', '', 'vault-dialog vault-writer')
@@ -45,6 +84,7 @@ export function openWriter ({ record, attachments, initialImage, onApply, onActi
   let dirty = false
   let preparing = false
   let files = attachments.slice()
+  let defaultFont = Object.hasOwn(fonts, record.font) ? record.font : 'mixed'
   let activeMedia
   let tableAnchor
   let tableSelection
@@ -64,11 +104,16 @@ export function openWriter ({ record, attachments, initialImage, onApply, onActi
 
   function capture () {
     page.normalize()
-    return historyState(page, selection, font.value, files)
+    return historyState(page, selection, defaultFont, files)
   }
 
   function recordChange (before, inputType) {
     rememberSelection()
+    if (files.some(item => item.ref.inlineOnly)) {
+      const embedded = new Set([...page.querySelectorAll('[data-inline-media]')].map(chip => chip.dataset.inlineMedia))
+      files = files.filter(item => !item.ref.inlineOnly || embedded.has(item.ref.id))
+    }
+    if (!currentState || currentState.files.length !== files.length || files.some((item, index) => item !== currentState.files[index])) fileNames()
     const next = capture()
     if (before && !sameHistoryState(before, next)) {
       const time = Date.now()
@@ -107,7 +152,7 @@ export function openWriter ({ record, attachments, initialImage, onApply, onActi
     for (const url of urls) URL.revokeObjectURL(url)
     urls.clear()
     page.innerHTML = state.html
-    font.value = state.font
+    defaultFont = state.font
     setFont(page, state.font)
     files = state.files.slice()
     selection = setHistorySelection(page, state.positions)
@@ -122,7 +167,10 @@ export function openWriter ({ record, attachments, initialImage, onApply, onActi
   function button (label, action, primary = false) {
     const control = el('button', label, primary ? '' : 'secondary compact')
     control.type = 'button'
-    control.addEventListener('mousedown', event => event.preventDefault())
+    control.addEventListener('mousedown', event => {
+      rememberSelection()
+      event.preventDefault()
+    })
     control.addEventListener('click', action)
     return control
   }
@@ -162,14 +210,16 @@ export function openWriter ({ record, attachments, initialImage, onApply, onActi
     const control = el('select')
     control.setAttribute('aria-label', label)
     control.append(new Option(label, ''), ...Object.entries(choices).map(([value, text]) => new Option(text, value)))
+    control.addEventListener('pointerdown', rememberSelection)
     control.onchange = () => {
+      if (document.activeElement === page) rememberSelection()
       if (control.value) action(control.value)
       control.value = ''
     }
     return control
   }
 
-  function inlineFormat (apply) {
+  function inlineFormat (apply, after) {
     mutate(() => {
       const active = restoreSelection()
       if (!active.rangeCount) return
@@ -178,6 +228,7 @@ export function openWriter ({ record, attachments, initialImage, onApply, onActi
         const span = el('span', '\u200b')
         apply(span)
         range.insertNode(span)
+        after?.(span)
         active.collapse(span.firstChild, 1)
       } else {
         const walker = document.createTreeWalker(page, NodeFilter.SHOW_TEXT)
@@ -196,6 +247,7 @@ export function openWriter ({ record, attachments, initialImage, onApply, onActi
           apply(span)
           span.append(part.extractContents())
           part.insertNode(span)
+          after?.(span)
           return span
         })
         if (spans.length) active.setBaseAndExtent(spans[0], 0, spans.at(-1), spans.at(-1).childNodes.length)
@@ -206,6 +258,12 @@ export function openWriter ({ record, attachments, initialImage, onApply, onActi
 
   function fontSize (size) {
     inlineFormat(span => { span.style.fontSize = `${size}pt` })
+  }
+
+  function underline (style) {
+    inlineFormat(span => {
+      if (style !== 'none') setUnderline(span, style)
+    }, clearInheritedUnderline)
   }
 
   function paragraphFormat (apply) {
@@ -367,22 +425,18 @@ export function openWriter ({ record, attachments, initialImage, onApply, onActi
     number.value = chip?.dataset.number || ''
   }
 
-  const font = el('select')
-  font.setAttribute('aria-label', '全文默认字体')
-  font.append(...Object.entries(fonts).map(([key, [label]]) => new Option(label, key)))
-  font.value = Object.hasOwn(fonts, record.font) ? record.font : 'mixed'
-  setFont(page, font.value)
-  font.onchange = () => {
-    const before = currentState
-    setFont(page, font.value)
-    recordChange(before)
-  }
+  setFont(page, defaultFont)
+  const fontControl = selectControl('字体', Object.fromEntries(Object.entries(fonts).map(([key, [label]]) => [key, label])), key => {
+    if (selection?.toString()) inlineFormat(span => setFont(span, key))
+    else mutate(() => { defaultFont = key; setFont(page, key) })
+  })
+  fontControl.title = '选中文字时更改选区字体，光标停在正文时更改全文默认字体'
 
   const attach = el('input')
   attach.type = 'file'
   attach.multiple = true
   attach.hidden = true
-  async function addAttachments (picked) {
+  async function addAttachments (picked, inlineOnly = false) {
     if (!picked.length || preparing) return
     const at = selection?.cloneRange()
     preparing = true
@@ -392,12 +446,14 @@ export function openWriter ({ record, attachments, initialImage, onApply, onActi
         if (dialog.open) { notice.textContent = message; onActivity() }
       })
       if (!dialog.open) return
-      const additions = prepared.map(file => ({ file, ref: draftMedia(file) }))
+      const additions = prepared.map(file => {
+        const ref = draftMedia(file)
+        return { file, ref: inlineOnly ? { ...ref, inlineOnly: true } : ref }
+      })
       if (at && page.contains(at.commonAncestorContainer)) selection = at
       mutate(() => {
         files.push(...additions)
         additions.filter(isMedia).forEach(insertImage)
-        fileNames()
       })
       notice.textContent = `已添加 ${additions.length} 个附件。`
     } catch (error) { notice.textContent = error?.message || '无法处理选中的文件，请分批重试。' }
@@ -410,10 +466,41 @@ export function openWriter ({ record, attachments, initialImage, onApply, onActi
   }
 
   for (const [label, name, value] of [
-    ['撤销', 'undo'], ['重做', 'redo'], ['加粗', 'bold'], ['斜体', 'italic'], ['下划线', 'underline'], ['删除线', 'strikeThrough'],
+    ['撤销', 'undo'], ['重做', 'redo'], ['加粗', 'bold'], ['斜体', 'italic'], ['删除线', 'strikeThrough'],
     ['上标', 'superscript'], ['下标', 'subscript']
   ]) toolbar.append(button(label, () => command(name, value)))
-  const sizes = Object.fromEntries([8, 9, 10, 10.5, 11, 12, 14, 16, 18, 20, 22, 24, 28, 32, 36, 48, 60, 72].map(size => [size, `${size} pt`]))
+  const sizeControl = selectControl('字号', {}, value => {
+    if (value !== 'custom') { fontSize(value); return }
+    customSize.hidden = false
+    const input = customSize.querySelector('input')
+    input.focus()
+    input.select()
+  })
+  sizeControl.append(...[8, 9, 10, 10.5, 11, 12, 14, 16, 18, 20, 22, 24, 28, 32, 36, 48, 60, 72].map(size => new Option(`${size} pt`, size)),
+    new Option('自定义字号…', 'custom'))
+  const palette = el('div', '', 'vault-text-palette')
+  palette.popover = 'auto'
+  palette.setAttribute('role', 'group')
+  palette.setAttribute('aria-label', '文字颜色选项')
+  const paletteButton = button('常用文字颜色', () => {
+    const rect = paletteButton.getBoundingClientRect()
+    palette.style.left = `${Math.max(8, Math.min(rect.left, window.innerWidth - 258))}px`
+    const above = window.innerHeight - rect.bottom < Math.min(225, window.innerHeight * .45)
+    palette.style.top = above ? 'auto' : `${rect.bottom + 5}px`
+    palette.style.bottom = above ? `${window.innerHeight - rect.top + 5}px` : 'auto'
+  })
+  paletteButton.popoverTargetElement = palette
+  for (const [color, label] of Object.entries(textColors)) {
+    const choice = button(label, () => {
+      palette.hidePopover()
+      inlineFormat(span => { span.style.color = color })
+    })
+    const swatch = el('span', '', 'vault-color-swatch')
+    swatch.setAttribute('aria-hidden', 'true')
+    swatch.style.backgroundColor = color
+    choice.append(swatch)
+    palette.append(choice)
+  }
   const textColor = el('input')
   const highlight = el('input')
   for (const [control, label, color, property] of [[textColor, '自定义文字颜色', '#283d2f', 'color'], [highlight, '自定义高亮颜色', '#fff0a8', 'backgroundColor']]) {
@@ -424,13 +511,8 @@ export function openWriter ({ record, attachments, initialImage, onApply, onActi
     control.onchange = () => inlineFormat(span => { span.style[property] = control.value })
   }
   toolbar.append(selectControl('标题级别', { p: '正文', h1: '标题 1', h2: '标题 2', h3: '标题 3', h4: '标题 4', h5: '标题 5', h6: '标题 6' }, value => command('formatBlock', value)),
-    font, selectControl('选中文字字体', Object.fromEntries(Object.entries(fonts).map(([key, [label]]) => [key, label])), key => inlineFormat(span => setFont(span, key))),
-    selectControl('字号', sizes, fontSize),
-    button('自定义字号', () => {
-      customSize.hidden = !customSize.hidden
-      if (!customSize.hidden) customSize.querySelector('input').select()
-    }),
-    selectControl('常用文字颜色', textColors, color => inlineFormat(span => { span.style.color = color })),
+    fontControl, sizeControl, selectControl('下划线', { ...Object.fromEntries(Object.entries(underlines).map(([key, [label]]) => [key, label])), none: '清除下划线' }, underline),
+    paletteButton, palette,
     textColor, selectControl('高亮颜色', highlightColors, color => inlineFormat(span => { span.style.backgroundColor = color })), highlight,
     selectControl('段落对齐', alignments, value => paragraphFormat(block => { block.style.textAlign = value })),
     selectControl('项目符号', bulletStyles, style => list('ul', style)),
@@ -786,7 +868,7 @@ export function openWriter ({ record, attachments, initialImage, onApply, onActi
       command('insertParagraph')
       const next = parentElement(window.getSelection().anchorNode)?.closest(blockSelector)
       if (next && next !== previous && next !== page && !next.matches('li,td,th') && !next.closest('li')) {
-        next.style.textAlign = 'left'
+        next.style.textAlign = next.closest('td,th') ? '' : 'left'
         next.style.textIndent = ''
       }
     })
@@ -841,7 +923,7 @@ export function openWriter ({ record, attachments, initialImage, onApply, onActi
         else command('outdent')
       } else if (block.style.textAlign && block.style.textAlign !== 'left' || parseFloat(block.style.textIndent) > 0) {
         event.preventDefault()
-        mutate(() => { block.style.textAlign = 'left'; block.style.textIndent = '' })
+        mutate(() => { block.style.textAlign = block.closest('td,th') ? '' : 'left'; block.style.textIndent = '' })
       }
     }
   })
@@ -851,8 +933,8 @@ export function openWriter ({ record, attachments, initialImage, onApply, onActi
     exportControl.disabled = true
     notice.textContent = '正在准备文档…'
     try {
-      const { exportNote } = await import('./vault-export.js?v=9')
-      await exportNote({ format, title: record.title, font: font.value, html: cleanDocument(page.innerHTML), files, mediaOptions: { owner: true }, alive: () => dialog.open })
+      const { exportNote } = await import('./vault-export.js?v=10')
+      await exportNote({ format, title: record.title, font: defaultFont, html: cleanDocument(page.innerHTML), files, mediaOptions: { owner: true }, alive: () => dialog.open })
       notice.textContent = ['print', 'pdf'].includes(format) ? '可在浏览器打印窗口选择打印机或「另存为 PDF」。' : '文档已生成。'
     } catch (error) { notice.textContent = error.message || '导出失败，请重试。' }
     finally { exportControl.disabled = false }
@@ -865,7 +947,7 @@ export function openWriter ({ record, attachments, initialImage, onApply, onActi
     if (!ready || preparing) return
     const html = cleanDocument(page.innerHTML)
     if (html.length > 150_000) { notice.textContent = '正文过长，请拆分为多条记录。'; return }
-    onApply(html, font.value, files)
+    onApply(html, defaultFont, files)
     dialog.close()
   }, true)
   header.append(el('h2', record.kind === 'paper' ? '论文笔记' : '日记正文'), wordCount, exportControl, button('关闭', close), applyRecord)
@@ -889,7 +971,7 @@ export function openWriter ({ record, attachments, initialImage, onApply, onActi
       paragraphBreak()
       return
     }
-    pendingInput = historyState(page, selection, font.value, files)
+    pendingInput = historyState(page, selection, defaultFont, files)
   })
   page.addEventListener('input', event => {
     if (!ready || changing || composition || event.isComposing) return
@@ -908,7 +990,17 @@ export function openWriter ({ record, attachments, initialImage, onApply, onActi
   page.addEventListener('click', event => {
     const chip = event.target.closest('[data-math]')
     if (chip) formula(chip, chip.dataset.display === 'true')
-    selectMedia(event.target.closest('[data-inline-media]'))
+    const media = event.target.closest('[data-inline-media]')
+    selectMedia(media)
+    if (media && event.target.matches('img')) {
+      const range = document.createRange()
+      range.selectNode(media)
+      page.focus()
+      const active = window.getSelection()
+      active.removeAllRanges()
+      active.addRange(range)
+      rememberSelection()
+    }
     const link = event.target.closest('a')
     if (link) {
       event.preventDefault()
@@ -924,7 +1016,7 @@ export function openWriter ({ record, attachments, initialImage, onApply, onActi
     rememberSelection()
     const pictures = [...event.clipboardData.items].filter(item => item.kind === 'file' && item.type.startsWith('image/'))
       .map(item => item.getAsFile()).filter(Boolean)
-    if (pictures.length) void addAttachments(pictures)
+    if (pictures.length) void addAttachments(pictures, true)
     else command('insertText', event.clipboardData.getData('text/plain'))
   })
   page.addEventListener('drop', event => event.preventDefault())
