@@ -8,8 +8,8 @@
   <meta http-equiv="Content-Security-Policy" content="default-src 'none'; script-src 'self'; style-src 'self'; img-src 'self'; connect-src https://api.github.com; form-action 'none'; base-uri 'none'; object-src 'none'">
   <title>每日待办 · Zaydenの树屋</title>
   <link rel="icon" href="../img/favicon.png">
-  <link rel="stylesheet" href="../assets/personal/personal.css?v=8">
-  <script type="module" src="../assets/personal/todo.js?v=5"></script>
+  <link rel="stylesheet" href="../assets/personal/personal.css?v=9">
+  <script type="module" src="../assets/personal/todo.js?v=6"></script>
 </head>
 <body>
   <main class="shell todo-shell">
@@ -35,30 +35,78 @@
       </div>
     </details>
     <p id="todo-status" class="status" role="status" aria-live="polite">正在读取 GitHub 待办…</p>
-    <div class="layout" id="todo-layout" data-guest>
-      <section class="panel editor" id="todo-editor" aria-labelledby="task-form-title" hidden>
+    <section class="panel" aria-labelledby="tasks-heading">
+      <div class="section-heading">
+        <h2 id="tasks-heading">公开待办</h2>
+        <div class="actions">
+          <button id="open-week" class="secondary compact" type="button">本周计划</button>
+          <button id="today" class="secondary compact" type="button">今天</button>
+          <button id="todo-refresh" class="secondary compact" type="button">刷新列表</button>
+        </div>
+      </div>
+      <div class="filters">
+        <label>范围
+          <select id="view">
+            <option value="day">按天</option>
+            <option value="week">按周</option>
+            <option value="month">按月</option>
+            <option value="year">按年</option>
+          </select>
+        </label>
+        <label>查看日期 <input id="focus-date" type="date" required></label>
+        <label>状态
+          <select id="filter">
+            <option value="all">全部</option>
+            <option value="open">待完成</option>
+            <option value="done">已完成</option>
+          </select>
+        </label>
+      </div>
+      <p class="muted" id="task-count"></p>
+      <div id="todo-period-chart" class="todo-period-chart" hidden></div>
+      <section id="weekly-plan" class="weekly-plan" aria-labelledby="weekly-title">
+        <div class="section-heading"><h3 id="weekly-title">每周计划</h3><button id="week-add" type="button" class="secondary compact" hidden>新增计划行</button></div>
+        <div class="personal-table-scroll" tabindex="0" aria-label="待办计划表">
+          <table class="personal-table todo-table" id="week-table">
+            <thead><tr><th scope="col">任务名称</th><th scope="col">截止时间</th><th scope="col">完成情况</th><th scope="col">备注</th><th id="week-actions" scope="col" hidden>操作</th></tr></thead>
+            <tbody id="week-rows"></tbody>
+            <tbody id="week-draft" hidden><tr>
+              <td><input form="week-form" name="title" maxlength="160" aria-label="计划任务名称" placeholder="专业课或英语任务" required></td>
+              <td><input form="week-form" name="date" type="date" aria-label="计划截止日期" required><input form="week-form" name="deadlineTime" type="time" aria-label="计划截止时刻（北京时间，可选）"></td>
+              <td><label class="inline-check"><input form="week-form" name="done" type="checkbox"> 已完成</label></td>
+              <td><input form="week-form" name="note" maxlength="2000" aria-label="计划备注" placeholder="可选"></td>
+              <td><div class="actions"><button form="week-form" type="submit" class="compact">保存此行</button><button id="week-cancel" type="button" class="secondary compact">取消</button></div></td>
+            </tr></tbody>
+          </table>
+        </div>
+        <form id="week-form"></form>
+        <button id="plan-more" class="secondary compact" type="button" hidden>显示更多</button>
+      </section>
+    </section>
+    <div class="todo-workspace" id="todo-workspace" hidden>
+      <section class="panel editor" id="todo-editor" aria-labelledby="task-form-title">
         <h2 id="task-form-title">新建待办</h2>
         <form id="task-form">
-          <label for="task-title">任务</label>
-          <input id="task-title" name="title" maxlength="160" required placeholder="例如：整理本周论文笔记">
-          <label for="task-date">安排日期</label>
-          <input id="task-date" name="date" type="date" required>
-          <label for="task-deadline">截止时刻（北京时间，可选）</label>
-          <input id="task-deadline" name="deadlineTime" type="time">
-          <label for="task-repeat">重复规则</label>
-          <select id="task-repeat" name="repeat">
-            <option value="none">不重复</option>
-            <option value="daily">每天</option>
-            <option value="weekly">每周</option>
-            <option value="monthly">每月</option>
-            <option value="yearly">每年</option>
-          </select>
-          <div id="repeat-end" hidden>
-            <label for="task-end">重复截止日期（可选）</label>
-            <input id="task-end" name="endDate" type="date">
+          <div class="todo-entry-fields">
+            <label class="todo-entry-wide">任务
+              <input id="task-title" name="title" maxlength="160" required placeholder="例如：整理本周论文笔记">
+            </label>
+            <label>安排日期 <input id="task-date" name="date" type="date" required></label>
+            <label>截止时刻（北京时间，可选） <input id="task-deadline" name="deadlineTime" type="time"></label>
+            <label>重复规则
+              <select id="task-repeat" name="repeat">
+                <option value="none">不重复</option>
+                <option value="daily">每天</option>
+                <option value="weekly">每周</option>
+                <option value="monthly">每月</option>
+                <option value="yearly">每年</option>
+              </select>
+            </label>
+            <label id="repeat-end" hidden>重复截止日期（可选） <input id="task-end" name="endDate" type="date"></label>
+            <label class="todo-entry-wide">备注 <span class="muted">（可选）</span>
+              <textarea id="task-note" name="note" maxlength="2000" rows="3" placeholder="补充细节或下一步"></textarea>
+            </label>
           </div>
-          <label for="task-note">备注 <span class="muted">（可选）</span></label>
-          <textarea id="task-note" name="note" maxlength="2000" rows="3" placeholder="补充细节或下一步"></textarea>
           <div class="actions">
             <button id="task-save" type="submit">添加待办</button>
             <button id="task-cancel" class="secondary" type="button" hidden>取消编辑</button>
@@ -72,80 +120,50 @@
           <input id="backup-file" type="file" accept=".json,application/json" hidden>
         </div>
       </section>
-      <section class="panel" aria-labelledby="tasks-heading">
-        <div class="section-heading">
-          <h2 id="tasks-heading">公开待办</h2>
-          <div class="actions">
-            <button id="open-week" class="secondary compact" type="button">本周计划</button>
-            <button id="today" class="secondary compact" type="button">今天</button>
-            <button id="todo-refresh" class="secondary compact" type="button">刷新列表</button>
-          </div>
+      <aside class="panel check-in" aria-labelledby="check-in-title">
+        <div class="check-in-head">
+          <div><h2 id="check-in-title">近 30 天打卡</h2><p id="check-in-range" class="muted"></p></div>
+          <strong id="check-in-total"></strong>
         </div>
-        <div class="filters">
-          <label>范围
-            <select id="view">
-              <option value="day">按天</option>
-              <option value="week">按周</option>
-              <option value="month">按月</option>
-              <option value="year">按年</option>
-            </select>
-          </label>
-          <label>查看日期 <input id="focus-date" type="date" required></label>
-          <label>状态
-            <select id="filter">
-              <option value="all">全部</option>
-              <option value="open">待完成</option>
-              <option value="done">已完成</option>
-            </select>
-          </label>
-        </div>
-        <p class="muted" id="task-count"></p>
-        <div id="todo-period-chart" class="todo-period-chart" hidden></div>
-        <div id="task-list"></div>
-        <section id="weekly-plan" class="weekly-plan" aria-labelledby="weekly-title" hidden>
-          <div class="section-heading"><h3 id="weekly-title">每周计划</h3><button id="week-add" type="button" class="secondary compact" hidden>新增计划行</button></div>
-          <div class="personal-table-scroll" tabindex="0" aria-label="每周计划表">
-            <table class="personal-table" id="week-table">
-              <thead><tr><th scope="col">任务名称</th><th scope="col">截止时间</th><th scope="col">完成情况</th><th scope="col">备注</th><th id="week-actions" scope="col" hidden>操作</th></tr></thead>
-              <tbody id="week-rows"></tbody>
-              <tbody id="week-draft" hidden><tr>
-                <td><input form="week-form" name="title" maxlength="160" aria-label="计划任务名称" placeholder="专业课或英语任务" required></td>
-                <td><input form="week-form" name="date" type="date" aria-label="计划截止日期" required><input form="week-form" name="deadlineTime" type="time" aria-label="计划截止时刻（北京时间，可选）"></td>
-                <td><label class="inline-check"><input form="week-form" name="done" type="checkbox"> 已完成</label></td>
-                <td><input form="week-form" name="note" maxlength="2000" aria-label="计划备注" placeholder="可选"></td>
-                <td><div class="actions"><button form="week-form" type="submit" class="compact">保存此行</button><button id="week-cancel" type="button" class="secondary compact">取消</button></div></td>
-              </tr></tbody>
-            </table>
-          </div>
-          <form id="week-form"></form>
-        </section>
-      </section>
+        <div class="check-in-weekdays" aria-hidden="true"><span>一</span><span>二</span><span>三</span><span>四</span><span>五</span><span>六</span><span>日</span></div>
+        <div class="check-in-days" id="check-in-days" role="list" aria-label="近 30 天打卡记录"></div>
+        <p class="muted check-in-key"><span>✓ 已打卡</span><span>× 无记录</span></p>
+        <p class="muted note">完成待办或保存专注时长的当天会打卡，按北京时间统计。</p>
+      </aside>
     </div>
     <section class="panel review focus-timer" id="focus-timer" aria-labelledby="timer-heading" hidden>
       <div class="section-heading">
         <h2 id="timer-heading">番茄钟</h2>
         <span class="muted" id="timer-state">等待开始</span>
       </div>
-      <p class="muted">从任务列表点「计时」可关联某次待办。直接输入事项，保存时会新建一项待办。</p>
-      <form id="timer-form">
-        <div class="filters">
-          <label>任务事项 <input name="title" maxlength="160" required placeholder="例如：阅读论文"></label>
-          <label>计时方式
-            <select name="mode">
-              <option value="countdown">倒计时</option>
-              <option value="stopwatch">正计时</option>
-            </select>
-          </label>
-          <label id="timer-minutes">分钟 <input name="minutes" type="number" min="1" max="720" step="1" value="25" required></label>
+      <div class="focus-timer-layout">
+        <div>
+          <p class="muted">从任务表点「计时」可关联待办，也可以直接输入一个新事项。</p>
+          <form id="timer-form">
+            <div class="filters">
+              <label>任务事项 <input name="title" maxlength="160" required placeholder="例如：阅读论文"></label>
+              <label>计时方式
+                <select name="mode">
+                  <option value="countdown">倒计时</option>
+                  <option value="stopwatch">正计时</option>
+                </select>
+              </label>
+              <label id="timer-minutes">分钟 <input name="minutes" type="number" min="1" max="720" step="1" value="25" required></label>
+            </div>
+            <output id="timer-clock" class="timer-clock" aria-label="计时">00:25:00</output>
+            <div class="actions">
+              <button id="timer-start" type="submit">开始计时</button>
+              <button id="timer-pause" type="button" class="secondary" hidden>暂停</button>
+              <button id="timer-save" type="button" hidden>结束并保存</button>
+              <button id="timer-discard" type="button" class="secondary" hidden>放弃本次</button>
+            </div>
+          </form>
         </div>
-        <output id="timer-clock" class="timer-clock" aria-label="计时">00:25:00</output>
-        <div class="actions">
-          <button id="timer-start" type="submit">开始计时</button>
-          <button id="timer-pause" type="button" class="secondary" hidden>暂停</button>
-          <button id="timer-save" type="button" hidden>结束并保存</button>
-          <button id="timer-discard" type="button" class="secondary" hidden>放弃本次</button>
-        </div>
-      </form>
+        <aside class="focus-quote" aria-labelledby="focus-quote-title">
+          <h3 id="focus-quote-title">今日寄语</h3>
+          <blockquote id="focus-quote-text"></blockquote>
+        </aside>
+      </div>
     </section>
     <section class="panel review focus-stats" aria-labelledby="focus-title">
       <div class="section-heading">
@@ -163,14 +181,15 @@
       <ol id="focus-ranking" class="focus-ranking"></ol>
     </section>
     <section class="panel review" aria-labelledby="review-title">
-      <h2 id="review-title">年度回顾</h2>
-      <p class="muted">每年 12 月 31 日起，打开本页时会生成当年的回顾。跨年后也可以补看，下载的 HTML 可离线打开。</p>
-      <div class="actions">
-        <label for="review-year">选择年份</label>
-        <select id="review-year"></select>
-        <button type="button" id="download-review">下载年度回顾 .html</button>
+      <div class="todo-review-bar">
+        <h2 id="review-title">年度回顾</h2>
+        <div class="todo-review-tools">
+          <select id="review-year" aria-label="选择回顾年份"></select>
+          <button type="button" id="download-review" class="compact" aria-label="下载年度回顾 HTML">下载 HTML</button>
+        </div>
       </div>
-      <div id="review-preview" class="review-preview"></div>
+      <p class="muted">按年份查看学习与完成记录，下载的 HTML 可离线打开。</p>
+      <div id="review-preview" class="review-preview todo-review-preview" tabindex="0" aria-label="年度统计"></div>
     </section>
     <dialog id="focus-reward" class="focus-reward" aria-labelledby="reward-title">
       <div class="reward-art" aria-hidden="true"></div>
@@ -178,6 +197,7 @@
         <p id="reward-kind" class="reward-kind"></p><h2 id="reward-title">专注完成</h2>
         <p id="reward-session" class="reward-session"></p>
         <blockquote id="reward-line"></blockquote><p id="reward-credit" class="reward-credit"></p>
+        <p id="reward-reflection" class="reward-reflection"></p>
         <p id="reward-next"></p>
         <div class="actions">
           <button type="button" id="reward-play" class="secondary" hidden>播放片刻</button>

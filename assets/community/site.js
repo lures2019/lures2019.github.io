@@ -126,14 +126,12 @@
     return response.json()
   }
 
-  function paintVisits (counts, live = false) {
+  function paintVisits (counts) {
     const today = document.getElementById('treehouse-visits-today')
     const total = document.getElementById('treehouse-visits-total')
-    const status = document.getElementById('treehouse-visits-status')
-    if (!today || !total || !status) return
+    if (!today || !total) return
     today.textContent = counts?.date === visitDay.format() ? counts.today.toLocaleString('zh-CN') : '—'
     total.textContent = counts ? counts.total.toLocaleString('zh-CN') : '—'
-    status.textContent = live ? '' : counts ? '最近更新 ' + dateFormat.format(new Date(counts.updatedAt)) : '统计暂不可用'
   }
 
   function validCounts (counts) {
@@ -171,7 +169,7 @@
       if (!lastCount || counts.total >= lastCount.total) lastCount = counts
       try { localStorage.setItem(visitKey, JSON.stringify(lastCount)) } catch { /* Optional cache. */ }
       live = true
-      if (page === lastPage) paintVisits(lastCount, true)
+      if (page === lastPage) paintVisits(lastCount)
     }).catch(() => { if (page === lastPage) paintVisits(lastCount) })
   }
 

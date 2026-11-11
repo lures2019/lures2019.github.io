@@ -1,7 +1,7 @@
-import { completionAt, dueOn, focusFor, focusStats, formatFocus, localDay, normalizeTasks, occurrenceDays, period, repeatLabels, reportYear, validDay } from './todo-model.js?v=5'
+import { addDays, completionAt, dueOn, focusFor, focusStats, formatFocus, localDay, normalizeTasks, occurrenceDays, period, repeatLabels, reportYear, validDay } from './todo-model.js?v=5'
 import { connectOwner, loadTasks, writeTasks } from './todo-repo.js?v=5'
 import { bindTimer } from './todo-timer.js?v=4'
-import { showReward } from './todo-rewards.js'
+import { dailyQuote, showReward } from './todo-rewards.js?v=6'
 import { annualHTML, downloadFile as download, escapeHTML, metricsHTML, pieChart, showPie } from './report-view.js'
 
 const storageKey = 'zayden-todo-v1'
@@ -18,6 +18,8 @@ const weekForm = get('week-form')
 const weekDraft = get('week-draft')
 const dateTime = new Intl.DateTimeFormat('zh-CN', { timeZone: 'Asia/Shanghai', dateStyle: 'medium', timeStyle: 'short' })
 const shanghaiTime = new Intl.DateTimeFormat('en-GB', { timeZone: 'Asia/Shanghai', hour: '2-digit', minute: '2-digit', hourCycle: 'h23' })
+const planTitles = { day: '当天计划', week: '每周计划', month: '每月计划', year: '年度计划' }
+const planPageSize = 50
 const lateOn = (task, due, today, time) => due < today || Boolean(due === today && task.deadlineTime && task.deadlineTime < time)
 let editing
 let tasks = []
@@ -26,6 +28,8 @@ let revision
 let busy = false
 let timer
 let persistentLogin = false
+let planLimit = planPageSize
+let renderedRange
 
 function stored (storage, key) {
   try { return JSON.parse(storage.getItem(key) || 'null') } catch { return null }
@@ -81,8 +85,7 @@ function message (text) {
 
 function controls () {
   const owner = Boolean(token)
-  get('todo-layout').toggleAttribute('data-guest', !owner)
-  get('todo-editor').hidden = !owner
+  get('todo-workspace').hidden = !owner
   get('focus-timer').hidden = !owner
   get('owner-connected').hidden = !owner
   login.hidden = owner
@@ -101,7 +104,7 @@ function controls () {
   const hasHistory = current && (current.completedAt || Object.keys(current.completions).length || current.focusSessions.length)
   form.elements.date.disabled = Boolean(hasHistory)
   form.elements.repeat.disabled = Boolean(hasHistory)
-  for (const list of ['task-list', 'week-rows', 'week-draft']) {
+  for (const list of ['week-rows', 'week-draft']) {
     for (const item of get(list).querySelectorAll('input, button')) item.disabled = busy || !owner || !revision
   }
   timer?.render()
@@ -204,26 +207,13 @@ function taskActions (task, due) {
   return actions
 }
 
-function taskRow (task, due, completedAt) {
-  const row = node('article', '', 'task')
-  row.toggleAttribute('data-done', Boolean(completedAt))
-  const text = node('div')
-  text.append(node('h3', task.title))
-  if (task.note) text.append(node('p', task.note, 'task-note'))
-  const status = completedAt ? '完成于 ' + dateTime.format(new Date(completedAt)) : '待完成'
-  const cadence = task.repeat === 'none' ? '' : ' · ' + repeatLabels[task.repeat]
-  const study = focusFor(task, due)
-  text.append(node('p', due + (task.deadlineTime ? ' ' + task.deadlineTime : '') + cadence + ' · ' + status + (study ? ' · 学习 ' + formatFocus(study) : ''), 'task-meta'))
-  row.append(completionCheckbox(task, due, completedAt), text)
-  if (token) row.append(taskActions(task, due))
-  return row
-}
-
 function planRow (task, due, completedAt, late) {
   const row = node('tr')
   const name = node('th', task.title)
   name.scope = 'row'
-  if (task.repeat !== 'none') name.append(node('small', repeatLabels[task.repeat]))
+  const study = focusFor(task, due)
+  const context = [task.repeat === 'none' ? '' : repeatLabels[task.repeat], study ? '学习 ' + formatFocus(study) : ''].filter(Boolean)
+  if (context.length) name.append(node('small', context.join(' · ')))
   const progress = node('td')
   const status = node('label', '', 'inline-check')
   if (token) status.append(completionCheckbox(task, due, completedAt))
@@ -241,6 +231,53 @@ function planRow (task, due, completedAt, late) {
     row.append(actions)
   }
   return row
+}
+
+function renderCheckIn (today) {
+  const start = addDays(today, -29)
+  const activity = new Set()
+  for (const task of tasks) {
+    const completed = task.repeat === 'none' ? [task.completedAt] : Object.values(task.completions)
+    for (const at of completed) {
+      if (!at) continue
+      const day = localDay(new Date(at))
+      if (day >= start && day <= today) activity.add(day)
+    }
+    for (const session of task.focusSessions) {
+      for (const day of Object.keys(session.days)) {
+        if (day >= start && day <= today) activity.add(day)
+      }
+    }
+  }
+  const calendar = get('check-in-days')
+  const weekday = new Date(start + 'T00:00:00Z').getUTCDay()
+  const days = []
+  for (let blank = 0; blank < (weekday + 6) % 7; blank++) {
+    const spacer = node('span')
+    spacer.setAttribute('aria-hidden', 'true')
+    days.push(spacer)
+  }
+  for (let i = 0; i < 30; i++) {
+    const day = addDays(start, i)
+    const checked = activity.has(day)
+    const tile = node('div', '', 'check-in-day')
+    tile.dataset.day = day
+    tile.toggleAttribute('data-checked', checked)
+    tile.setAttribute('role', 'listitem')
+    tile.title = day + (checked ? ' 已打卡' : ' 无记录')
+    tile.setAttribute('aria-label', tile.title)
+    if (day === today) tile.setAttribute('aria-current', 'date')
+    const mark = node('span', checked ? '✓' : '×', 'check-in-mark')
+    mark.setAttribute('aria-hidden', 'true')
+    const date = node('time', i === 0 || day.endsWith('-01') ? day.slice(5).replace('-', '/') : String(Number(day.slice(8))))
+    date.dateTime = day
+    date.setAttribute('aria-hidden', 'true')
+    tile.append(mark, date)
+    days.push(tile)
+  }
+  calendar.replaceChildren(...days)
+  get('check-in-range').textContent = start.slice(5).replace('-', '/') + ' – ' + today.slice(5).replace('-', '/')
+  get('check-in-total').textContent = activity.size + ' / 30 天'
 }
 
 function reviewMetrics (summary, focus) {
@@ -314,6 +351,9 @@ function render () {
   const day = validDay(dateFilter.value) ? dateFilter.value : localDay()
   const { start, end, label } = period(day, view)
   const filter = get('filter').value
+  const rangeKey = view + ':' + start + ':' + filter
+  if (rangeKey !== renderedRange) planLimit = planPageSize
+  renderedRange = rangeKey
   const now = new Date()
   const today = localDay(now)
   const time = shanghaiTime.format(now)
@@ -325,34 +365,18 @@ function render () {
   const late = matches.filter(item => !item.completedAt && item.late).length
   get('task-count').textContent = `${label} · ${matches.length} 项任务 · ${done} 项已完成`
   const chart = get('todo-period-chart')
-  chart.hidden = view === 'day'
+  chart.hidden = !matches.length
   if (!chart.hidden) showPie(chart, [['已完成', done], ['待完成', matches.length - done - late], ['已逾期', late]], value => value + ' 项')
-  const list = get('task-list')
-  list.replaceChildren()
-  get('weekly-plan').hidden = view !== 'week'
-  list.hidden = view === 'week'
-  if (view === 'week') {
-    weekForm.elements.date.min = start
-    weekForm.elements.date.max = end
-    const rows = get('week-rows')
-    rows.replaceChildren(...visible.map(({ task, due, completedAt, late }) => planRow(task, due, completedAt, late)))
-    if (!visible.length) {
-      const row = rows.insertRow()
-      const cell = row.insertCell()
-      cell.colSpan = token ? 5 : 4
-      cell.textContent = '本周暂无对应的任务。'
-    }
-  } else {
-    if (!visible.length) list.append(node('p', '这个范围内暂无对应的待办。', 'muted'))
-    let lastGroup
-    for (const { task, due, completedAt } of visible) {
-      const group = view === 'year' ? due.slice(0, 7) : due
-      if (view !== 'day' && group !== lastGroup) {
-        list.append(node('h3', group, 'task-group'))
-        lastGroup = group
-      }
-      list.append(taskRow(task, due, completedAt))
-    }
+  get('weekly-title').textContent = planTitles[view]
+  weekForm.elements.date.min = start
+  weekForm.elements.date.max = end
+  const rows = get('week-rows')
+  rows.replaceChildren(...visible.slice(0, planLimit).map(({ task, due, completedAt, late }) => planRow(task, due, completedAt, late)))
+  get('plan-more').hidden = visible.length <= planLimit
+  if (!visible.length) {
+    const cell = rows.insertRow().insertCell()
+    cell.colSpan = token ? 5 : 4
+    cell.textContent = '这个范围内暂无对应的待办。'
   }
 
   const current = today.slice(0, 4)
@@ -373,12 +397,14 @@ function render () {
     }
   }
   const descending = [...years].sort().reverse()
-  yearPicker.replaceChildren(...descending.map(year => new Option(
-    year + (year <= closed ? ' 年 · 年度回顾' : ' 年 · 进行中'), year
-  )))
+  yearPicker.replaceChildren(...descending.map(year => new Option(year + ' 年', year)))
   yearPicker.value = years.has(oldChoice) ? oldChoice : descending.find(year => year <= closed) || current
   renderReview()
   renderFocus()
+  if (token) {
+    renderCheckIn(today)
+    get('focus-quote-text').textContent = dailyQuote(today)
+  }
   controls()
 }
 
@@ -435,16 +461,17 @@ get('week-add').onclick = () => {
   weekForm.elements.title.focus()
 }
 get('week-cancel').onclick = () => { weekDraft.hidden = true; rememberWeek() }
+get('plan-more').onclick = () => { planLimit += planPageSize; render() }
 weekDraft.addEventListener('input', rememberWeek)
 weekForm.onsubmit = async event => {
   event.preventDefault()
   const { title, date, deadlineTime, done, note } = weekForm.elements
   if (!title.value.trim() || !validDay(date.value) || date.value < date.min || date.value > date.max) {
-    return message('请填写任务名称和所选周内的截止日期。')
+    return message('请填写任务名称和当前日期范围内的截止日期。')
   }
   const task = { id: crypto.randomUUID(), title: title.value.trim(), date: date.value, deadlineTime: deadlineTime.value, note: note.value.trim(),
     completedAt: done.checked ? new Date().toISOString() : null }
-  if (await save(items => [...items, task], '周计划已保存到 GitHub。')) {
+  if (await save(items => [...items, task], '计划已保存到 GitHub。')) {
     weekForm.reset()
     weekDraft.hidden = true
     rememberWeek()

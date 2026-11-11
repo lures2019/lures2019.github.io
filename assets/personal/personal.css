@@ -39,8 +39,6 @@ input, select, textarea, button { font: inherit; }
 .page-intro p:last-child { color: var(--muted); }
 .back { display: inline-block; margin-bottom: 22px; }
 .eyebrow { color: var(--accent); font-size: .76rem; font-weight: 700; letter-spacing: .14em; }
-.layout { display: grid; grid-template-columns: minmax(250px, .8fr) minmax(0, 1.7fr); gap: 18px; align-items: start; }
-.layout[data-guest] { grid-template-columns: minmax(0, 1fr); }
 .todo-owner summary { cursor: pointer; font-weight: 700; }
 .todo-owner form, #owner-connected { margin-top: 12px; }
 .timer-clock { display: block; margin: 12px 0; font-size: clamp(2.4rem, 9vw, 4.6rem); font-variant-numeric: tabular-nums; font-weight: 700; color: var(--accent); }
@@ -63,7 +61,7 @@ input, select, textarea, button { font: inherit; }
 .actions { margin: 10px 0; }
 .filters { align-items: flex-end; }
 .filters label { flex: 1 1 110px; }
-.muted, .task-meta, .note { color: var(--muted); font-size: .88rem; }
+.muted, .note { color: var(--muted); font-size: .88rem; }
 .note { margin: 15px 0 0; }
 .status { margin: 10px 0; color: var(--accent); }
 .status:empty { margin: 0 0 16px; }
@@ -93,21 +91,49 @@ button.secondary { background: var(--wash); color: var(--ink); border-color: var
 button.compact { min-height: 34px; padding: 3px 9px; font-size: .85rem; }
 button:disabled { opacity: .65; cursor: default; }
 .actions select { width: auto; }
-.task-group { margin: 14px 0 4px; color: var(--muted); }
-.task { display: grid; grid-template-columns: auto minmax(0, 1fr) auto; gap: 10px; align-items: start; padding: 12px 0; border-top: 1px solid var(--line); }
-.task input { margin-top: 4px; }
-.task p, .task h3 { margin: 0; overflow-wrap: anywhere; }
 .task-note, .entry-text { white-space: pre-wrap; overflow-wrap: anywhere; }
-.task[data-done] h3 { text-decoration: line-through; color: var(--muted); }
-.task .actions { margin: 0; gap: 4px; }
 .review-preview { display: grid; grid-template-columns: repeat(auto-fit, minmax(120px, 1fr)); gap: 10px; margin-top: 16px; }
 .metric { background: var(--wash); border-radius: 8px; padding: 10px 12px; margin: 0; color: var(--muted); }
 .metric strong { display: block; color: var(--ink); font-size: 1.35rem; }
 .todo-shell, .ledger-shell { width: min(1180px, calc(100% - 24px)); }
 .todo-shell .page-intro, .ledger-hero { margin: 16px 0; padding: clamp(18px, 4vw, 40px); border: 1px solid var(--line); border-radius: 24px; background: radial-gradient(ellipse at 90% 5%, var(--wash), transparent 65%), var(--surface); }
-#todo-layout:has(#weekly-plan:not([hidden])) { grid-template-columns: minmax(0, 1fr); }
-#todo-layout:has(#weekly-plan:not([hidden])) .editor { order: 1; }
-.todo-period-chart { margin: 0 0 16px; }
+.todo-workspace, .focus-timer-layout { display: grid; grid-template-columns: minmax(0, 1.3fr) minmax(0, 1fr); gap: 16px; align-items: start; }
+.todo-workspace, .todo-shell > .review { margin-top: 16px; }
+.todo-workspace > .panel { margin: 0; }
+.todo-entry-fields { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 10px 12px; align-items: end; }
+.todo-entry-fields label:not(:first-child) { margin-top: 0; }
+.todo-entry-wide { grid-column: 1 / -1; }
+.todo-period-chart { margin: 0 0 20px; padding: clamp(8px, 2vw, 20px); border: 1px solid var(--line); border-radius: 16px; background: color-mix(in srgb, var(--wash) 45%, var(--surface)); }
+.todo-period-chart .data-pie { max-width: 440px; margin: auto; grid-template-columns: minmax(92px, 160px) minmax(0, 200px); justify-content: center; }
+.todo-table { min-width: 460px; }
+.todo-table th:first-child { width: 27%; }
+.todo-table th:nth-child(2), .todo-table th:nth-child(3) { width: 18%; }
+#plan-more { display: block; margin: 12px auto 0; }
+.check-in { background: radial-gradient(ellipse at 100% 0%, var(--wash), transparent 75%), var(--surface); }
+.check-in-head { display: flex; align-items: flex-start; justify-content: space-between; gap: 8px; }
+.check-in-head h2, .check-in-head p { margin: 0; }
+.check-in-head > strong { flex: none; padding: 4px 9px; border-radius: 999px; color: var(--accent); background: var(--wash); font-size: .84rem; }
+.check-in-days, .check-in-weekdays { display: grid; grid-template-columns: repeat(7, minmax(0, 1fr)); gap: clamp(3px, .9vw, 8px); text-align: center; }
+.check-in-weekdays { margin: 14px 0 6px; color: var(--muted); font-size: .78rem; }
+.check-in-day { display: grid; place-content: center; gap: 1px; min-height: 44px; padding: 4px 0; border: 1px solid var(--line); border-radius: 9px; background: var(--surface); color: var(--muted); line-height: 1.15; }
+.check-in-mark { font-size: 1.06rem; font-weight: 750; }
+.check-in-day time { font-size: .72rem; font-variant-numeric: tabular-nums; }
+.check-in-day[data-checked] { background: var(--wash); color: var(--accent); }
+.check-in-day[aria-current="date"] { border-color: var(--accent); }
+.check-in-key { display: flex; flex-wrap: wrap; gap: 4px 16px; margin: 12px 0 0; }
+.check-in-key span:first-child { color: var(--accent); }
+.focus-timer-layout { align-items: stretch; }
+.focus-quote { display: grid; align-content: center; min-height: 176px; padding: clamp(20px, 3vw, 36px); border: 1px solid #42685a; border-radius: 17px; color: #f1f8ed; background: radial-gradient(ellipse at 92% 0%, #437866, transparent 75%), #173c34; }
+.focus-quote h3 { margin: 0 0 12px; color: #c5e4d7; font-size: .85rem; }
+.focus-quote blockquote { margin: 0; padding-inline-start: 14px; border-inline-start: 2px solid #91cbb4; font: 1.26rem/1.7 "Songti SC", SimSun, Georgia, serif; }
+.todo-review-bar, .todo-review-tools { display: flex; flex-wrap: nowrap; align-items: center; justify-content: space-between; gap: 8px; }
+.todo-review-bar { margin-bottom: 8px; }
+.todo-review-bar h2 { margin: 0; white-space: nowrap; }
+.todo-review-tools select { width: auto; min-height: 36px; padding: 4px 7px; font-size: .88rem; }
+.todo-review-tools button { white-space: nowrap; }
+.todo-review-preview { grid-template-columns: none; grid-auto-flow: column; grid-auto-columns: minmax(104px, 1fr); overflow-x: auto; padding-bottom: 6px; }
+.todo-review-preview .metric { min-width: 0; font-size: .82rem; }
+.todo-review-preview .metric strong { font-size: 1.15rem; overflow-wrap: anywhere; }
 .data-pie { display: grid; grid-template-columns: minmax(115px, 186px) minmax(0, 1fr); align-items: center; gap: clamp(8px, 3vw, 22px); margin: 0; }
 .pie-plot { position: relative; width: min(100%, 186px); margin: auto; }
 .pie-plot > svg { display: block; width: 100%; overflow: visible; }
@@ -165,6 +191,7 @@ button:disabled { opacity: .65; cursor: default; }
 .reward-kind, .reward-credit { margin: 0 0 3px; color: var(--reward-spark); font-size: .86rem; }
 .reward-body h2 { margin: 0; font-size: clamp(2rem, 7vw, 3.45rem); line-height: 1.15; }
 .reward-session { overflow-wrap: anywhere; }
+.reward-reflection { margin: 12px 0 5px; font-weight: 600; }
 .reward-body blockquote { margin: 14px 0 6px; border-inline-start: 3px solid var(--reward-spark); padding-inline-start: 14px; color: var(--reward-ink); font-size: clamp(1.13rem, 3vw, 1.5rem); }
 [data-reward="poem"] blockquote, [data-reward="quote"] blockquote { font-family: "Songti SC", SimSun, serif; }
 .reward-body .actions { justify-content: flex-end; margin-bottom: 0; }
@@ -173,10 +200,12 @@ button:disabled { opacity: .65; cursor: default; }
 @keyframes reward-enter { from { opacity: 0; transform: translateY(12px) scale(.97); } to { opacity: 1; transform: none; } }
 @media (prefers-reduced-motion: reduce) { .focus-reward { animation: none; } .pie-plot [data-slice] { transition: none; } }
 @media (max-width: 760px) {
+  .todo-workspace, .focus-timer-layout { grid-template-columns: minmax(0, 1fr); }
   .ledger-chart-grid { grid-template-columns: 1fr; }
   .ledger-fields, .ledger-parts { grid-template-columns: repeat(2, minmax(0, 1fr)); }
 }
 @media (max-width: 405px) { .data-pie { grid-template-columns: 1fr; } }
+@media (max-width: 450px) { .todo-entry-fields { grid-template-columns: minmax(0, 1fr); } }
 .entry { padding: 12px 0; border-top: 1px solid var(--line); }
 .entry h3, .entry p { margin-bottom: 5px; }
 .entry img { display: block; max-width: 100%; height: auto; border-radius: 8px; }
@@ -325,8 +354,6 @@ button.vault-resize-handle { position: absolute; right: 2px; bottom: 2px; width:
 .vault-attachments button { margin: 3px 0 3px 6px; }
 #share-paper-notes { margin-bottom: 8px; }
 @media (max-width: 650px) {
-  .layout { grid-template-columns: 1fr; }
-  .task .actions { grid-column: 2; }
   .vault-library-head { align-items: flex-start; }
   .vault-shell .page-intro { padding: 18px; }
   .vault-writing-canvas { grid-template-columns: minmax(0, 1fr); }
