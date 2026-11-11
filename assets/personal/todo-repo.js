@@ -1,4 +1,4 @@
-import { normalizeTasks } from './todo-model.js'
+import { normalizeTasks } from './todo-model.js?v=5'
 
 const api = 'https://api.github.com'
 const owner = 'lures2019'

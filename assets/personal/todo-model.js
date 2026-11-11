@@ -7,6 +7,7 @@ export const repeatLabels = {
 }
 
 export const idPattern = /^[0-9a-f]{8}(?:-[0-9a-f]{4}){3}-[0-9a-f]{12}$/i
+export const validDeadline = value => typeof value === 'string' && /^(?:[01]\d|2[0-3]):[0-5]\d$/.test(value)
 export const maxFocusMs = 86_400_000
 const dayLength = 86_400_000
 const shanghai = new Intl.DateTimeFormat('en-CA', {
@@ -152,10 +153,11 @@ export function normalizeTasks (data) {
   const sessionIds = new Set()
   return data.map(task => {
     if (!task || typeof task !== 'object') throw new Error('待办记录格式不正确。')
-    const { id, title, note, date, completedAt = null, repeat = 'none', endDate = null, completions = {}, focusSessions = [] } = task
+    const { id, title, note, date, deadlineTime = '', completedAt = null, repeat = 'none', endDate = null, completions = {}, focusSessions = [] } = task
     if (typeof id !== 'string' || !idPattern.test(id) || ids.has(id) ||
         typeof title !== 'string' || !title.trim() || title.length > 160 ||
         typeof note !== 'string' || note.length > 2000 || !validDay(date) ||
+        (deadlineTime !== '' && !validDeadline(deadlineTime)) ||
         typeof repeat !== 'string' || !Object.hasOwn(repeatLabels, repeat) ||
         (endDate !== null && (!validDay(endDate) || endDate < date || repeat === 'none')) ||
         (completedAt !== null && (!validTime(completedAt) || repeat !== 'none')) ||
@@ -184,7 +186,7 @@ export function normalizeTasks (data) {
       return { id: session.id, day: session.day, days: Object.fromEntries(days) }
     })
     ids.add(id)
-    return { id, title, note, date, repeat, endDate, completedAt, completions: Object.fromEntries(done), focusSessions: focus }
+    return { id, title, note, date, ...(deadlineTime && { deadlineTime }), repeat, endDate, completedAt, completions: Object.fromEntries(done), focusSessions: focus }
   })
 }
 
@@ -194,6 +196,7 @@ export function reportYear (tasks, year) {
   let scheduled = 0
   let completed = 0
   let finishedPlans = 0
+  let onTime = 0
   const activeDays = new Set()
   for (const task of tasks) {
     for (const day of occurrenceDays(task, start, end)) {
@@ -201,6 +204,7 @@ export function reportYear (tasks, year) {
       months[Number(day.slice(5, 7)) - 1].scheduled++
       const done = completionAt(task, day)
       if (done && localDay(new Date(done)) <= end) finishedPlans++
+      if (done && Date.parse(done) <= Date.parse(day + 'T' + (task.deadlineTime || '23:59') + ':59.999+08:00')) onTime++
     }
     for (const at of task.repeat === 'none' ? [task.completedAt] : Object.values(task.completions)) {
       if (!at) continue
@@ -211,6 +215,6 @@ export function reportYear (tasks, year) {
       months[Number(day.slice(5, 7)) - 1].completed++
     }
   }
-  return { months, scheduled, completed, finishedPlans, activeDays: activeDays.size,
+  return { months, scheduled, completed, finishedPlans, onTime, activeDays: activeDays.size,
     rate: scheduled ? Math.round(finishedPlans / scheduled * 100) + '%' : '—' }
 }

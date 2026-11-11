@@ -1,5 +1,5 @@
-import { completionAt, dueOn, focusFor, focusStats, formatFocus, localDay, normalizeTasks, occurrenceDays, period, repeatLabels, reportYear, validDay } from './todo-model.js?v=4'
-import { connectOwner, loadTasks, writeTasks } from './todo-repo.js?v=4'
+import { completionAt, dueOn, focusFor, focusStats, formatFocus, localDay, normalizeTasks, occurrenceDays, period, repeatLabels, reportYear, validDay } from './todo-model.js?v=5'
+import { connectOwner, loadTasks, writeTasks } from './todo-repo.js?v=5'
 import { bindTimer } from './todo-timer.js?v=4'
 import { showReward } from './todo-rewards.js'
 import { annualHTML, downloadFile as download, escapeHTML, metricsHTML, pieChart, showPie } from './report-view.js'
@@ -17,6 +17,8 @@ const yearPicker = get('review-year')
 const weekForm = get('week-form')
 const weekDraft = get('week-draft')
 const dateTime = new Intl.DateTimeFormat('zh-CN', { timeZone: 'Asia/Shanghai', dateStyle: 'medium', timeStyle: 'short' })
+const shanghaiTime = new Intl.DateTimeFormat('en-GB', { timeZone: 'Asia/Shanghai', hour: '2-digit', minute: '2-digit', hourCycle: 'h23' })
+const lateOn = (task, due, today, time) => due < today || Boolean(due === today && task.deadlineTime && task.deadlineTime < time)
 let editing
 let tasks = []
 let token
@@ -52,7 +54,7 @@ function rememberView () {
 function rememberDraft () {
   if (!token) return
   const draft = { editing, fields: Object.fromEntries(
-    ['title', 'note', 'date', 'repeat', 'endDate'].map(name => [name, form.elements[name].value])
+    ['title', 'note', 'date', 'deadlineTime', 'repeat', 'endDate'].map(name => [name, form.elements[name].value])
   ) }
   remember(sessionStorage, draftKey, draft)
   if (persistentLogin) remember(localStorage, draftKey, draft)
@@ -60,8 +62,8 @@ function rememberDraft () {
 
 function rememberWeek () {
   if (!token) return
-  const { title, note, date, done } = weekForm.elements
-  const draft = weekDraft.hidden ? null : { title: title.value, note: note.value, date: date.value, done: done.checked }
+  const { title, note, date, deadlineTime, done } = weekForm.elements
+  const draft = weekDraft.hidden ? null : { title: title.value, note: note.value, date: date.value, deadlineTime: deadlineTime.value, done: done.checked }
   remember(sessionStorage, weekDraftKey, draft)
   if (persistentLogin) remember(localStorage, weekDraftKey, draft)
 }
@@ -152,6 +154,7 @@ function setEditor (task) {
   form.elements.title.value = task?.title || ''
   form.elements.note.value = task?.note || ''
   form.elements.date.value = task?.date || dateFilter.value || localDay()
+  form.elements.deadlineTime.value = task?.deadlineTime || ''
   form.elements.repeat.value = task?.repeat || 'none'
   form.elements.endDate.value = task?.endDate || ''
   get('task-form-title').textContent = task ? '编辑待办' : '新建待办'
@@ -210,13 +213,13 @@ function taskRow (task, due, completedAt) {
   const status = completedAt ? '完成于 ' + dateTime.format(new Date(completedAt)) : '待完成'
   const cadence = task.repeat === 'none' ? '' : ' · ' + repeatLabels[task.repeat]
   const study = focusFor(task, due)
-  text.append(node('p', due + cadence + ' · ' + status + (study ? ' · 学习 ' + formatFocus(study) : ''), 'task-meta'))
+  text.append(node('p', due + (task.deadlineTime ? ' ' + task.deadlineTime : '') + cadence + ' · ' + status + (study ? ' · 学习 ' + formatFocus(study) : ''), 'task-meta'))
   row.append(completionCheckbox(task, due, completedAt), text)
   if (token) row.append(taskActions(task, due))
   return row
 }
 
-function planRow (task, due, completedAt, today) {
+function planRow (task, due, completedAt, late) {
   const row = node('tr')
   const name = node('th', task.title)
   name.scope = 'row'
@@ -224,12 +227,14 @@ function planRow (task, due, completedAt, today) {
   const progress = node('td')
   const status = node('label', '', 'inline-check')
   if (token) status.append(completionCheckbox(task, due, completedAt))
-  const badge = node('span', completedAt ? '已完成' : due < today ? '已逾期' : '待完成', 'plan-state')
-  badge.dataset.state = completedAt ? 'done' : due < today ? 'late' : 'open'
+  const badge = node('span', completedAt ? '已完成' : late ? '已逾期' : '待完成', 'plan-state')
+  badge.dataset.state = completedAt ? 'done' : late ? 'late' : 'open'
   status.append(badge)
   progress.append(status)
   if (completedAt) progress.append(node('small', dateTime.format(new Date(completedAt))))
-  row.append(name, node('td', due, 'numeric'), progress, node('td', task.note || '—', 'task-note'))
+  const deadline = node('td', due, 'numeric')
+  if (task.deadlineTime) deadline.append(node('small', task.deadlineTime))
+  row.append(name, deadline, progress, node('td', task.note || '—', 'task-note'))
   if (token) {
     const actions = node('td')
     actions.append(taskActions(task, due))
@@ -239,7 +244,7 @@ function planRow (task, due, completedAt, today) {
 }
 
 function reviewMetrics (summary, focus) {
-  return [['安排任务', summary.scheduled], ['当年完成', summary.completed], ['计划完成率', summary.rate],
+  return [['安排任务', summary.scheduled], ['当年完成', summary.completed], ['按时完成计划', summary.onTime], ['计划完成率', summary.rate],
     ['番茄钟次数', focus.sessions], ['学习时长', formatFocus(focus.total)], ['学习天数', focus.active],
     ['日均学习', focus.active ? formatFocus(focus.average) : '—'], ['最长连续学习', focus.streak + ' 天']]
 }
@@ -264,7 +269,7 @@ function exportReview () {
   }).join('')
   const top = focus.top.map(({ title, duration }) => [title, duration])
   const sections = [
-    ['年度任务进度', pieChart([['按年计划已完成', summary.finishedPlans], ['按年计划未完成', summary.scheduled - summary.finishedPlans]], value => value + ' 项')],
+    ['年度任务进度', pieChart([['按时完成', summary.onTime], ['逾期完成', summary.finishedPlans - summary.onTime], ['未完成', summary.scheduled - summary.finishedPlans]], value => value + ' 项')],
     ['每月学习与任务', months],
     ['学习任务 Top 10', pieChart(top, formatFocus)]
   ]
@@ -309,13 +314,15 @@ function render () {
   const day = validDay(dateFilter.value) ? dateFilter.value : localDay()
   const { start, end, label } = period(day, view)
   const filter = get('filter').value
-  const today = localDay()
+  const now = new Date()
+  const today = localDay(now)
+  const time = shanghaiTime.format(now)
   const matches = tasks.flatMap(task => Array.from(occurrenceDays(task, start, end),
-    due => ({ task, due, completedAt: completionAt(task, due) })))
+    due => ({ task, due, completedAt: completionAt(task, due), late: lateOn(task, due, today, time) })))
   const visible = matches.filter(item => filter === 'all' || Boolean(item.completedAt) === (filter === 'done'))
   visible.sort((a, b) => a.due.localeCompare(b.due) || Number(Boolean(a.completedAt)) - Number(Boolean(b.completedAt)))
   const done = matches.filter(item => item.completedAt).length
-  const late = matches.filter(item => !item.completedAt && item.due < today).length
+  const late = matches.filter(item => !item.completedAt && item.late).length
   get('task-count').textContent = `${label} · ${matches.length} 项任务 · ${done} 项已完成`
   const chart = get('todo-period-chart')
   chart.hidden = view === 'day'
@@ -328,7 +335,7 @@ function render () {
     weekForm.elements.date.min = start
     weekForm.elements.date.max = end
     const rows = get('week-rows')
-    rows.replaceChildren(...visible.map(({ task, due, completedAt }) => planRow(task, due, completedAt, today)))
+    rows.replaceChildren(...visible.map(({ task, due, completedAt, late }) => planRow(task, due, completedAt, late)))
     if (!visible.length) {
       const row = rows.insertRow()
       const cell = row.insertCell()
@@ -379,6 +386,7 @@ form.addEventListener('submit', async event => {
   event.preventDefault()
   const title = form.elements.title.value.trim()
   const date = form.elements.date.value
+  const deadlineTime = form.elements.deadlineTime.value
   const note = form.elements.note.value.trim()
   const repeat = form.elements.repeat.value
   const endDate = repeat === 'none' ? null : form.elements.endDate.value || null
@@ -390,7 +398,7 @@ form.addEventListener('submit', async event => {
     .some(day => day > endDate)) return message('截止日期不能早于已有的完成或计时记录。')
   if (await save(items => {
     if (id && !items.some(item => item.id === id)) throw new Error('该任务已被删除，请重新选择。')
-    const fields = { title, date, note, repeat, endDate }
+    const fields = { title, date, deadlineTime, note, repeat, endDate }
     return id ? items.map(item => item.id === id ? { ...item, ...fields } : item)
       : [...items, { id: crypto.randomUUID(), ...fields, completedAt: null, completions: {} }]
   }, id ? '修改已保存到 GitHub。' : '新待办已保存到 GitHub。')) {
@@ -430,11 +438,11 @@ get('week-cancel').onclick = () => { weekDraft.hidden = true; rememberWeek() }
 weekDraft.addEventListener('input', rememberWeek)
 weekForm.onsubmit = async event => {
   event.preventDefault()
-  const { title, date, done, note } = weekForm.elements
+  const { title, date, deadlineTime, done, note } = weekForm.elements
   if (!title.value.trim() || !validDay(date.value) || date.value < date.min || date.value > date.max) {
     return message('请填写任务名称和所选周内的截止日期。')
   }
-  const task = { id: crypto.randomUUID(), title: title.value.trim(), date: date.value, note: note.value.trim(),
+  const task = { id: crypto.randomUUID(), title: title.value.trim(), date: date.value, deadlineTime: deadlineTime.value, note: note.value.trim(),
     completedAt: done.checked ? new Date().toISOString() : null }
   if (await save(items => [...items, task], '周计划已保存到 GitHub。')) {
     weekForm.reset()
@@ -530,14 +538,14 @@ async function signIn (value, persistent, restore = false) {
     const draft = stored(sessionStorage, draftKey) || (persistent && stored(localStorage, draftKey))
     if (draft?.fields && (!draft.editing || tasks.some(task => task.id === draft.editing))) {
       setEditor(tasks.find(task => task.id === draft.editing))
-      for (const name of ['title', 'note', 'date', 'repeat', 'endDate']) {
+      for (const name of ['title', 'note', 'date', 'deadlineTime', 'repeat', 'endDate']) {
         if (typeof draft.fields[name] === 'string') form.elements[name].value = draft.fields[name]
       }
       rememberDraft()
     }
     const week = stored(sessionStorage, weekDraftKey) || (persistent && stored(localStorage, weekDraftKey))
     if (week && validDay(week.date)) {
-      for (const name of ['title', 'note', 'date']) if (typeof week[name] === 'string') weekForm.elements[name].value = week[name]
+      for (const name of ['title', 'note', 'date', 'deadlineTime']) if (typeof week[name] === 'string') weekForm.elements[name].value = week[name]
       weekForm.elements.done.checked = week.done === true
       weekDraft.hidden = false
     }
