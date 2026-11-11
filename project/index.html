@@ -8,11 +8,11 @@
   <meta http-equiv="Content-Security-Policy" content="default-src 'none'; script-src 'self'; style-src 'self'; img-src 'self'; connect-src https://api.github.com; form-action 'none'; base-uri 'none'; object-src 'none'">
   <title>每日待办 · Zaydenの树屋</title>
   <link rel="icon" href="../img/favicon.png">
-  <link rel="stylesheet" href="../assets/personal/personal.css">
-  <script type="module" src="../assets/personal/todo.js?v=3"></script>
+  <link rel="stylesheet" href="../assets/personal/personal.css?v=8">
+  <script type="module" src="../assets/personal/todo.js?v=4"></script>
 </head>
 <body>
-  <main class="shell">
+  <main class="shell todo-shell">
     <header class="page-intro">
       <a class="back" href="../">← 返回树屋</a>
       <p class="eyebrow">ZAYDEN’S TREEHOUSE / 01</p>
@@ -58,6 +58,7 @@
           <label for="task-note">备注 <span class="muted">（可选）</span></label>
           <textarea id="task-note" name="note" maxlength="2000" rows="3" placeholder="补充细节或下一步"></textarea>
           <div class="actions">
+            <button id="open-week" class="secondary compact" type="button">本周计划</button>
             <button id="task-save" type="submit">添加待办</button>
             <button id="task-cancel" class="secondary" type="button" hidden>取消编辑</button>
           </div>
@@ -97,7 +98,25 @@
           </label>
         </div>
         <p class="muted" id="task-count"></p>
+        <div id="todo-period-chart" class="todo-period-chart" hidden></div>
         <div id="task-list"></div>
+        <section id="weekly-plan" class="weekly-plan" aria-labelledby="weekly-title" hidden>
+          <div class="section-heading"><h3 id="weekly-title">每周计划</h3><button id="week-add" type="button" class="secondary compact" hidden>新增计划行</button></div>
+          <div class="personal-table-scroll" tabindex="0" aria-label="每周计划表">
+            <table class="personal-table" id="week-table">
+              <thead><tr><th scope="col">任务名称</th><th scope="col">截止日期</th><th scope="col">完成情况</th><th scope="col">备注</th><th id="week-actions" scope="col" hidden>操作</th></tr></thead>
+              <tbody id="week-rows"></tbody>
+              <tbody id="week-draft" hidden><tr>
+                <td><input form="week-form" name="title" maxlength="160" aria-label="计划任务名称" placeholder="专业课或英语任务" required></td>
+                <td><input form="week-form" name="date" type="date" aria-label="计划截止日期" required></td>
+                <td><label class="inline-check"><input form="week-form" name="done" type="checkbox"> 已完成</label></td>
+                <td><input form="week-form" name="note" maxlength="2000" aria-label="计划备注" placeholder="可选"></td>
+                <td><div class="actions"><button form="week-form" type="submit" class="compact">保存此行</button><button id="week-cancel" type="button" class="secondary compact">取消</button></div></td>
+              </tr></tbody>
+            </table>
+          </div>
+          <form id="week-form"></form>
+        </section>
       </section>
     </div>
     <section class="panel review focus-timer" id="focus-timer" aria-labelledby="timer-heading" hidden>
@@ -151,6 +170,19 @@
       </div>
       <div id="review-preview" class="review-preview"></div>
     </section>
+    <dialog id="focus-reward" class="focus-reward" aria-labelledby="reward-title">
+      <div class="reward-art" aria-hidden="true"></div>
+      <div class="reward-body">
+        <p id="reward-kind" class="reward-kind"></p><h2 id="reward-title">专注完成</h2>
+        <p id="reward-session" class="reward-session"></p>
+        <blockquote id="reward-line"></blockquote><p id="reward-credit" class="reward-credit"></p>
+        <p id="reward-next"></p>
+        <div class="actions">
+          <button type="button" id="reward-play" class="secondary" hidden>播放片刻</button>
+          <button type="button" id="reward-close">收下奖励</button>
+        </div>
+      </div>
+    </dialog>
   </main>
 </body>
 </html>

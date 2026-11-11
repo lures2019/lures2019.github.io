@@ -1,11 +1,12 @@
-import { download, el } from './vault-crypto.js'
-import { openMedia } from './vault-media.js'
-import { editableDocument, richBody } from './vault-rich.js?v=7'
+import { download, el } from './vault-crypto.js?v=8'
+import { openMedia } from './vault-media.js?v=8'
+import { editableDocument, richBody } from './vault-rich.js?v=8'
 import { localDay, period, validDay } from './todo-model.js'
+import { isImageType, isVideoType } from './vault-media-model.js?v=8'
 
 const kinds = { photo: '照片', journal: '日记', paper: '论文', video: '视频' }
-const isPhoto = file => /^image\/(png|jpeg|webp|gif)$/.test(file.type)
-const isVideo = file => /^video\/(mp4|webm)$/.test(file.type)
+const isPhoto = file => isImageType(file.type)
+const isVideo = file => isVideoType(file.type)
 const mediaKind = file => isPhoto(file) ? 'image' : isVideo(file) ? 'video' : 'file'
 export const paperStages = {
   writing: '写作中', submitted: '已投稿', reviewing: '审稿中', revising: '返修中',
@@ -102,6 +103,9 @@ export function createLibrary (root, { controls, mediaOptions, editPaper, upload
         const url = URL.createObjectURL(blob)
         urls.set(box, url)
         const player = el(kind === 'video' ? 'video' : 'img')
+        player.addEventListener('error', () => {
+          box.replaceChildren(el('p', '当前浏览器无法预览该文件。', 'muted'), button('下载 ' + file.name, () => download(blob, file.name)))
+        }, { once: true })
         player.src = url
         if (kind === 'video') {
           player.controls = true
@@ -155,7 +159,7 @@ export function createLibrary (root, { controls, mediaOptions, editPaper, upload
       menu.disabled = true
       status.textContent = '正在准备文档…'
       try {
-        const { exportNote } = await import('./vault-export.js?v=7')
+        const { exportNote } = await import('./vault-export.js?v=8')
         await exportNote({ format, title: record.title, font: record.font, html: await editableDocument(record),
           files: (record.attachments || []).map(ref => ({ ref })), mediaOptions: mediaOptions?.(), alive: () => visible && actions.isConnected })
         status.textContent = ['print', 'pdf'].includes(format) ? '请在浏览器打印窗口选择输出位置。' : '文档已生成。'
@@ -253,7 +257,18 @@ export function createLibrary (root, { controls, mediaOptions, editPaper, upload
     const article = el('article', '', 'vault-record-detail vault-reading-page')
     article.append(viewLink(`← 返回${kinds[record.kind]}`, record.kind), el('h3', record.title),
       el('p', [record.date, record.category].filter(Boolean).join(' · '), 'entry-meta'))
-    if (!photo) article.append(notes(record))
+    if (record.kind === 'video') {
+      if (record.note) article.append(el('p', record.note, 'vault-album-caption'))
+      const grid = el('div', '', 'vault-video-album')
+      for (const [index, file] of [record.video, ...(record.attachments || [])].entries()) {
+        const clip = el('figure', '', 'vault-clip')
+        const name = el('figcaption', '', 'vault-clip-name')
+        name.append(el('strong', '#' + String(index + 1).padStart(2, '0')), el('span', file.name))
+        clip.append(mediaControl(file, 'video'), name)
+        grid.append(clip)
+      }
+      article.append(grid)
+    } else if (!photo) article.append(notes(record))
     else {
       if (record.note) article.append(el('p', record.note, 'vault-album-caption'))
       const grid = el('div', '', 'vault-photo-album')
@@ -321,7 +336,8 @@ export function createLibrary (root, { controls, mediaOptions, editPaper, upload
         if (!isPhoto(file)) article.append(mediaControl(file, 'file'))
       }
     } else if (record.kind === 'video') {
-      article.append(mediaControl(record.video, 'video'))
+      if (record.attachments?.length) article.append(viewLink('浏览 ' + (record.attachments.length + 1) + ' 个视频或分段', 'video', record.id))
+      else article.append(mediaControl(record.video, 'video'))
       if (record.note) article.append(el('p', record.note, 'entry-text'))
     } else {
       if (record.note) {
@@ -342,8 +358,8 @@ export function createLibrary (root, { controls, mediaOptions, editPaper, upload
     const selectedKind = params.get('kind')
     const selectedPaper = params.get('paper')
     const selectedRecord = params.get('record')
-    const detail = records.find(record => (record.kind === 'paper' && record.id === selectedPaper) ||
-      (['photo', 'journal'].includes(record.kind) && record.kind === selectedKind && record.id === selectedRecord))
+    const detail = records.find(record => record.kind === 'paper' ? record.id === selectedPaper
+      : record.kind === selectedKind && record.id === selectedRecord)
     filters.hidden = stats.hidden = Boolean(detail) || !visible
     tabs.hidden = !visible
     date.disabled = range.value === 'all'

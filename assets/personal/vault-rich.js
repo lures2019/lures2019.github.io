@@ -1,5 +1,5 @@
-import { el } from './vault-crypto.js'
-import { copyFormatting, fonts, outline, setFont, updateWordCount } from './vault-layout.js?v=7'
+import { el } from './vault-crypto.js?v=8'
+import { copyFormatting, fonts, outline, setFont, updateWordCount } from './vault-layout.js?v=8'
 
 const assets = new Map()
 let parser

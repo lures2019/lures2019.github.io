@@ -9,6 +9,9 @@
   let observer
   let lastPage
   let lastCount
+  let visitSnapshot
+  const visitKey = 'treehouse-visit-snapshot-v1'
+  const visitDay = new Intl.DateTimeFormat('sv-SE', { timeZone: 'Asia/Shanghai', dateStyle: 'short' })
   let highlighter
 
   function node (tag, text = '', className = '') {
@@ -110,9 +113,9 @@
     return control
   }
 
-  async function api (path, body, count = false) {
+  async function api (path, body) {
     const response = await fetch(service + path, {
-      method: body || count ? 'POST' : 'GET', credentials: 'omit',
+      method: body ? 'POST' : 'GET', credentials: 'omit',
       ...(body ? { headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body) } : {}),
       ...(AbortSignal.timeout ? { signal: AbortSignal.timeout(10_000) } : {})
     })
@@ -123,25 +126,53 @@
     return response.json()
   }
 
-  function paintVisits (counts) {
-    if (!counts) return
+  function paintVisits (counts, live = false) {
     const today = document.getElementById('treehouse-visits-today')
     const total = document.getElementById('treehouse-visits-total')
-    if (today) today.textContent = Number(counts.today).toLocaleString('zh-CN')
-    if (total) total.textContent = Number(counts.total).toLocaleString('zh-CN')
+    const status = document.getElementById('treehouse-visits-status')
+    if (!today || !total || !status) return
+    today.textContent = counts?.date === visitDay.format() ? counts.today.toLocaleString('zh-CN') : '—'
+    total.textContent = counts ? counts.total.toLocaleString('zh-CN') : '—'
+    status.textContent = live ? '' : counts ? '最近更新 ' + dateFormat.format(new Date(counts.updatedAt)) : '统计暂不可用'
+  }
+
+  function validCounts (counts) {
+    return counts && /^\d{4}-\d{2}-\d{2}$/.test(counts.date) &&
+      Number.isSafeInteger(counts.today) && counts.today >= 0 &&
+      Number.isSafeInteger(counts.total) && counts.total >= counts.today &&
+      Number.isFinite(Date.parse(counts.updatedAt))
   }
 
   function visits () {
     const page = location.pathname + location.search
-    if (page === lastPage) { paintVisits(lastCount); return }
+    if (page === lastPage) return
     lastPage = page
-    const ready = () => {
-      void api('/visits', undefined, true).then(counts => {
-        if (page === lastPage) { lastCount = counts; paintVisits(counts) }
-      }).catch(() => {})
+    let live = false
+    const onHome = Boolean(document.getElementById('treehouse-visits-today'))
+    if (onHome) {
+      try {
+        const cached = JSON.parse(localStorage.getItem(visitKey))
+        if (validCounts(cached) && (!lastCount || cached.total > lastCount.total)) lastCount = cached
+      } catch { /* Continue with the current request. */ }
+      if (lastCount) paintVisits(lastCount)
+      visitSnapshot ??= fetch('/assets/community/visit-snapshot.json', { signal: AbortSignal.timeout(3500) })
+        .then(response => response.ok ? response.json() : null).catch(() => null)
+      void visitSnapshot.then(snapshot => {
+        if (validCounts(snapshot) && (!lastCount || snapshot.total > lastCount.total)) lastCount = snapshot
+        if (!live && page === lastPage && lastCount) paintVisits(lastCount)
+      })
     }
-    if (window.requestIdleCallback) requestIdleCallback(ready, { timeout: 1500 })
-    else setTimeout(ready, 0)
+    void fetch(service + '/visits', {
+      method: 'POST', credentials: 'omit', keepalive: true, signal: AbortSignal.timeout(6500)
+    }).then(async response => {
+      if (!response.ok) throw new Error('Visit service unavailable')
+      const counts = { ...(await response.json()), updatedAt: new Date().toISOString() }
+      if (!validCounts(counts)) throw new Error('Invalid visit counts')
+      if (!lastCount || counts.total >= lastCount.total) lastCount = counts
+      try { localStorage.setItem(visitKey, JSON.stringify(lastCount)) } catch { /* Optional cache. */ }
+      live = true
+      if (page === lastPage) paintVisits(lastCount, true)
+    }).catch(() => { if (page === lastPage) paintVisits(lastCount) })
   }
 
   function button (text, className = 'review-button') {

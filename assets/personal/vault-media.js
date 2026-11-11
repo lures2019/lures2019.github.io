@@ -1,6 +1,6 @@
-import { base64, maxPackageSize, randomBytes } from './vault-crypto.js'
+import { base64, maxPackageSize, randomBytes } from './vault-crypto.js?v=8'
 import { cloudConnected, readMediaChunk, writeMediaChunk } from './vault-cloud.js'
-import { chunkSize, maxMediaBytes, mediaId } from './vault-media-model.js'
+import { chunkSize, isImageType, isVideoType, maxMediaBytes, mediaId } from './vault-media-model.js?v=8'
 
 const encoder = new TextEncoder()
 const decoder = new TextDecoder()
@@ -104,7 +104,7 @@ export async function openMedia (file, options = {}) {
     })))
   }
   // Active documents always download instead of being rendered in the page.
-  return new Blob(parts, { type: /^(image\/(png|jpeg|gif|webp)|video\/(mp4|webm))$/.test(file.type) ? file.type : 'application/octet-stream' })
+  return new Blob(parts, { type: isImageType(file.type) || isVideoType(file.type) ? file.type : 'application/octet-stream' })
 }
 
 export async function makeBundle (archive, files, options = {}) {

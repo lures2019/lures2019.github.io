@@ -1,7 +1,7 @@
-import { maxPackageSize, unseal } from './vault-crypto.js'
+import { maxPackageSize, unseal } from './vault-crypto.js?v=8'
 import { readCloudShare, shareIdPattern } from './vault-cloud.js'
-import { createLibrary } from './vault-library.js?v=7'
-import { openBundle } from './vault-media.js'
+import { createLibrary } from './vault-library.js?v=8'
+import { openBundle } from './vault-media.js?v=8'
 
 const form = document.getElementById('read-share')
 const status = document.getElementById('reader-status')

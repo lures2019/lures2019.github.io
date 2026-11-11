@@ -1,0 +1,93 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="robots" content="noindex">
+  <meta name="referrer" content="no-referrer">
+  <meta http-equiv="Content-Security-Policy" content="default-src 'none'; script-src 'self'; style-src 'self'; img-src 'self'; connect-src https://api.github.com; form-action 'none'; base-uri 'none'; object-src 'none'">
+  <title>记账 · Zaydenの树屋</title>
+  <link rel="icon" href="../img/favicon.png">
+  <link rel="stylesheet" href="../assets/personal/personal.css?v=8">
+  <script type="module" src="../assets/personal/ledger.js"></script>
+</head>
+<body>
+  <main class="shell ledger-shell">
+    <header class="page-intro ledger-hero">
+      <a class="back" href="../">← 返回树屋</a>
+      <h1>树屋记账</h1>
+      <p>查看日常收支、时段分布和年度回顾。</p>
+      <div id="ledger-metrics" class="review-preview" aria-label="收支概览"></div>
+    </header>
+    <noscript><p>启用 JavaScript 后即可读取账本。</p></noscript>
+    <details class="panel todo-owner ledger-owner">
+      <summary>站主编辑</summary>
+      <form id="ledger-login">
+        <label for="ledger-token">待办仓库的 GitHub Fine-grained 令牌</label>
+        <input id="ledger-token" name="token" type="password" autocomplete="off" maxlength="255" required>
+        <label class="inline-check"><input name="remember" type="checkbox"> 在这台私人设备上记住编辑登录（最多 90 天）</label>
+        <p class="muted">同一浏览器已记住待办登录时，可以直接进入编辑。</p>
+        <button type="submit">连接 GitHub</button>
+      </form>
+      <button id="ledger-signout" type="button" class="secondary" hidden>退出编辑</button>
+    </details>
+    <p id="ledger-status" class="status" role="status">正在读取 GitHub 账本…</p>
+    <section class="panel ledger-editor" id="ledger-editor" hidden>
+      <div class="section-heading"><h2 id="ledger-form-title">新增收支</h2><button id="ledger-cancel" type="button" class="secondary compact" hidden>取消编辑</button></div>
+      <form id="ledger-form">
+        <div class="ledger-fields">
+          <label>日期 <input name="date" type="date" required></label>
+          <label>时段 <select name="daypart"><option value="morning">早上</option><option value="midday">中午</option><option value="evening">晚上</option><option value="other">其他</option></select></label>
+          <label>类型 <select name="direction"><option value="expense">支出</option><option value="income">收入</option></select></label>
+          <label>金额（元） <input name="amount" inputmode="decimal" placeholder="0.00" maxlength="12" required></label>
+          <label>项目 <input name="title" list="ledger-titles" maxlength="100" autocomplete="off" placeholder="输入或选择以往项目" required></label>
+          <label>分类 <input name="category" list="ledger-categories" maxlength="60" autocomplete="off" placeholder="选择已有分类或输入新分类" required></label>
+          <label class="ledger-note">备注 <input name="note" maxlength="240" placeholder="可选"></label>
+        </div>
+        <div class="actions"><button id="ledger-save" type="submit">保存到 GitHub</button><span class="muted">项目、金额和备注会公开显示，请只填写可公开内容。</span></div>
+        <datalist id="ledger-titles"></datalist>
+        <datalist id="ledger-categories"></datalist>
+      </form>
+    </section>
+    <section class="panel ledger-period" aria-labelledby="ledger-period-title">
+      <div class="section-heading">
+        <h2 id="ledger-period-title">账单明细</h2>
+        <div class="actions">
+          <button id="ledger-previous" class="secondary compact" type="button" aria-label="上一段日期">←</button>
+          <button id="ledger-today" class="secondary compact" type="button">今天</button>
+          <button id="ledger-next" class="secondary compact" type="button" aria-label="下一段日期">→</button>
+          <button id="ledger-refresh" class="secondary compact" type="button">刷新</button>
+        </div>
+      </div>
+      <div class="filters">
+        <label>日期范围 <select id="ledger-view"><option value="day">按天</option><option value="week">按周</option><option value="month">按月</option><option value="year">按年</option></select></label>
+        <label>参照日期 <input id="ledger-date" type="date"></label>
+        <label>收支 <select id="ledger-kind"><option value="all">全部收支</option><option value="expense">支出</option><option value="income">收入</option></select></label>
+        <label>分类 <select id="ledger-category"></select></label>
+        <label>搜索项目 <input id="ledger-search" type="search" placeholder="项目或备注"></label>
+      </div>
+      <div id="ledger-parts" class="ledger-parts" aria-label="分时段支出"></div>
+      <div class="ledger-chart-grid">
+        <section><h3>支出分类</h3><div id="ledger-expense-chart"></div></section>
+        <section><h3>收入分类</h3><div id="ledger-income-chart"></div></section>
+      </div>
+      <p id="ledger-range" class="muted"></p>
+      <div class="personal-table-scroll" tabindex="0" aria-label="收支明细表">
+        <table class="personal-table ledger-table">
+          <thead><tr><th scope="col">日期 · 时段</th><th scope="col">项目</th><th scope="col">分类</th><th scope="col">金额</th><th scope="col">备注</th><th id="ledger-actions" scope="col" hidden>操作</th></tr></thead>
+          <tbody id="ledger-rows"></tbody>
+        </table>
+      </div>
+      <button id="ledger-more" class="secondary compact" type="button" hidden>显示更多</button>
+    </section>
+    <section class="panel ledger-year" aria-labelledby="ledger-year-title">
+      <h2 id="ledger-year-title">收支年度回顾</h2>
+      <p class="muted">回顾全年收支、各月结余和支出类别。可下载后离线打开。</p>
+      <div class="actions">
+        <label for="ledger-year">选择年份</label><select id="ledger-year"></select>
+        <button id="ledger-report" type="button">下载年度回顾 .html</button>
+      </div>
+    </section>
+  </main>
+</body>
+</html>

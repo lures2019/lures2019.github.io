@@ -4,6 +4,8 @@ on:
   push:
     branches: [master]
   workflow_dispatch:
+  schedule:
+    - cron: '23 * * * *'
 
 permissions:
   contents: read
@@ -25,6 +27,19 @@ jobs:
           git archive HEAD | tar -xf - -C "$RUNNER_TEMP/treehouse-pages"
           test -s "$RUNNER_TEMP/treehouse-pages/index.html"
           test -s "$RUNNER_TEMP/treehouse-pages/private/index.html"
+      - name: Add a snapshot of the visit counts
+        run: |
+          file="$RUNNER_TEMP/treehouse-pages/assets/community/visit-snapshot.json"
+          endpoint="https://treehouse-community.vault-cloud.workers.dev/visits"
+          if curl --fail --silent --max-time 6 "$endpoint" |
+            jq -e -c 'select(.date | type == "string") | select((.today | type == "number") and (.total | type == "number")) | . + {updatedAt: (now | todateiso8601)}' > "$file.tmp"; then
+            mv "$file.tmp" "$file"
+          else
+            rm -f "$file.tmp"
+            curl --fail --silent --max-time 5 "https://lures2019.github.io/assets/community/visit-snapshot.json" -o "$file.tmp" &&
+              jq -e -c 'select((.date | type == "string") and (.total | type == "number") and (.updatedAt | type == "string"))' "$file.tmp" > "$file" || true
+            rm -f "$file.tmp"
+          fi
       - uses: actions/upload-pages-artifact@v4
         with:
           path: ${{ runner.temp }}/treehouse-pages

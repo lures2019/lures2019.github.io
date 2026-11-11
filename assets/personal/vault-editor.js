@@ -1,8 +1,9 @@
-import { base64, deriveKey, download, el, localDay, randomBytes, seal, unseal } from './vault-crypto.js'
-import { createLibrary, paperDetails, paperStages } from './vault-library.js?v=7'
-import { cacheImportedMedia, draftMedia, makeBundle, openBundle, syncImportedMedia, uploadMedia } from './vault-media.js'
-import { recordMedia } from './vault-media-model.js'
-import { openWriter } from './vault-writing.js?v=7'
+import { base64, deriveKey, download, el, localDay, randomBytes, seal, unseal } from './vault-crypto.js?v=8'
+import { createLibrary, paperDetails, paperStages } from './vault-library.js?v=8'
+import { cacheImportedMedia, draftMedia, makeBundle, openBundle, syncImportedMedia, uploadMedia } from './vault-media.js?v=8'
+import { isImageType, isVideoType, maxAttachments, maxSharedMedia, recordMedia } from './vault-media-model.js?v=8'
+import { prepareAttachments, prepareImage, prepareVideo } from './vault-transcode.js?v=8'
+import { openWriter } from './vault-writing.js?v=8'
 import {
   closeCloudShare, cloudConfigured, cloudConnected, connectCloud, disconnectCloud, emptyRevision, listCloudShares,
   loadCloudArchive, publishCloudShare, remoteRevision, resumeCloud, uploadCloudArchive
@@ -215,10 +216,12 @@ function showFields () {
   get('entry-note').hidden = rich
   get('rich-fields').hidden = !rich
   get('attachment-fields').hidden = kind === 'video'
-  get('attachment-help').textContent = '每条记录最多 16 个附件。' + (rich ? '图片和视频可插入正文。' : '图片附件会出现在相册中。')
+  get('attachment-help').textContent = `每条记录最多 ${maxAttachments} 个附件。` + (rich ? '图片和视频可插入正文。' : '图片附件会出现在相册中。')
   get('entry-note-label').textContent = { photo: '照片配文', video: '视频配文', journal: '日记正文', paper: '论文笔记' }[kind]
   entryForm.elements.photo.required = kind === 'photo' && !editing
   entryForm.elements.video.required = kind === 'video' && !editing
+  get('replace-videos').hidden = kind !== 'video' || !editing
+  get('video-count').textContent = editing?.video ? '已保存 ' + (1 + attachments.length) + ' 个视频或分段。' : ''
   showAttachments()
 }
 
@@ -257,7 +260,7 @@ function launchWriting (initialImage) {
   if (!entryDialog.open || writing?.open) return
   writing = openWriter({
     record: { kind: entryForm.elements.kind.value, title: entryForm.elements.title.value, note: entryForm.elements.note.value, format: noteFormat, font: noteFont },
-    attachments, initialImage,
+    attachments, initialImage, onActivity: activity,
     onApply (html, font, files) {
       entryForm.elements.note.value = html
       noteFormat = 'visual'
@@ -279,7 +282,7 @@ function showAttachments () {
   get('remove-paper-pdf').hidden = !pdf
   get('attachment-list').replaceChildren(...attachments.map(item => {
     const row = el('li', item.ref.name)
-    if (['journal', 'paper'].includes(entryForm.elements.kind.value) && /^(image\/(png|jpeg|gif|webp)|video\/(mp4|webm))$/.test(item.ref.type)) {
+    if (['journal', 'paper'].includes(entryForm.elements.kind.value) && (isImageType(item.ref.type) || isVideoType(item.ref.type))) {
       const insert = el('button', '插入正文', 'secondary compact')
       insert.type = 'button'
       insert.onclick = () => launchWriting(item)
@@ -293,16 +296,25 @@ function showAttachments () {
   }))
 }
 
-get('entry-attachments').addEventListener('change', event => {
+get('entry-attachments').addEventListener('change', async event => {
+  const input = event.currentTarget
+  const files = [...input.files]
+  input.value = ''
+  const unlocked = owner
+  const save = get('entry-save')
+  const writer = get('open-writing')
+  if (!files.length || save.disabled) return
+  save.disabled = writer.disabled = input.disabled = true
   try {
-    const files = [...event.target.files]
-    if (attachments.length + files.length > 16) throw new Error('每条记录最多 16 个附件。')
-    attachments = [...attachments, ...files.map(file => ({ file, ref: draftMedia(file) }))]
+    const prepared = await prepareAttachments(files, maxAttachments - attachments.length, message => { activity(); notify(message) })
+    if (owner !== unlocked || !entryDialog.open) return
+    attachments = [...attachments, ...prepared.map(file => ({ file, ref: draftMedia(file) }))]
     showAttachments()
+    notify(`已添加 ${prepared.length} 个附件，保存记录后上传。`)
   } catch (error) {
     notify(error.message)
   } finally {
-    event.target.value = ''
+    save.disabled = writer.disabled = input.disabled = false
   }
 })
 get('remove-paper-pdf').addEventListener('click', () => { paperPdfRemoved = true; showAttachments() })
@@ -449,9 +461,6 @@ async function persist (records) {
 }
 
 async function compressPhoto (file) {
-  if (!file || !['image/jpeg', 'image/png', 'image/webp'].includes(file.type) || file.size > 20_000_000) {
-    throw new Error('请选择一张 20 MB 以内的 JPG、PNG 或 WebP 图片。')
-  }
   const image = await createImageBitmap(file)
   const canvas = document.createElement('canvas')
   const scale = Math.min(1, 1600 / Math.max(image.width, image.height))
@@ -528,14 +537,26 @@ entryForm.addEventListener('submit', async event => {
     }
     if (kind === 'photo') {
       const file = form.photo.files[0]
-      record.photo = file ? await compressPhoto(file) : editing?.photo
+      if (file?.size > 50_000_000) throw new Error('相册封面上限 50 MB，可将更大的图片作为附件添加。')
+      record.photo = file ? await compressPhoto(await prepareImage(file, progress)) : editing?.photo
       if (!record.photo) throw new Error('请选择一张照片。')
     }
     if (kind === 'video') {
-      const file = form.video.files[0]
-      if (file && !['video/mp4', 'video/webm'].includes(file.type)) throw new Error('请选择 MP4 或 WebM 视频。')
-      record.video = file ? await uploadMedia(file, progress) : editing?.video
-      if (!record.video) throw new Error('请选择视频。')
+      const keep = editing?.video && (!form.replaceVideos.checked || !form.video.files.length)
+      const videos = keep ? [editing.video, ...files.map(item => item.ref)] : []
+      const prepared = []
+      for (const file of form.video.files) {
+        if (owner !== unlocked) return
+        prepared.push(...await prepareVideo(file, progress))
+        if (prepared.length + videos.length > maxAttachments + 1) throw new Error('单条记录最多保存 121 个视频或分段。')
+      }
+      for (const file of prepared) {
+        if (owner !== unlocked) return
+        videos.push(await uploadMedia(file, progress))
+      }
+      if (!videos.length) throw new Error('请选择视频。')
+      record.video = videos[0]
+      if (videos.length > 1) record.attachments = videos.slice(1)
     }
     if (kind === 'journal' || kind === 'paper') {
       record.format = noteFormat
@@ -653,6 +674,7 @@ get('make-share').addEventListener('click', async event => {
     const key = await deriveKey(password, salt)
     const blob = await seal('share', key, salt, records)
     const files = recordMedia(records)
+    if (cloudConfigured && files.length > maxSharedMedia) throw new Error('一个在线分享最多可包含 128 个附件，请分成多个分享。')
     if (owner !== unlocked) return
     let proof
     if (cloudConfigured) {

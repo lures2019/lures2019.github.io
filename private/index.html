@@ -5,11 +5,11 @@
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <meta name="robots" content="noindex, nofollow">
   <meta name="referrer" content="no-referrer">
-  <meta http-equiv="Content-Security-Policy" content="default-src 'none'; script-src 'self'; style-src 'self'; style-src-attr 'unsafe-inline'; img-src 'self' data: blob:; media-src blob:; connect-src 'self' data: blob: https://treehouse-vault.vault-cloud.workers.dev; form-action 'none'; base-uri 'none'">
+  <meta http-equiv="Content-Security-Policy" content="default-src 'none'; script-src 'self' 'wasm-unsafe-eval'; worker-src 'self' blob:; style-src 'self'; style-src-attr 'unsafe-inline'; img-src 'self' data: blob:; media-src blob:; connect-src 'self' data: blob: https://treehouse-vault.vault-cloud.workers.dev; form-action 'none'; base-uri 'none'">
   <title>私密空间 · Zaydenの树屋</title>
   <link rel="icon" href="../img/favicon.png">
-  <link rel="stylesheet" href="../assets/personal/personal.css?v=7">
-  <script type="module" src="../assets/personal/vault-editor.js?v=7"></script>
+  <link rel="stylesheet" href="../assets/personal/personal.css?v=8">
+  <script type="module" src="../assets/personal/vault-editor.js?v=8"></script>
 </head>
 <body>
   <main class="shell vault-shell">
@@ -73,13 +73,15 @@
             </div>
             <div id="photo-fields">
               <label for="entry-photo">照片文件</label>
-              <input id="entry-photo" name="photo" type="file" accept="image/jpeg,image/png,image/webp">
+              <input id="entry-photo" name="photo" type="file" accept="image/*,.heic,.heif,.tif,.tiff">
               <p class="muted">导入时生成 WebP，最长边 1600 像素。</p>
             </div>
             <div id="video-fields" hidden>
-              <label for="entry-video">视频文件</label>
-              <input id="entry-video" name="video" type="file" accept="video/mp4,video/webm">
-              <p class="muted">MP4 或 WebM，每个文件最多 120 MB。播放时才下载。</p>
+              <label for="entry-video">视频文件（可多选）</label>
+              <input id="entry-video" name="video" type="file" multiple accept="video/*,.mov,.mkv,.avi,.m4v,.wmv,.flv,.mpeg,.mpg,.mts,.m2ts,.ts,.ogv,.3gp,.vob">
+              <p class="muted">单个源视频最多 1 GB。大文件和 MOV、MKV、AVI 等格式会在浏览器转换成编号 MP4 分段。</p>
+              <label class="inline-check" id="replace-videos" hidden><input name="replaceVideos" type="checkbox"> 用新选文件替换已有视频</label>
+              <p class="muted" id="video-count"></p>
             </div>
             <div id="paper-fields" hidden>
               <label for="paper-journal">投稿期刊</label>
@@ -105,9 +107,9 @@
               <span id="writing-summary" class="muted"></span>
             </div>
             <div id="attachment-fields" hidden>
-              <label for="entry-attachments">图片或文档附件</label>
+              <label for="entry-attachments">图片、视频或文档附件</label>
               <input id="entry-attachments" type="file" multiple>
-              <p class="muted" id="attachment-help">每条记录最多 16 个附件。</p>
+              <p class="muted" id="attachment-help">每条记录最多 120 个附件。</p>
               <ul id="attachment-list" class="vault-attachments"></ul>
             </div>
             <div class="actions">

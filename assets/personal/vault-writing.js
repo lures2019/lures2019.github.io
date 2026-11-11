@@ -1,10 +1,12 @@
-import { el } from './vault-crypto.js'
-import { draftMedia, openMedia } from './vault-media.js'
-import { cleanDocument, editableDocument, renderEquations, safeLink } from './vault-rich.js?v=7'
-import { alignments, bounded, fonts, imageLimits, listStyles, outline, setFont, setImageSize, sizeLimits, updateWordCount } from './vault-layout.js?v=7'
+import { el } from './vault-crypto.js?v=8'
+import { draftMedia, openMedia } from './vault-media.js?v=8'
+import { isImageType, isVideoType, maxAttachments } from './vault-media-model.js?v=8'
+import { prepareAttachments } from './vault-transcode.js?v=8'
+import { cleanDocument, editableDocument, renderEquations, safeLink } from './vault-rich.js?v=8'
+import { alignments, bounded, fonts, imageLimits, listStyles, outline, setFont, setImageSize, sizeLimits, updateWordCount } from './vault-layout.js?v=8'
 
-const isImage = item => /^image\/(png|jpeg|webp|gif)$/.test(item.ref.type)
-const isVideo = item => /^video\/(mp4|webm)$/.test(item.ref.type)
+const isImage = item => isImageType(item.ref.type)
+const isVideo = item => isVideoType(item.ref.type)
 const isMedia = item => isImage(item) || isVideo(item)
 const emojiGroups = [
   ['表情与手势', 0x1f600, 0x1f64f], ['食物与饮品', 0x1f345, 0x1f37f], ['旅行与交通', 0x1f680, 0x1f6a5]
@@ -12,7 +14,7 @@ const emojiGroups = [
 const highlightColors = { '#fff0a8': '柠檬黄', '#c7f3c7': '薄荷绿', '#b9e9fc': '冰蓝', '#fed1de': '玫瑰粉',
   '#e2d0ff': '薰衣草紫', '#ffd6ad': '蜜桃橙', '#d8e2ef': '雾灰蓝', '#ffffff': '白色' }
 
-export function openWriter ({ record, attachments, initialImage, onApply }) {
+export function openWriter ({ record, attachments, initialImage, onApply, onActivity }) {
   const dialog = el('dialog', '', 'vault-dialog vault-writer')
   dialog.setAttribute('aria-label', '写作窗口')
   const tools = el('div', '', 'vault-writer-tools')
@@ -34,6 +36,7 @@ export function openWriter ({ record, attachments, initialImage, onApply }) {
   let selection
   let ready = false
   let dirty = false
+  let preparing = false
   let files = attachments.slice()
   let activeMedia
 
@@ -265,16 +268,25 @@ export function openWriter ({ record, attachments, initialImage, onApply }) {
   attach.type = 'file'
   attach.multiple = true
   attach.hidden = true
-  attach.onchange = () => {
+  attach.onchange = async () => {
+    const picked = [...attach.files]
+    attach.value = ''
+    if (!picked.length || preparing) return
+    preparing = true
+    attach.disabled = applyRecord.disabled = true
     try {
-      if (files.length + attach.files.length > 16) throw new Error('每条记录最多 16 个附件。')
-      const additions = [...attach.files].map(file => ({ file, ref: draftMedia(file) }))
+      const prepared = await prepareAttachments(picked, maxAttachments - files.length, message => {
+        if (dialog.open) { notice.textContent = message; onActivity() }
+      })
+      if (!dialog.open) return
+      const additions = prepared.map(file => ({ file, ref: draftMedia(file) }))
       files.push(...additions)
       additions.filter(isMedia).forEach(insertImage)
       fileNames()
       dirty = true
-    } catch (error) { notice.textContent = error.message }
-    attach.value = ''
+      notice.textContent = `已添加 ${additions.length} 个附件。`
+    } catch (error) { notice.textContent = error?.message || '无法处理选中的文件，请分批重试。' }
+    finally { preparing = attach.disabled = applyRecord.disabled = false }
   }
 
   for (const [label, name, value] of [
@@ -393,7 +405,7 @@ export function openWriter ({ record, attachments, initialImage, onApply }) {
     exportControl.disabled = true
     notice.textContent = '正在准备文档…'
     try {
-      const { exportNote } = await import('./vault-export.js?v=7')
+      const { exportNote } = await import('./vault-export.js?v=8')
       await exportNote({ format, title: record.title, font: font.value, html: cleanDocument(page.innerHTML), files, mediaOptions: { owner: true }, alive: () => dialog.open })
       notice.textContent = ['print', 'pdf'].includes(format) ? '可在浏览器打印窗口选择打印机或「另存为 PDF」。' : '文档已生成。'
     } catch (error) { notice.textContent = error.message || '导出失败，请重试。' }
@@ -403,14 +415,14 @@ export function openWriter ({ record, attachments, initialImage, onApply }) {
   function close () {
     if (!dirty || confirm('关闭写作窗口并放弃本次修改？')) dialog.close()
   }
-  header.append(el('h2', record.kind === 'paper' ? '论文笔记' : '日记正文'), wordCount, exportControl,
-    button('关闭', close), button('应用到记录', () => {
-      if (!ready) return
-      const html = cleanDocument(page.innerHTML)
-      if (html.length > 150_000) { notice.textContent = '正文过长，请拆分为多条记录。'; return }
-      onApply(html, font.value, files)
-      dialog.close()
-    }, true))
+  const applyRecord = button('应用到记录', () => {
+    if (!ready || preparing) return
+    const html = cleanDocument(page.innerHTML)
+    if (html.length > 150_000) { notice.textContent = '正文过长，请拆分为多条记录。'; return }
+    onApply(html, font.value, files)
+    dialog.close()
+  }, true)
+  header.append(el('h2', record.kind === 'paper' ? '论文笔记' : '日记正文'), wordCount, exportControl, button('关闭', close), applyRecord)
   dialog.addEventListener('cancel', event => { event.preventDefault(); close() })
   dialog.addEventListener('close', () => {
     document.removeEventListener('selectionchange', rememberSelection)

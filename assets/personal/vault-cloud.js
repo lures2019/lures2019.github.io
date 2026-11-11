@@ -1,4 +1,4 @@
-import { base64, maxPackageSize, randomBytes } from './vault-crypto.js'
+import { base64, maxPackageSize, randomBytes } from './vault-crypto.js?v=8'
 
 const service = document.documentElement.dataset.vaultCloud
 const sessionKey = 'treehouse-vault-session'

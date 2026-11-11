@@ -1,0 +1,14 @@
+Media conversion components
+
+ffmpeg.wasm JavaScript wrapper 0.12.15 — MIT
+FFmpeg single-thread WebAssembly core 0.12.10 — GPL-2.0-or-later
+Release and corresponding wrapper, core bindings, and build recipes:
+https://github.com/ffmpegwasm/ffmpeg.wasm/releases/tag/v12.15
+https://github.com/ffmpegwasm/ffmpeg.wasm/tree/71aa99d37c02a7b4c435275ca9ef50e612f6efa1
+FFmpeg 5.1.4 and dependency revisions are specified in the release build scripts:
+https://github.com/FFmpeg/FFmpeg/tree/n5.1.4
+https://www.gnu.org/licenses/old-licenses/gpl-2.0.html
+
+heic-to 1.6.7 — LGPL-3.0
+https://github.com/hoppergee/heic-to/tree/78345a3fcdb4a1d70d513fce2646aeff0127f7ba
+See heic-to.LICENSE in this directory.

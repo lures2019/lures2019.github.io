@@ -1,4 +1,4 @@
-import { idPattern, localDay, maxFocusMs, studyDays, validDay } from './todo-model.js'
+import { idPattern, localDay, maxFocusMs, studyDays, validDay } from './todo-model.js?v=4'
 
 const storage = 'zayden-focus-v1'
 const draftStorage = 'zayden-focus-draft-v1'
@@ -42,7 +42,7 @@ function clockText (ms, remaining) {
     .map(part => String(part).padStart(2, '0')).join(':')
 }
 
-export function bindTimer ({ canSave, save, notify }) {
+export function bindTimer ({ canSave, canCelebrate, save, notify, celebrate }) {
   const get = id => document.getElementById(id)
   const form = get('timer-form')
   const { title, mode, minutes } = form.elements
@@ -76,6 +76,11 @@ export function bindTimer ({ canSave, save, notify }) {
     const down = (current?.mode || mode.value) === 'countdown'
     const limit = current?.limit ?? Math.max(0, Number(minutes.value)) * 60_000
     const elapsed = current ? elapsedAt(current, Date.now()) : 0
+    if (current?.rewardPending && canCelebrate()) {
+      current.rewardPending = false
+      persist()
+      celebrate(current.title, elapsed)
+    }
     clock.value = clockText(down ? Math.max(0, limit - elapsed) : elapsed, down)
     const running = active && current.started !== null
     state.textContent = saving ? '正在保存' : !active ? '等待开始' : current.done ? '已结束 · 待保存'
@@ -110,6 +115,7 @@ export function bindTimer ({ canSave, save, notify }) {
       stopSegment(current, Date.now())
       if (closedTime(current) < 1000) return render()
       current.done = true
+      current.rewardPending = true
       persist()
     }
     if (!canSave()) return render()

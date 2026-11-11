@@ -1,7 +1,8 @@
-import { download, el } from './vault-crypto.js'
-import { openMedia } from './vault-media.js'
-import { renderEquations } from './vault-rich.js?v=7'
-import { setFont } from './vault-layout.js?v=7'
+import { download, el } from './vault-crypto.js?v=8'
+import { openMedia } from './vault-media.js?v=8'
+import { isImageType } from './vault-media-model.js?v=8'
+import { renderEquations } from './vault-rich.js?v=8'
+import { setFont } from './vault-layout.js?v=8'
 
 const libraries = new Map()
 let printCleanup
@@ -61,7 +62,7 @@ async function sheetFor ({ title, font, html, files, format, mediaOptions, alive
     if (!alive()) return
     const item = files.find(file => file.ref.id === node.dataset.inlineMedia)
     const name = node.textContent || '附件'
-    if (!item || !/^image\/(jpeg|png|webp|gif)$/.test(item.ref.type)) {
+    if (!item || !isImageType(item.ref.type)) {
       node.replaceChildren(el('span', `[附件：${name}]`))
       continue
     }

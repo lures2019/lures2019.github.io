@@ -107,16 +107,20 @@ export function focusFor (task, day) {
 
 export function focusStats (tasks, start = '1900-01-01', end = '9998-12-31') {
   let total = 0
+  let sessions = 0
   const active = new Set()
   const ranking = new Map()
   for (const task of tasks) {
     let duration = 0
     for (const session of task.focusSessions) {
+      let recorded = false
       for (const [day, ms] of Object.entries(session.days)) {
         if (day < start || day > end) continue
         active.add(day)
         duration += ms
+        recorded = true
       }
+      if (recorded) sessions++
     }
     if (duration) {
       total += duration
@@ -125,7 +129,15 @@ export function focusStats (tasks, start = '1900-01-01', end = '9998-12-31') {
   }
   const top = [...ranking].map(([title, duration]) => ({ title, duration }))
     .sort((a, b) => b.duration - a.duration || a.title.localeCompare(b.title, 'zh-CN')).slice(0, 10)
-  return { total, active: active.size, average: active.size ? total / active.size : 0, top }
+  let streak = 0
+  let run = 0
+  let previous
+  for (const day of [...active].sort()) {
+    run = previous && addDays(previous, 1) === day ? run + 1 : 1
+    streak = Math.max(streak, run)
+    previous = day
+  }
+  return { total, active: active.size, average: active.size ? total / active.size : 0, top, sessions, streak }
 }
 
 function validTime (value) {
@@ -199,6 +211,6 @@ export function reportYear (tasks, year) {
       months[Number(day.slice(5, 7)) - 1].completed++
     }
   }
-  return { months, scheduled, completed, activeDays: activeDays.size,
+  return { months, scheduled, completed, finishedPlans, activeDays: activeDays.size,
     rate: scheduled ? Math.round(finishedPlans / scheduled * 100) + '%' : '—' }
 }

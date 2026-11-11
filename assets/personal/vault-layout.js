@@ -1,4 +1,4 @@
-import { el } from './vault-crypto.js'
+import { el } from './vault-crypto.js?v=8'
 
 export const fonts = {
   sans: ['默认无衬线', '"Segoe UI", "Microsoft YaHei", sans-serif', 'Microsoft YaHei'],
