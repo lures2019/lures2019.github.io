@@ -219,6 +219,61 @@ export function openWriter ({ record, attachments, initialImage, onApply, onActi
     return control
   }
 
+  function previewControl (label, choices, apply, preview, columns = 1) {
+    const menu = el('div', '', 'vault-preview-menu')
+    menu.popover = 'auto'
+    menu.setAttribute('role', 'group')
+    menu.setAttribute('aria-label', `${label}选项`)
+    menu.style.setProperty('--preview-columns', columns)
+    const trigger = button(label, () => {
+      rememberSelection()
+      const { left, top, bottom } = trigger.getBoundingClientRect()
+      const spaceBelow = window.innerHeight - bottom - 13
+      const spaceAbove = top - 13
+      const maxHeight = 410
+      const above = spaceBelow < maxHeight && spaceAbove > spaceBelow
+      menu.style.setProperty('--preview-left', `${left}px`)
+      menu.style.top = above ? 'auto' : `${bottom + 5}px`
+      menu.style.bottom = above ? `${window.innerHeight - top + 5}px` : 'auto'
+      menu.style.maxHeight = `${Math.max(0, Math.min(maxHeight, above ? spaceAbove : spaceBelow))}px`
+    })
+    trigger.classList.add('vault-preview-trigger')
+    trigger.popoverTargetElement = menu
+    const options = Object.entries(choices).map(([value, name]) => {
+      const choice = button(name, () => {
+        menu.hidePopover()
+        apply(value)
+      })
+      const sample = preview(value)
+      sample.setAttribute('aria-hidden', 'true')
+      choice.append(sample)
+      return choice
+    })
+    options[0].autofocus = true
+    menu.append(...options)
+    menu.addEventListener('keydown', event => {
+      const index = options.indexOf(document.activeElement)
+      if (index === -1) return
+      const steps = { ArrowDown: columns, ArrowUp: -columns, ArrowLeft: -1, ArrowRight: 1 }
+      let next
+      if (Object.hasOwn(steps, event.key)) next = (index + steps[event.key] + options.length) % options.length
+      else if (event.key === 'Home') next = 0
+      else if (event.key === 'End') next = options.length - 1
+      else return
+      event.preventDefault()
+      options[next].focus()
+    })
+    return [trigger, menu]
+  }
+
+  function colorControl (label, colors, property) {
+    return previewControl(label, colors, color => inlineFormat(span => { span.style[property] = color }), color => {
+      const swatch = el('span', '', 'vault-color-swatch')
+      swatch.style.backgroundColor = color
+      return swatch
+    }, 2)
+  }
+
   function inlineFormat (apply, after) {
     mutate(() => {
       const active = restoreSelection()
@@ -478,29 +533,18 @@ export function openWriter ({ record, attachments, initialImage, onApply, onActi
   })
   sizeControl.append(...[8, 9, 10, 10.5, 11, 12, 14, 16, 18, 20, 22, 24, 28, 32, 36, 48, 60, 72].map(size => new Option(`${size} pt`, size)),
     new Option('自定义字号…', 'custom'))
-  const palette = el('div', '', 'vault-text-palette')
-  palette.popover = 'auto'
-  palette.setAttribute('role', 'group')
-  palette.setAttribute('aria-label', '文字颜色选项')
-  const paletteButton = button('常用文字颜色', () => {
-    const rect = paletteButton.getBoundingClientRect()
-    palette.style.left = `${Math.max(8, Math.min(rect.left, window.innerWidth - 258))}px`
-    const above = window.innerHeight - rect.bottom < Math.min(225, window.innerHeight * .45)
-    palette.style.top = above ? 'auto' : `${rect.bottom + 5}px`
-    palette.style.bottom = above ? `${window.innerHeight - rect.top + 5}px` : 'auto'
+  const headings = { p: '正文', h1: '标题 1', h2: '标题 2', h3: '标题 3', h4: '标题 4', h5: '标题 5', h6: '标题 6' }
+  const headingControl = previewControl('标题级别', headings, value => command('formatBlock', value), value => {
+    const sample = el('span', 'Aa 示例', 'vault-heading-example')
+    sample.dataset.heading = value
+    return sample
   })
-  paletteButton.popoverTargetElement = palette
-  for (const [color, label] of Object.entries(textColors)) {
-    const choice = button(label, () => {
-      palette.hidePopover()
-      inlineFormat(span => { span.style.color = color })
-    })
-    const swatch = el('span', '', 'vault-color-swatch')
-    swatch.setAttribute('aria-hidden', 'true')
-    swatch.style.backgroundColor = color
-    choice.append(swatch)
-    palette.append(choice)
-  }
+  const underlineChoices = { ...Object.fromEntries(Object.entries(underlines).map(([key, [label]]) => [key, label])), none: '清除下划线' }
+  const underlineControl = previewControl('下划线', underlineChoices, underline, value => {
+    const sample = el('span', 'Aa 示例', 'vault-underline-example')
+    if (value !== 'none') setUnderline(sample, value)
+    return sample
+  })
   const textColor = el('input')
   const highlight = el('input')
   for (const [control, label, color, property] of [[textColor, '自定义文字颜色', '#283d2f', 'color'], [highlight, '自定义高亮颜色', '#fff0a8', 'backgroundColor']]) {
@@ -510,10 +554,9 @@ export function openWriter ({ record, attachments, initialImage, onApply, onActi
     control.title = label
     control.onchange = () => inlineFormat(span => { span.style[property] = control.value })
   }
-  toolbar.append(selectControl('标题级别', { p: '正文', h1: '标题 1', h2: '标题 2', h3: '标题 3', h4: '标题 4', h5: '标题 5', h6: '标题 6' }, value => command('formatBlock', value)),
-    fontControl, sizeControl, selectControl('下划线', { ...Object.fromEntries(Object.entries(underlines).map(([key, [label]]) => [key, label])), none: '清除下划线' }, underline),
-    paletteButton, palette,
-    textColor, selectControl('高亮颜色', highlightColors, color => inlineFormat(span => { span.style.backgroundColor = color })), highlight,
+  toolbar.append(...headingControl, fontControl, sizeControl, ...underlineControl,
+    ...colorControl('常用文字颜色', textColors, 'color'), textColor,
+    ...colorControl('高亮颜色', highlightColors, 'backgroundColor'), highlight,
     selectControl('段落对齐', alignments, value => paragraphFormat(block => { block.style.textAlign = value })),
     selectControl('项目符号', bulletStyles, style => list('ul', style)),
     selectControl('编号样式', numberingStyles, style => list('ol', style)))

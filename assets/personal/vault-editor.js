@@ -3,7 +3,7 @@ import { createLibrary, paperDetails, paperStages } from './vault-library.js?v=1
 import { cacheImportedMedia, draftMedia, makeBundle, openBundle, syncImportedMedia, uploadMedia } from './vault-media.js?v=8'
 import { isImageType, isVideoType, maxAttachments, maxSharedMedia, recordMedia } from './vault-media-model.js?v=8'
 import { prepareAttachments, prepareImage, prepareVideo } from './vault-transcode.js?v=8'
-import { openWriter } from './vault-writing.js?v=10'
+import { openWriter } from './vault-writing.js?v=11'
 import { forgetVaultSession, rememberVaultSession, resumeVaultSession, touchVaultSession, vaultIdleMs } from './vault-session.js'
 import {
   closeCloudShare, cloudConfigured, cloudConnected, connectCloud, disconnectCloud, emptyRevision, listCloudShares,
