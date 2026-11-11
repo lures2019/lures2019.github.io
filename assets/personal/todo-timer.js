@@ -1,6 +1,7 @@
 import { idPattern, localDay, maxFocusMs, studyDays, validDay } from './todo-model.js?v=4'
 
-const storage = 'zayden-focus-v1'
+const legacyStorage = 'zayden-focus-v1'
+const storage = 'treehouse-focus-active-v2'
 const draftStorage = 'zayden-focus-draft-v1'
 const modes = ['countdown', 'stopwatch']
 const closedTime = timer => timer.segments.reduce((sum, [from, to]) => sum + to - from, 0)
@@ -17,9 +18,9 @@ export function stopSegment (timer, now) {
   timer.started = null
 }
 
-function loadTimer () {
+function parseTimer (raw) {
   try {
-    const value = JSON.parse(sessionStorage.getItem(storage) || 'null')
+    const value = JSON.parse(raw || 'null')
     if (!value || typeof value.title !== 'string' || !value.title.trim() || value.title.length > 160 ||
         !validDay(value.day) || typeof value.id !== 'string' || !idPattern.test(value.id) ||
         (value.taskId !== null && (typeof value.taskId !== 'string' || !idPattern.test(value.taskId))) ||
@@ -34,6 +35,15 @@ function loadTimer () {
   } catch {
     return null
   }
+}
+
+function loadTimer () {
+  try {
+    const saved = localStorage.getItem(storage)
+    if (saved !== null) return parseTimer(saved)
+  } catch { /* The same tab can still use its session storage. */ }
+  try { return parseTimer(sessionStorage.getItem(storage) || sessionStorage.getItem(legacyStorage)) }
+  catch { return null }
 }
 
 function clockText (ms, remaining) {
@@ -52,8 +62,12 @@ export function bindTimer ({ canSave, canCelebrate, save, notify, celebrate }) {
   const discard = get('timer-discard')
   const state = get('timer-state')
   const clock = get('timer-clock')
+  const correct = get('timer-correct')
+  const endForm = get('timer-end-form')
+  const endInput = endForm.elements.actualEnd
   let selected
   let current = loadTimer()
+  let autoRecover = Boolean(current?.done)
   let saving = false
 
   function rememberDraft () {
@@ -63,11 +77,14 @@ export function bindTimer ({ canSave, canCelebrate, save, notify, celebrate }) {
   }
 
   function persist () {
+    const data = current ? JSON.stringify(current) : 'null'
     try {
-      if (current) sessionStorage.setItem(storage, JSON.stringify(current))
-      else sessionStorage.removeItem(storage)
+      localStorage.setItem(storage, data)
+      sessionStorage.removeItem(legacyStorage)
+      sessionStorage.removeItem(storage)
     } catch {
-      notify('浏览器无法保存本次计时草稿，建议保存后再离开页面。')
+      try { sessionStorage.setItem(storage, data) }
+      catch { notify('浏览器无法保存本次计时草稿，请先保存再离开页面。') }
     }
   }
 
@@ -84,7 +101,7 @@ export function bindTimer ({ canSave, canCelebrate, save, notify, celebrate }) {
     clock.value = clockText(down ? Math.max(0, limit - elapsed) : elapsed, down)
     const running = active && current.started !== null
     state.textContent = saving ? '正在保存' : !active ? '等待开始' : current.done ? '已结束 · 待保存'
-      : running ? (down ? '倒计时中' : '正计时中') : '已暂停'
+      : running ? (down ? '倒计时中' : elapsed >= limit ? '达到计时上限 · 请确认结束' : '正计时中') : '已暂停'
     title.disabled = active
     mode.disabled = active
     get('timer-minutes').hidden = !down
@@ -94,36 +111,45 @@ export function bindTimer ({ canSave, canCelebrate, save, notify, celebrate }) {
     pause.hidden = !active || current.done
     pause.textContent = running ? '暂停' : '继续'
     finishButton.hidden = !active
-    finishButton.disabled = saving || !canSave() || elapsed < 1000
+    finishButton.disabled = saving || elapsed < 1000 || (current?.done && !canSave())
     finishButton.textContent = active && current.done ? '保存本次时长' : '结束并保存'
     discard.hidden = !active
     discard.disabled = saving
+    correct.hidden = down || !running || Boolean(current?.done)
+    correct.disabled = saving
+    if (correct.hidden) endForm.hidden = true
   }
 
   function reset () {
     current = null
     selected = undefined
     title.value = ''
+    endForm.hidden = true
     persist()
     rememberDraft()
     render()
   }
 
-  async function finish () {
+  async function finish (end = Date.now()) {
     if (!current || saving) return
     if (!current.done) {
-      stopSegment(current, Date.now())
-      if (closedTime(current) < 1000) return render()
+      if (elapsedAt(current, end) < 1000) return notify('请至少记录一秒。')
+      stopSegment(current, end)
       current.done = true
       current.rewardPending = true
       persist()
     }
-    if (!canSave()) return render()
+    if (!canSave()) {
+      autoRecover = true
+      notify('计时已结束并保存在本机，连接后可补存到 GitHub。')
+      return render()
+    }
+    const session = current
     saving = true
     render()
     try {
-      if (await save({ id: current.id, taskId: current.taskId, title: current.title, day: current.day,
-        days: studyDays(current.segments) })) reset()
+      if (await save({ id: session.id, taskId: session.taskId, title: session.title, day: session.day,
+        days: studyDays(session.segments) }) && current?.id === session.id) reset()
     } finally {
       saving = false
       render()
@@ -131,11 +157,16 @@ export function bindTimer ({ canSave, canCelebrate, save, notify, celebrate }) {
   }
 
   function tick () {
-    if (current && !current.done && elapsedAt(current, Date.now()) >= current.limit) {
-      finish()
-    } else {
-      render()
+    if (current?.mode === 'countdown' && !current.done && elapsedAt(current, Date.now()) >= current.limit) {
+      void finish()
+      return
     }
+    if (autoRecover && current?.done && canSave() && !saving) {
+      autoRecover = false
+      void finish()
+      return
+    }
+    render()
   }
 
   form.addEventListener('submit', event => {
@@ -156,7 +187,24 @@ export function bindTimer ({ canSave, canCelebrate, save, notify, celebrate }) {
     persist()
     tick()
   })
-  finishButton.addEventListener('click', finish)
+  finishButton.addEventListener('click', () => void finish())
+  correct.addEventListener('click', () => {
+    endForm.hidden = false
+    const asChina = time => new Date(time + 8 * 3600_000).toISOString().slice(0, 19)
+    endInput.min = asChina(current.started)
+    endInput.max = asChina(Date.now())
+    endInput.value = endInput.max
+    endInput.focus()
+  })
+  get('timer-end-cancel').onclick = () => { endForm.hidden = true }
+  endForm.onsubmit = event => {
+    event.preventDefault()
+    const end = Date.parse(endInput.value + '+08:00')
+    if (!current || current.started === null || !Number.isFinite(end) || end < current.started || end > Date.now()) {
+      return notify('请填写最后一段开始与现在之间的北京时间。')
+    }
+    void finish(end)
+  }
   discard.addEventListener('click', () => {
     if (current && !saving && confirm('放弃本次计时记录？')) reset()
   })
@@ -164,6 +212,7 @@ export function bindTimer ({ canSave, canCelebrate, save, notify, celebrate }) {
   mode.addEventListener('change', () => { rememberDraft(); render() })
   minutes.addEventListener('input', () => { rememberDraft(); render() })
   if (current) {
+    persist()
     title.value = current.title
     mode.value = current.mode
     if (current.mode === 'countdown') minutes.value = String(current.limit / 60_000)
@@ -176,6 +225,23 @@ export function bindTimer ({ canSave, canCelebrate, save, notify, celebrate }) {
       if (idPattern.test(draft?.selected?.id) && validDay(draft.selected.due)) selected = draft.selected
     } catch { /* A malformed draft can be discarded without affecting saved time. */ }
   }
+  window.addEventListener('storage', event => {
+    if (event.key !== storage || event.storageArea !== localStorage) return
+    const wasActive = Boolean(current)
+    current = parseTimer(event.newValue)
+    if (current) {
+      current.rewardPending = false
+      title.value = current.title
+      mode.value = current.mode
+      if (current.mode === 'countdown') minutes.value = String(current.limit / 60_000)
+    } else if (wasActive) { title.value = ''; selected = undefined }
+    endForm.hidden = true
+    render()
+  })
+  window.addEventListener('online', () => {
+    autoRecover = Boolean(current?.done)
+    tick()
+  })
   setInterval(tick, 250)
   render()
 

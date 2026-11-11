@@ -260,7 +260,29 @@ button:disabled { opacity: .65; cursor: default; }
 .vault-rich-text[data-font="serif"] { font-family: Georgia, 'Noto Serif SC', serif; }
 .vault-rich-text[data-font="mono"] { font-family: ui-monospace, Consolas, monospace; }
 .vault-rich-text table { border-collapse: collapse; margin: 12px auto; max-width: 100%; }
+.vault-rich-text table:has(> colgroup), .vault-writing-page table { width: 100%; }
+.vault-rich-text table:has(> colgroup) { table-layout: fixed; }
 .vault-rich-text th, .vault-rich-text td { text-align: center; }
+.vault-rich-text :is(td,th) { min-width: 18px; overflow-wrap: anywhere; vertical-align: top; }
+.vault-rich-text [data-vault-table-selected] { background: var(--wash); box-shadow: inset 0 0 0 2px var(--accent); }
+.vault-column-resize, .vault-column-resize * { cursor: col-resize !important; }
+.vault-rich-text ul { padding-inline-start: 1.7em; }
+.vault-rich-text ul > li::marker { font-size: 1.18em; color: var(--accent); }
+.vault-rich-text a, .vault-rich-text a:visited { color: #1655a4; text-decoration: underline; text-underline-offset: .14em; }
+.vault-writing-page a { cursor: pointer; }
+.vault-rich-text pre { overflow: auto; margin: 14px 0; padding: 12px 16px 15px; border: 1px solid #32425a; border-radius: 11px; background: #142033; color: #e9edf6; line-height: 1.6; tab-size: 4; white-space: pre; text-indent: 0; text-align: left; }
+.vault-rich-text pre[data-language]::before { display: block; margin: 0 0 8px; padding-bottom: 5px; border-bottom: 1px solid #3b4d66; color: #a7c3e7; content: attr(data-language); font: 650 .74rem/1.5 system-ui,sans-serif; letter-spacing: .05em; }
+.vault-rich-text pre code, .vault-code-form textarea { font-family: "Cascadia Code", Consolas, ui-monospace, monospace; font-size: .92rem; }
+.vault-writing-page pre { cursor: text; }
+.vault-rich-text pre :is(.keyword,.atrule,.important) { color: #d5a9ff; }
+.vault-rich-text pre :is(.string,.char,.attr-value) { color: #a9dfaa; }
+.vault-rich-text pre :is(.number,.boolean,.constant) { color: #ffcb92; }
+.vault-rich-text pre :is(.function,.class-name,.tag,.selector) { color: #8cd3ff; }
+.vault-rich-text pre :is(.operator,.punctuation) { color: #c2cee1; }
+.vault-rich-text pre :is(.comment,.prolog,.doctype) { color: #a4b4c7; }
+@media (prefers-color-scheme: dark) {
+  .vault-rich-text a, .vault-rich-text a:visited { color: #88baff; }
+}
 .vault-rich-text math[display="block"] { display: block; padding: 4px 0; }
 .vault-math[data-display="true"] { display: grid; grid-template-columns: minmax(2.5rem, 1fr) minmax(0, auto) minmax(2.5rem, 1fr); align-items: center; width: 100%; box-sizing: border-box; }
 .vault-math[data-display="true"] .vault-math-expression { grid-column: 2; text-align: center; overflow-x: auto; }
@@ -294,6 +316,8 @@ button.vault-resize-handle { position: absolute; right: 2px; bottom: 2px; width:
 .vault-ribbon input[type="color"] { width: 32px; min-height: 34px; padding: 3px; cursor: pointer; }
 .vault-writing-prompt { display: flex; flex-wrap: wrap; align-items: end; gap: 8px; padding: 8px 14px; }
 .vault-writing-prompt label { flex: 1 1 110px; margin-top: 0 !important; }
+.vault-code-form label:has(textarea) { flex-basis: 100%; }
+.vault-code-form textarea { tab-size: 4; }
 .vault-writing-canvas { display: grid; grid-template-columns: minmax(118px, 170px) minmax(0, 1fr); align-items: start; gap: 14px; background: var(--wash); padding: clamp(8px, 2vw, 20px); }
 .vault-writing-page { width: min(100%, 790px); min-height: 360px; margin: auto; padding: clamp(16px, 4vw, 48px); background: var(--surface); box-shadow: 0 4px 20px #11271815; border: 1px solid var(--line); border-radius: 6px; white-space: pre-wrap; }
 .vault-writing-page:focus { outline: 2px solid var(--accent); outline-offset: -2px; }

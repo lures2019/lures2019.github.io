@@ -1,6 +1,6 @@
 import { addDays, completionAt, dueOn, focusFor, focusStats, formatFocus, localDay, normalizeTasks, occurrenceDays, period, repeatLabels, reportYear, validDay } from './todo-model.js?v=5'
 import { connectOwner, loadTasks, writeTasks } from './todo-repo.js?v=5'
-import { bindTimer } from './todo-timer.js?v=4'
+import { bindTimer } from './todo-timer.js?v=7'
 import { dailyQuote, showReward } from './todo-rewards.js?v=6'
 import { annualHTML, downloadFile as download, escapeHTML, metricsHTML, pieChart, showPie } from './report-view.js'
 
@@ -620,13 +620,19 @@ timer = bindTimer({
   canCelebrate: () => Boolean(token),
   notify: message,
   celebrate: showReward,
-  save: ({ id, taskId, title, day, days }) => save(items => {
-    if (items.some(item => item.focusSessions.some(session => session.id === id))) return items
-    const session = { id, day, days }
-    const target = items.find(item => item.id === taskId && dueOn(item, day))
-    if (target) return items.map(item => item === target ? { ...item, focusSessions: [...item.focusSessions, session] } : item)
-    return [...items, { id, title, date: day, note: '', focusSessions: [session] }]
-  }, '学习时长已保存到 GitHub。')
+  async save ({ id, taskId, title, day, days }) {
+    const addSession = items => {
+      if (items.some(item => item.focusSessions.some(session => session.id === id))) return items
+      const session = { id, day, days }
+      const target = items.find(item => item.id === taskId && dueOn(item, day))
+      if (target) return items.map(item => item === target ? { ...item, focusSessions: [...item.focusSessions, session] } : item)
+      return [...items, { id, title, date: day, note: '', focusSessions: [session] }]
+    }
+    const previous = revision
+    const feedback = '学习时长已保存到 GitHub。'
+    if (await save(addSession, feedback)) return true
+    return Boolean(revision && revision !== previous && await save(addSession, feedback))
+  }
 })
 const savedView = stored(localStorage, viewKey) || {}
 dateFilter.value = validDay(savedView['focus-date']) ? savedView['focus-date'] : localDay()

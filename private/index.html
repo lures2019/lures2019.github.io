@@ -8,8 +8,8 @@
   <meta http-equiv="Content-Security-Policy" content="default-src 'none'; script-src 'self' 'wasm-unsafe-eval'; worker-src 'self' blob:; style-src 'self'; style-src-attr 'unsafe-inline'; img-src 'self' data: blob:; media-src blob:; connect-src 'self' data: blob: https://treehouse-vault.vault-cloud.workers.dev; form-action 'none'; base-uri 'none'">
   <title>私密空间 · Zaydenの树屋</title>
   <link rel="icon" href="../img/favicon.png">
-  <link rel="stylesheet" href="../assets/personal/personal.css?v=8">
-  <script type="module" src="../assets/personal/vault-editor.js?v=8"></script>
+  <link rel="stylesheet" href="../assets/personal/personal.css?v=10">
+  <script type="module" src="../assets/personal/vault-editor.js?v=9"></script>
 </head>
 <body>
   <main class="shell vault-shell">
@@ -37,6 +37,7 @@
       <form id="unlock-form">
         <label for="owner-password">资料库密码</label>
         <input id="owner-password" name="password" type="password" maxlength="512" required autocomplete="current-password">
+        <label class="inline-check"><input name="rememberTab" type="checkbox" checked> 此标签页刷新后保持解锁，闲置十分钟锁定</label>
         <div id="create-options" hidden>
           <label for="owner-confirm">再次输入新密码</label>
           <input id="owner-confirm" name="confirmation" type="password" minlength="16" maxlength="512" autocomplete="new-password">

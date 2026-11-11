@@ -1,5 +1,6 @@
-import { el } from './vault-crypto.js?v=8'
-import { copyFormatting, fonts, outline, setFont, updateWordCount } from './vault-layout.js?v=8'
+import { el } from './vault-crypto.js?v=9'
+import { copyFormatting, fonts, outline, setFont, updateWordCount } from './vault-layout.js?v=9'
+import { tableLimits } from './vault-table.js'
 
 const assets = new Map()
 let parser
@@ -8,7 +9,7 @@ function script (name) {
   if (!assets.has(name)) {
     assets.set(name, new Promise((resolve, reject) => {
       const tag = document.createElement('script')
-      tag.src = new URL('./vendor/' + name + '.js', import.meta.url).href
+      tag.src = new URL(name === 'prism' ? '../community/prism.js?v=1' : './vendor/' + name + '.js', import.meta.url).href
       tag.onload = resolve
       tag.onerror = () => {
         assets.delete(name)
@@ -62,8 +63,30 @@ async function markdown () {
   return md
 }
 
-const allowedTags = new Set('p div br h1 h2 h3 h4 h5 h6 strong b em i u s strike del mark font sup sub ul ol li a blockquote pre code table thead tbody tfoot tr th td span hr'.split(' '))
+const allowedTags = new Set('p div br h1 h2 h3 h4 h5 h6 strong b em i u s strike del mark font sup sub ul ol li a blockquote pre code table caption colgroup col thead tbody tfoot tr th td span hr'.split(' '))
 const blockedTags = new Set(['script', 'style', 'iframe', 'object', 'svg', 'math', 'template'])
+export const codeLanguages = { plain: '纯文本', javascript: 'JavaScript', typescript: 'TypeScript', python: 'Python',
+  c: 'C', cpp: 'C++', java: 'Java', go: 'Go', rust: 'Rust', sql: 'SQL', bash: 'Shell', powershell: 'PowerShell',
+  json: 'JSON', yaml: 'YAML', markup: 'HTML/XML', css: 'CSS', markdown: 'Markdown' }
+
+function codeLanguage (pre) {
+  const lang = pre.dataset.language || pre.querySelector('code')?.getAttribute('class')?.match(/(?:^|\s)language-([\w-]+)/)?.[1]
+  return Object.hasOwn(codeLanguages, lang) ? lang : 'plain'
+}
+
+export async function renderCodeBlocks (root) {
+  const blocks = [...root.querySelectorAll('pre[data-language]:not([data-rendered-code])')]
+  for (const block of blocks) block.dataset.renderedCode = ''
+  if (!blocks.some(block => codeLanguage(block) !== 'plain')) return
+  await script('prism')
+  for (const block of blocks) {
+    const code = block.querySelector('code')
+    const language = codeLanguage(block)
+    if (code && Object.hasOwn(window.Prism.languages, language)) {
+      code.innerHTML = window.Prism.highlight(code.textContent, window.Prism.languages[language], language)
+    }
+  }
+}
 
 export function safeLink (value) {
   try {
@@ -85,6 +108,21 @@ export function cleanDocument (html) {
       if (!allowedTags.has(child.localName)) { copy(child, to, depth + 1); continue }
       const next = el(child.localName === 'font' ? 'span' : child.localName)
       copyFormatting(child, next)
+      if (next.matches('th,td')) {
+        if (child.colSpan > 1 && child.colSpan <= tableLimits.columns) next.colSpan = child.colSpan
+        if (child.rowSpan > 1 && child.rowSpan <= tableLimits.rows) next.rowSpan = child.rowSpan
+      }
+      if (next.localName === 'ol' && child.start > 1 && child.start <= 10_000) next.start = child.start
+      if (next.localName === 'col' && child.parentElement?.localName === 'colgroup' &&
+          /^\d+(?:\.\d+)?%$/.test(child.style.width) && parseFloat(child.style.width) > 0 && parseFloat(child.style.width) <= 100) {
+        next.style.width = child.style.width
+      }
+      if (next.localName === 'pre') {
+        next.dataset.language = codeLanguage(child)
+        next.append(el('code', child.textContent))
+        to.append(next)
+        continue
+      }
       if (next.localName === 'a') {
         const href = safeLink(child.getAttribute('href'))
         if (href) {
@@ -138,7 +176,7 @@ export async function renderEquations (root) {
 
 export function richBody (record, inlineMedia, navigation, count) {
   const body = el('div', record.format === 'visual' ? '' : record.note, 'vault-rich-text')
-  if (Object.hasOwn(fonts, record.font)) setFont(body, record.font)
+  setFont(body, Object.hasOwn(fonts, record.font) ? record.font : 'mixed')
   if (!['rich', 'visual'].includes(record.format) || !record.note) {
     if (count) updateWordCount(body, count)
     return body
@@ -151,7 +189,7 @@ export function richBody (record, inlineMedia, navigation, count) {
       if (file) node.replaceChildren(inlineMedia(file, node.textContent))
     }
     if (navigation && body.querySelector('h1,h2,h3,h4,h5,h6')) { outline(body, navigation); navigation.hidden = false }
-    await renderEquations(body)
+    await Promise.all([renderEquations(body), renderCodeBlocks(body)])
   })().catch(() => { /* The source text remains readable if a vendor asset is unavailable. */ })
   return body
 }

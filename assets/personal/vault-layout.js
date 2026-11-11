@@ -1,6 +1,7 @@
-import { el } from './vault-crypto.js?v=8'
+import { el } from './vault-crypto.js?v=9'
 
 export const fonts = {
+  mixed: ['中文宋体 / 西文 Times New Roman', '"Times New Roman", "Liberation Serif", SimSun, "Songti SC", "Noto Serif CJK SC", serif', 'Times New Roman'],
   sans: ['默认无衬线', '"Segoe UI", "Microsoft YaHei", sans-serif', 'Microsoft YaHei'],
   serif: ['默认衬线', 'Georgia, "Noto Serif SC", SimSun, serif', 'Georgia'],
   mono: ['等宽字体', 'Consolas, "Cascadia Code", monospace', 'Consolas'],
@@ -15,10 +16,15 @@ export const fonts = {
   cambria: ['Cambria', 'Cambria, SimSun, serif', 'Cambria']
 }
 
-export const listStyles = {
+export const bulletStyles = {
   disc: '● 实心圆', circle: '○ 空心圆', square: '■ 方块',
+  '"◆ "': '◆ 菱形', '"◇ "': '◇ 空心菱形', '"▪ "': '▪ 小方块', '"✓ "': '✓ 对勾',
+  '"➜ "': '➜ 箭头', '"★ "': '★ 五角星', '"– "': '– 短横线'
+}
+export const numberingStyles = {
   decimal: '1、2、3', 'decimal-leading-zero': '01、02、03', 'lower-alpha': 'a、b、c', 'upper-alpha': 'A、B、C',
-  'lower-roman': 'i、ii、iii', 'upper-roman': 'I、II、III', 'cjk-ideographic': '一、二、三'
+  'lower-roman': 'i、ii、iii', 'upper-roman': 'I、II、III', 'cjk-ideographic': '一、二、三',
+  'simp-chinese-informal': '一、二、三（简体）', 'simp-chinese-formal': '壹、贰、叁', 'lower-greek': 'α、β、γ'
 }
 export const alignments = { left: '左对齐', center: '居中', right: '右对齐', justify: '两端对齐' }
 
@@ -55,9 +61,9 @@ export function colorValue (value) {
 }
 
 export function setFont (node, key) {
-  const font = fonts[Object.hasOwn(fonts, key) ? key : 'sans']
+  const font = fonts[Object.hasOwn(fonts, key) ? key : 'mixed']
   node.style.fontFamily = font[1]
-  node.dataset.font = Object.hasOwn(fonts, key) ? key : 'sans'
+  node.dataset.font = Object.hasOwn(fonts, key) ? key : 'mixed'
 }
 
 export function copyFormatting (from, to) {
@@ -78,7 +84,8 @@ export function copyFormatting (from, to) {
   }
   const indent = dimension(style.textIndent, 'em', 0, 8)
   if (indent) to.style.textIndent = indent
-  if (['ol', 'ul'].includes(to.localName) && Object.hasOwn(listStyles, style.listStyleType)) to.style.listStyleType = style.listStyleType
+  const list = to.localName === 'ul' ? bulletStyles : numberingStyles
+  if (['ol', 'ul'].includes(to.localName) && Object.hasOwn(list, style.listStyleType)) to.style.listStyleType = style.listStyleType
   if (/^[a-f0-9-]{36}$/.test(from.dataset?.inlineMedia)) {
     const width = dimension(style.width, 'px', imageLimits.min, imageLimits.width)
     if (width) setImageSize(to, parseFloat(width), /^\d+$/.test(from.dataset.height) ? Number(from.dataset.height) : undefined)

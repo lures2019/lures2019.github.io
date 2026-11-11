@@ -18,11 +18,11 @@ export function base64 (bytes) {
   return btoa(binary)
 }
 
-export async function deriveKey (password, salt) {
+export async function deriveKey (password, salt, extractable = false) {
   const material = await crypto.subtle.importKey('raw', encoder.encode(password), 'PBKDF2', false, ['deriveKey'])
   return crypto.subtle.deriveKey(
     { name: 'PBKDF2', salt, iterations: 600_000, hash: 'SHA-256' },
-    material, { name: 'AES-GCM', length: 256 }, false, ['encrypt', 'decrypt']
+    material, { name: 'AES-GCM', length: 256 }, extractable, ['encrypt', 'decrypt']
   )
 }
 
@@ -35,14 +35,14 @@ export async function seal (kind, key, salt, records) {
   return new Blob([marker, salt, iv, data], { type: 'application/octet-stream' })
 }
 
-export async function unseal (kind, password, blob) {
+export async function unseal (kind, credential, blob) {
   if (blob.size < headerSize + 16 || blob.size > maxPackageSize) throw new Error('资料包大小无效。')
   const bytes = new Uint8Array(await blob.arrayBuffer())
   const marker = bytes.subarray(0, 8)
   if (decoder.decode(marker) !== signature[kind]) throw new Error('请选择正确类型的加密文件。')
   const salt = bytes.subarray(8, 8 + saltSize)
   const iv = bytes.subarray(8 + saltSize, headerSize)
-  const key = await deriveKey(password, salt)
+  const key = typeof credential === 'string' ? await deriveKey(credential, salt) : credential
   let plain
   try {
     plain = await crypto.subtle.decrypt(

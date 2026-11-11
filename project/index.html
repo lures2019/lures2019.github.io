@@ -9,7 +9,7 @@
   <title>每日待办 · Zaydenの树屋</title>
   <link rel="icon" href="../img/favicon.png">
   <link rel="stylesheet" href="../assets/personal/personal.css?v=9">
-  <script type="module" src="../assets/personal/todo.js?v=6"></script>
+  <script type="module" src="../assets/personal/todo.js?v=7"></script>
 </head>
 <body>
   <main class="shell todo-shell">
@@ -155,7 +155,15 @@
               <button id="timer-start" type="submit">开始计时</button>
               <button id="timer-pause" type="button" class="secondary" hidden>暂停</button>
               <button id="timer-save" type="button" hidden>结束并保存</button>
+              <button id="timer-correct" class="secondary" type="button" hidden>补填结束时间</button>
               <button id="timer-discard" type="button" class="secondary" hidden>放弃本次</button>
+            </div>
+          </form>
+          <form id="timer-end-form" hidden>
+            <label>实际结束时间（北京时间） <input name="actualEnd" type="datetime-local" step="1" required></label>
+            <div class="actions">
+              <button type="submit">结束并保存</button>
+              <button type="button" id="timer-end-cancel" class="secondary">取消</button>
             </div>
           </form>
         </div>

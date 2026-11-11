@@ -1,8 +1,8 @@
-import { download, el } from './vault-crypto.js?v=8'
+import { download, el } from './vault-crypto.js?v=9'
 import { openMedia } from './vault-media.js?v=8'
 import { isImageType } from './vault-media-model.js?v=8'
-import { renderEquations } from './vault-rich.js?v=8'
-import { setFont } from './vault-layout.js?v=8'
+import { renderCodeBlocks, renderEquations } from './vault-rich.js?v=9'
+import { setFont } from './vault-layout.js?v=9'
 
 const libraries = new Map()
 let printCleanup
@@ -43,6 +43,34 @@ async function wordImage (blob) {
   return image
 }
 
+function prepareWordLayout (body) {
+  for (const group of body.querySelectorAll('table > colgroup')) {
+    group.parentElement.style.tableLayout = 'fixed'
+    group.parentElement.style.width = '100%'
+    for (const col of group.children) {
+      if (col.style.width.endsWith('%')) col.style.width = (6.2 * parseFloat(col.style.width)).toFixed(2) + 'px'
+    }
+  }
+  const walker = document.createTreeWalker(body, NodeFilter.SHOW_TEXT)
+  const textNodes = []
+  const chinese = /([\p{Script=Han}\u3000-\u303f\uff00-\uffef]+)/gu
+  for (let text = walker.nextNode(); text; text = walker.nextNode()) {
+    if (text.parentElement.closest('[data-font]')?.dataset.font === 'mixed' && !text.parentElement.closest('pre,[data-math]')) {
+      textNodes.push(text)
+    }
+  }
+  for (const text of textNodes) {
+    const parts = text.data.split(chinese)
+    if (parts.length === 1) continue
+    text.replaceWith(...parts.map((part, index) => {
+      if (index % 2 === 0) return part
+      const span = el('span', part)
+      span.style.fontFamily = 'SimSun'
+      return span
+    }))
+  }
+}
+
 async function sheetFor ({ title, font, html, files, format, mediaOptions, alive }) {
   const sheet = el('article', '', 'vault-export-sheet vault-rich-text')
   const body = el('div')
@@ -80,6 +108,8 @@ async function sheetFor ({ title, font, html, files, format, mediaOptions, alive
     node.replaceChildren(image)
   }
   await renderEquations(body)
+  if (format === 'docx') prepareWordLayout(body)
+  else await renderCodeBlocks(body).catch(() => {})
   if (['png', 'jpeg', 'svg'].includes(format)) {
     for (const math of body.querySelectorAll('math[display="block"]')) math.removeAttribute('display')
   }
@@ -122,7 +152,7 @@ export async function exportNote (options) {
     const { Document, Packer } = window.docx
     const children = window.docxHtml.htmlToContent(sheet.innerHTML, {
       maxImageWidth: 620,
-      stylesheet: 'table { margin: 0 auto; border-collapse: collapse; } td, th { border: 1px solid #9baaa0; padding: 6px; text-align: center; }'
+      stylesheet: 'table { margin: 0 auto; border-collapse: collapse; } td, th { border: 1px solid #9baaa0; padding: 6px; text-align: center; } pre { background-color: #142033; color: #e9edf6; padding: 10px; white-space: pre; } pre, pre code { font-family: Consolas, monospace; }'
     })
     const blob = await Packer.toBlob(new Document({ title, sections: [{ children }] }))
     if (alive()) download(blob, `${name}.docx`)

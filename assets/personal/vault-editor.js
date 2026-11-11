@@ -1,9 +1,10 @@
-import { base64, deriveKey, download, el, localDay, randomBytes, seal, unseal } from './vault-crypto.js?v=8'
-import { createLibrary, paperDetails, paperStages } from './vault-library.js?v=8'
+import { base64, deriveKey, download, el, localDay, randomBytes, seal, unseal } from './vault-crypto.js?v=9'
+import { createLibrary, paperDetails, paperStages } from './vault-library.js?v=9'
 import { cacheImportedMedia, draftMedia, makeBundle, openBundle, syncImportedMedia, uploadMedia } from './vault-media.js?v=8'
 import { isImageType, isVideoType, maxAttachments, maxSharedMedia, recordMedia } from './vault-media-model.js?v=8'
 import { prepareAttachments, prepareImage, prepareVideo } from './vault-transcode.js?v=8'
-import { openWriter } from './vault-writing.js?v=8'
+import { openWriter } from './vault-writing.js?v=9'
+import { forgetVaultSession, rememberVaultSession, resumeVaultSession, touchVaultSession, vaultIdleMs } from './vault-session.js'
 import {
   closeCloudShare, cloudConfigured, cloudConnected, connectCloud, disconnectCloud, emptyRevision, listCloudShares,
   loadCloudArchive, publishCloudShare, remoteRevision, resumeCloud, uploadCloudArchive
@@ -183,6 +184,7 @@ async function openVault (password, confirmation, backup) {
     }
     return unlocked
   }
+  if (typeof password !== 'string') throw new Error('请重新输入资料库密码。')
   if (backup) {
     const bundle = await openBundle(backup)
     const unlocked = await unseal('owner', password, bundle.archive)
@@ -234,7 +236,7 @@ function edit (record) {
   entryForm.elements.date.value = record?.date || localDay()
   entryForm.elements.note.value = record?.note || ''
   noteFormat = record?.format
-  noteFont = record?.font || 'sans'
+  noteFont = record?.font || 'mixed'
   entryForm.elements.category.value = record?.category || ''
   const paper = record?.kind === 'paper' ? paperDetails(record) : {}
   entryForm.elements.paperJournal.value = record?.journal || ''
@@ -379,9 +381,10 @@ function clearShare () {
   get('share-password').value = ''
 }
 
-function lock (feedback = '资料库已锁定。') {
+function lock (feedback = '资料库已锁定。', preserveSession = false) {
   if (!owner) return
   clearTimeout(timer)
+  if (!preserveSession) void forgetVaultSession(db)
   owner = undefined
   if (writing?.open) writing.close()
   if (entryDialog.open) entryDialog.close()
@@ -402,7 +405,8 @@ function lock (feedback = '资料库已锁定。') {
 function activity () {
   if (!owner) return
   clearTimeout(timer)
-  timer = setTimeout(() => lock(), 10 * 60 * 1000)
+  timer = setTimeout(() => lock(), vaultIdleMs)
+  touchVaultSession()
 }
 
 function recordControls (record) {
@@ -476,6 +480,32 @@ async function compressPhoto (file) {
   return base64(new Uint8Array(await result.arrayBuffer()))
 }
 
+function activateVault (unlocked) {
+  owner = unlocked
+  importedMedia = snapshot.pending ? recordMedia(owner.records).map(({ id, size }) => ({ id, size })) : []
+  backupAllowed = true
+  gate.hidden = true
+  content.hidden = false
+  edit()
+  library.show(owner.records)
+  activity()
+  updateCloud()
+  queueBackup()
+  notify('')
+}
+
+async function resumeTab () {
+  if (owner || !db || !snapshot) return
+  const button = get('unlock')
+  button.disabled = true
+  try {
+    const key = await resumeVaultSession(db)
+    if (key) activateVault(await openVault(key))
+  }
+  catch { await forgetVaultSession(db) }
+  finally { updateCloud(); if (!cloudConfigured) button.disabled = false }
+}
+
 unlockForm.addEventListener('submit', async event => {
   event.preventDefault()
   const button = get('unlock')
@@ -484,20 +514,18 @@ unlockForm.addEventListener('submit', async event => {
   const password = unlockForm.elements.password.value
   const confirmation = unlockForm.elements.confirmation.value
   const backup = unlockForm.elements.backup.files[0]
+  const remember = unlockForm.elements.rememberTab.checked
   unlockForm.reset()
   notify('正在打开资料库…')
   try {
-    owner = await openVault(password, confirmation, backup)
-    importedMedia = snapshot.pending ? recordMedia(owner.records).map(({ id, size }) => ({ id, size })) : []
-    backupAllowed = true
-    gate.hidden = true
-    content.hidden = false
-    edit()
-    library.show(owner.records)
-    activity()
-    updateCloud()
-    queueBackup()
-    notify('')
+    const unlocked = await openVault(password, confirmation, backup)
+    let sessionAvailable = true
+    if (remember) {
+      try { await rememberVaultSession(db, password, unlocked.salt) }
+      catch { sessionAvailable = false }
+    } else await forgetVaultSession(db)
+    activateVault(unlocked)
+    if (!sessionAvailable) notify('资料库已打开。当前浏览器无法保存刷新会话。')
   } catch (error) {
     preferCloud = false
     updateGate()
@@ -735,7 +763,8 @@ entryForm.elements.kind.addEventListener('change', () => {
 })
 entryForm.elements.paperStage.addEventListener('change', showFields)
 for (const event of ['keydown', 'pointerdown']) document.addEventListener(event, activity)
-window.addEventListener('pagehide', () => lock())
+window.addEventListener('pagehide', () => lock(undefined, true))
+window.addEventListener('pageshow', event => { if (event.persisted) void resumeTab() })
 
 try {
   if (!crypto.subtle) throw new Error('HTTPS required')
@@ -757,6 +786,7 @@ try {
       updateCloud(error.message)
     }
   }
+  await resumeTab()
 } catch {
   notify('无法开启加密存储。请通过 HTTPS 打开，并检查浏览器的存储权限。')
 }
