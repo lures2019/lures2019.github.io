@@ -1,0 +1,179 @@
+<!doctype html>
+<html lang="zh-CN"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Word 公式排版 · Zaydenの树屋</title><meta name="description" content="可编辑公式自动居中、靠右编号，支持单双栏。">
+<link rel="canonical" href="https:&#x2F;&#x2F;lures2019.github.io&#x2F;toolbox&#x2F;word-equation&#x2F;"><link rel="icon" href="/img/favicon.png"><link rel="stylesheet" href="/assets/toolbox/toolbox.css">
+</head><body><header class="mast"><nav aria-label="面包屑"><a class="brand" href="/">Zaydenの树屋</a><span aria-hidden="true">/</span><a href="/toolbox/">百宝箱</a></nav></header>
+<main><article class="readme"><div align="center">
+  <h1>Word 公式排版插件</h1>
+  <p>在 Windows 桌面 Word 中插入可编辑的公式，自动居中、右侧编号。</p>
+  <p><code>Word 原生公式</code> · <code>MathType 7</code> · <code>单双栏排版</code></p>
+  <p>
+    <a href="#使用指南">使用指南</a> ·
+    <a href="#下载">下载</a> ·
+    <a href="#开发思路">开发思路</a>
+  </p>
+</div>
+<p><img src="/assets/toolbox/formula-dialog.png" alt="新版公式编辑界面，左侧为多行 LaTeX 编辑区，右侧为字号、栏数和编号设置。"></p>
+<h2 id="使用指南">使用指南</h2>
+<h3 id="安装并插入第一条公式">安装并插入第一条公式</h3>
+<ol>
+<li>保存文档并退出所有 Word 窗口。用平时打开 Word 的 Windows 账户运行<a href="#%E4%B8%8B%E8%BD%BD">安装程序</a>，点 <strong>安装</strong>。</li>
+<li>重开 Word，把光标放在正文的空白段落，点击 <strong>公式排版 → 插入公式</strong>。</li>
+<li>选择 <strong>Word 原生公式</strong>，粘贴示例，按 <strong>Ctrl + Enter</strong> 或点 <strong>插入公式</strong>。新文档的第一条公式默认编号为 <code>(1)</code>。</li>
+</ol>
+<pre><code class="language-latex">\frac{a_1 + a_2}{2} + \sqrt{x_i^2 + y_i^2}
+</code></pre>
+<p>安装器会为 Windows 上的 <strong>32 位和 64 位桌面 Word</strong> 注册加载项。当前版本已在 64 位 Word 2021 中验证过插入和编号，也做过 32 位 COM 加载检查。</p>
+<h3 id="选编辑器、字号和栏数">选编辑器、字号和栏数</h3>
+<table>
+<thead>
+<tr>
+<th>模式</th>
+<th>怎么输入</th>
+<th>字号怎么设</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><strong>Word 原生公式</strong></td>
+<td>在多行编辑区输入 LaTeX。工具栏可插入分式、根号、上标和下标，也可在编辑区空白时点 <strong>填入示例</strong>。</td>
+<td>在 <strong>公式字号（磅）</strong> 中设置，支持 6 到 72 磅，可按 0.5 磅调整。</td>
+</tr>
+<tr>
+<td><strong>MathType 7</strong></td>
+<td>点 <strong>打开 MathType</strong>，在本机 MathType 编辑器中输入，完成后关闭编辑器回到 Word。此模式需要已启用 Word 加载项的可用 MathType 7 桌面版。</td>
+<td>勾选 <strong>保留 MathType 字号</strong> 时，在 MathType 的 <strong>大小 → 定义</strong> 中设置。取消勾选后，插件按指定字号等比调整公式在 Word 中的显示。</td>
+</tr>
+</tbody>
+</table>
+<p>同一窗口内切换模式时，已输入的 LaTeX 会保留。点 <strong>适应屏幕</strong> 可展开窗口，再点 <strong>还原窗口</strong> 恢复。窄窗口的排版设置位于编辑区下方，可滚动查看。</p>
+<table>
+<thead>
+<tr>
+<th>栏数选项</th>
+<th>什么时候选</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><strong>跟随位置</strong></td>
+<td>日常排版。公式在光标所在的正文栏居中，编号贴该栏右边。</td>
+</tr>
+<tr>
+<td><strong>单栏 · 通栏</strong></td>
+<td>双栏论文中有一条公式需要横跨两栏。</td>
+</tr>
+<tr>
+<td><strong>双栏 · 当前栏</strong></td>
+<td>希望公式按双栏排版，并在自己的栏内居中。</td>
+</tr>
+</tbody>
+</table>
+<p>所选栏数与当前位置不同时，插件可在公式处插入连续分节符。要沿用模板的分栏，选 <strong>跟随位置</strong>。</p>
+<h3 id="设定编号">设定编号</h3>
+<p>在 <strong>编号格式</strong>中保留一个 <code>{n}</code> 作为序号。<strong>起始编号</strong>留空会续编，填写数字会从当前条重新计数。</p>
+<table>
+<thead>
+<tr>
+<th>编号格式</th>
+<th>起始编号</th>
+<th>当前条显示</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>({n})</code></td>
+<td>留空，文档第一条</td>
+<td><code>(1)</code></td>
+</tr>
+<tr>
+<td><code>(A-{n})</code></td>
+<td><code>5</code></td>
+<td><code>(A-5)</code></td>
+</tr>
+<tr>
+<td><code>（3-{n}）</code></td>
+<td><code>1</code></td>
+<td><code>（3-1）</code></td>
+</tr>
+</tbody>
+</table>
+<p>通过插件插入的 Word 公式和 MathType 公式共用一套编号。插入公式或保存文档时会刷新编号。移动公式时，把公式所在段落和编号一起移动。需要立即重排时，点 <strong>公式排版 → 更新公式编号</strong>。</p>
+<h3 id="常见问题">常见问题</h3>
+<ul>
+<li><strong>装好后看不到「公式排版」</strong>。在安装器中打开 <strong>安装状态</strong>，再到 Word 的 <strong>文件 → 选项 → 加载项</strong> 检查 COM 加载项。安装程序目前未签名。单位电脑若限制未签名的加载项，请把 Word 的提示交给管理员确认。 <a href="https://support.microsoft.com/en-us/office/add-ins/view-manage-and-install-add-ins-for-excel-powerpoint-and-word">Microsoft 加载项管理说明</a></li>
+<li><strong>MathType 无法打开</strong>。在 Word 的 <strong>MathType → 内联</strong> 里试插公式，确认桌面版 MathType 的授权和加载项状态。</li>
+<li><strong>公式太长或插入位置有误</strong>。公式和编号放不进一栏时，可减小字号、选择通栏，或用 <code>aligned</code> 写成多行公式。插入点应在可编辑正文的独立段落。</li>
+<li><strong>需要卸载</strong>。运行安装程序，点 <strong>卸载</strong>，再重开 Word。已插入的公式及编号域由 Word 保存在文档中。</li>
+</ul>
+<h2 id="下载">下载</h2>
+<table>
+<thead>
+<tr>
+<th>文件</th>
+<th>用途</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><strong><a href="https://raw.githubusercontent.com/lures2019/lures2019.github.io/405fbf73e57d0a42a0a5c8cd00472e460a57aa55/WordEquationSetup.exe">Windows 安装程序（EXE）</a></strong></td>
+<td>直接安装或转发给同事。一个 EXE 已包含加载项。</td>
+</tr>
+<tr>
+<td><strong><a href="https://raw.githubusercontent.com/lures2019/lures2019.github.io/405fbf73e57d0a42a0a5c8cd00472e460a57aa55/WordEquationTools-source.zip">源码压缩包（ZIP）</a></strong></td>
+<td>查看 C# 源码、PowerShell 构建脚本和测试。</td>
+</tr>
+</tbody>
+</table>
+<h2 id="开发思路">开发思路</h2>
+<p>写论文时，公式本身通常只需输入一次，反复花时间的是对齐、切换栏数和重新编号。插件把这些操作放进 Word 的同一个窗口，让作者先写公式，再按光标位置的栏宽完成排版。</p>
+<ul>
+<li><strong>保留公式的可编辑性。</strong> Word 模式把受支持的 LaTeX 转成可继续编辑的 OMML 公式。MathType 模式调用本机编辑器，保留可编辑的 MathType OLE 对象。</li>
+<li><strong>按正文栏宽对齐。</strong> 公式和编号分别使用居中、右对齐的位置制表符。切换分栏时，排版范围由 Word 的节管理。</li>
+<li><strong>按文档顺序统一编号。</strong> 两种公式都使用 <code>SEQ WordEquationToolsNumber</code> 域。插入或移除公式后，可以按文档顺序重排同一套编号。</li>
+<li><strong>优先保证公式输入空间。</strong> 宽窗口让编辑区和设置并排。窄窗口将设置放到下方，保留底部的插入操作。</li>
+</ul>
+<h3 id="源码结构与本地构建">源码结构与本地构建</h3>
+<table>
+<thead>
+<tr>
+<th>源码</th>
+<th>职责</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><a href="https://github.com/lures2019/lures2019.github.io/blob/405fbf73e57d0a42a0a5c8cd00472e460a57aa55/src/AddIn.cs"><code>src/AddIn.cs</code></a></td>
+<td>Word 功能区入口，处理保存与编号刷新事件</td>
+</tr>
+<tr>
+<td><a href="https://github.com/lures2019/lures2019.github.io/blob/405fbf73e57d0a42a0a5c8cd00472e460a57aa55/src/EquationDialog.cs"><code>src/EquationDialog.cs</code></a></td>
+<td>WinForms 编辑窗口、模板按钮和响应式布局</td>
+</tr>
+<tr>
+<td><a href="https://github.com/lures2019/lures2019.github.io/blob/405fbf73e57d0a42a0a5c8cd00472e460a57aa55/src/Latex.cs"><code>src/Latex.cs</code></a></td>
+<td>本地 LaTeX 解析及 MathML → OMML 转换</td>
+</tr>
+<tr>
+<td><a href="https://github.com/lures2019/lures2019.github.io/blob/405fbf73e57d0a42a0a5c8cd00472e460a57aa55/src/Equation.cs"><code>src/Equation.cs</code></a></td>
+<td>Word 与 MathType 公式插入、分栏、对齐和编号</td>
+</tr>
+<tr>
+<td><a href="https://github.com/lures2019/lures2019.github.io/blob/405fbf73e57d0a42a0a5c8cd00472e460a57aa55/installer/Setup.cs"><code>installer/Setup.cs</code></a></td>
+<td>为当前 Windows 账户安装、诊断和卸载 COM 加载项</td>
+</tr>
+<tr>
+<td><a href="https://github.com/lures2019/lures2019.github.io/blob/405fbf73e57d0a42a0a5c8cd00472e460a57aa55/tests/Program.cs"><code>tests/Program.cs</code></a></td>
+<td>输入、界面、Word 集成与混合编号测试</td>
+</tr>
+</tbody>
+</table>
+<p>在 Windows 上准备 PowerShell、.NET Framework C# 编译器和 Office 互操作程序集。编译器及程序集的具体路径见 <a href="https://github.com/lures2019/lures2019.github.io/blob/405fbf73e57d0a42a0a5c8cd00472e460a57aa55/build.ps1"><code>build.ps1</code></a>。在项目根目录执行以下命令。</p>
+<pre><code class="language-powershell">.\build.ps1
+.\build\WordEquationTests.exe
+.\build\WordEquationTests.exe --ui .\build\qa-layout
+.\build\WordEquationTests.exe .\build\qa-word
+</code></pre>
+<p>构建生成 <code>build/WordEquationSetup.exe</code>、<code>build/WordEquationTools.dll</code> 和测试运行器。执行真实 Word 测试需要桌面版 Word。安装当前构建并启用 MathType Word 加载项后，可以用 <code>.\build\WordEquationTests.exe .\build\qa-mixed --installed --mathtype</code> 检查混排和保存时更新编号。混排测试使用随源码提供的 MathType 对象。</p>
+<p>当前源码目录未附带许可证文件。</p>
+</article><a class="back" href="/toolbox/">← 返回软件目录</a></main></body></html>
