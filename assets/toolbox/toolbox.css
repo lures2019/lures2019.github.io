@@ -78,7 +78,9 @@ body { background:radial-gradient(ellipse at 8% 4%,#ece7fb,transparent 48rem),va
 .license { margin-top:18px; }
 .directory { border-radius:16px; box-shadow:0 8px 25px #2920440b; }
 .directory h2::before { content:""; display:inline-block; width:5px; height:1em; margin-right:9px; vertical-align:-.07em; border-radius:3px; background:#7667bc; }
-.catalog :is(th,td) { text-align:center; vertical-align:middle; }
+.catalog :is(th,td) { vertical-align:middle; }
+.catalog thead th { padding-block:13px; font-size:1.0625rem; font-weight:700; text-align:center; color:var(--ink); }
+.catalog tbody :is(.date,td:last-child) { text-align:center; }
 .catalog thead th,.readme th { background:#f0edf7; }
 .catalog tbody tr:hover { background:#fbf9ff; }
 .catalog .summary { display:-webkit-box; -webkit-box-orient:vertical; -webkit-line-clamp:3; line-clamp:3; white-space:normal; overflow:hidden; overflow-wrap:anywhere; line-height:1.55; }
