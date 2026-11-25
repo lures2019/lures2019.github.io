@@ -1,0 +1,154 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta http-equiv="Content-Security-Policy" content="default-src 'none'; script-src 'self' 'wasm-unsafe-eval'; style-src 'self'; font-src 'self' blob:; img-src 'self' blob: data:; worker-src 'self'; connect-src 'self'; object-src 'none'; base-uri 'none'; form-action 'none'">
+  <meta name="description" content="在浏览器内批量将论文 PDF 转换为高清图片，按论文标题自动归档。">
+  <meta name="theme-color" content="#f3f5fa">
+  <title>Paperframe · 论文图像工坊</title>
+  <link rel="icon" href="./assets/favicon.svg" type="image/svg+xml">
+  <link rel="stylesheet" href="./app.css">
+  <script defer src="./vendor/zip/zip-native.min.js"></script>
+  <script type="module" src="./app.mjs"></script>
+</head>
+<body>
+  <header class="topbar">
+    <div class="shell masthead">
+      <a class="wordmark" href="./" aria-label="Paperframe 论文图像工坊首页">
+        <span class="brand-icon"><svg aria-hidden="true"><use href="./assets/icons.svg#brand"/></svg></span>
+        <span><strong>Paperframe</strong><small>论文图像工坊</small></span>
+      </a>
+      <nav class="tool-nav" id="tool-nav" aria-label="PDF 工具">
+        <button type="button" data-tool="convert" aria-pressed="true">PDF 转图片</button>
+        <button type="button" data-tool="merge" aria-pressed="false">合并 PDF</button>
+        <button type="button" data-tool="split" aria-pressed="false">拆分 PDF</button>
+        <button type="button" data-tool="image" aria-pressed="false">图片转 PDF</button>
+        <button type="button" data-tool="watermark" aria-pressed="false">添加水印</button>
+        <button type="button" data-tool="delete" aria-pressed="false">删除页面</button>
+      </nav>
+      <div class="top-actions">
+        <a class="button plain toolbox-link" href="../" aria-label="返回百宝箱"><svg aria-hidden="true"><use href="./assets/icons.svg#folder"/></svg>百宝箱</a>
+        <span class="privacy"><svg aria-hidden="true"><use href="./assets/icons.svg#lock"/></svg>浏览器本地处理</span>
+        <button class="button plain help-button" id="help" type="button"><svg aria-hidden="true"><use href="./assets/icons.svg#help"/></svg>使用帮助</button>
+      </div>
+    </div>
+  </header>
+
+  <main class="shell">
+    <section class="hero" aria-labelledby="title">
+      <div class="hero-copy">
+        <h1 id="title">论文 PDF <span>批量转图片</span></h1>
+        <p id="hero-description">逐页保留原版排版、公式、表格与插图，按论文标题自动归档。</p>
+      </div>
+      <div class="hero-art" aria-hidden="true">
+        <div class="orbit orbit-wide"></div><div class="orbit orbit-inner"></div>
+        <div class="sheet sheet-back"></div>
+        <div class="sheet sheet-main">
+          <i class="paper-title"></i><i class="paper-rule"></i>
+          <div class="paper-body"><div class="paper-chart"><i></i><i></i><i></i><i></i><i></i></div><div class="paper-text"></div></div>
+          <div class="paper-table"></div>
+        </div>
+        <div class="art-chip art-chip-a"><svg><use href="./assets/icons.svg#grid"/></svg></div>
+        <div class="art-chip art-chip-b"><svg><use href="./assets/icons.svg#image"/></svg></div>
+        <i class="spark spark-a"></i><i class="spark spark-b"></i><i class="spark spark-c"></i>
+      </div>
+    </section>
+
+    <div class="workspace" id="workspace" data-tool="convert">
+      <section class="card files-card" aria-labelledby="files-title">
+        <div class="card-heading">
+          <span class="section-icon"><svg aria-hidden="true"><use href="./assets/icons.svg#files"/></svg></span>
+          <div><h2 id="files-title">待处理文件</h2><p id="selection">添加 PDF 后，勾选需要转换的论文</p></div>
+          <button type="button" class="button secondary add-button" id="add" hidden><svg aria-hidden="true"><use href="./assets/icons.svg#plus"/></svg><span id="add-label">添加 PDF</span></button>
+        </div>
+        <input id="file-input" type="file" accept=".pdf,application/pdf" multiple hidden>
+        <div class="drop-zone" id="drop-zone">
+          <div class="upload-icon"><svg aria-hidden="true"><use href="./assets/icons.svg#upload"/></svg></div>
+          <h3 id="drop-title">拖放 PDF 到这里</h3>
+          <p id="drop-description">支持同时添加多篇论文</p>
+          <button class="button primary select-button" id="select" type="button"><svg aria-hidden="true"><use href="./assets/icons.svg#plus"/></svg><span id="select-label">选择 PDF</span></button>
+        </div>
+        <div class="file-panel" id="file-panel" hidden>
+          <div class="list-heading"><label id="check-label"><input id="check-all" type="checkbox"> 全选</label><span id="single-label" hidden>选择</span><span id="file-column">论文 / 输出文件夹</span><span>状态</span><span></span></div>
+          <ul id="file-list" aria-label="PDF 文件列表"></ul>
+        </div>
+        <div id="page-editor" class="page-editor" hidden>
+          <div class="page-header"><h3>选择页面</h3><div class="page-pagination"><button id="previous-pages" class="button plain icon-button" type="button" aria-label="上一组预览">‹</button><span id="preview-range"></span><button id="next-pages" class="button plain icon-button" type="button" aria-label="下一组预览">›</button></div></div>
+          <p>按住拖拽连续页，也可在右侧直接填写起止页。</p>
+          <div class="page-grid" id="page-grid" aria-label="可选页面"></div>
+        </div>
+        <div class="notice" id="file-notice" role="status" hidden></div>
+        <div class="safe-note"><svg aria-hidden="true"><use href="./assets/icons.svg#shield"/></svg>原文件和处理结果均留在设备上，无需上传。</div>
+      </section>
+
+      <section class="card settings-card" aria-labelledby="settings-title">
+        <div class="card-heading settings-heading">
+          <span class="section-icon blue"><svg aria-hidden="true"><use href="./assets/icons.svg#sliders"/></svg></span>
+          <div><h2 id="settings-title">导出设置</h2><p id="settings-description">适用于本次勾选的全部 PDF</p></div>
+        </div>
+        <fieldset id="options">
+          <div id="convert-options" class="option-grid">
+          <div class="field"><label for="format">图片格式</label><div class="select-wrap"><select id="format"><option value="png">PNG · 无损</option><option value="jpg">JPG · 高质量</option></select><svg aria-hidden="true"><use href="./assets/icons.svg#chevron"/></svg></div></div>
+          <div class="field"><label for="dpi">输出分辨率</label><div class="number-wrap"><input id="dpi" type="number" value="400" min="400" max="1200" step="1" required aria-describedby="dpi-range"><span id="dpi-range">DPI · 400–1200</span></div></div>
+          <div class="field"><label for="color-mode">颜色模式</label><div class="select-wrap"><select id="color-mode"><option value="color">彩色</option><option value="gray">灰度</option></select><svg aria-hidden="true"><use href="./assets/icons.svg#chevron"/></svg></div></div>
+          <div class="field"><label for="destination">保存方式</label><div class="select-wrap"><select id="destination"><option value="zip">打包下载 ZIP</option><option value="folder">保存到文件夹</option></select><svg aria-hidden="true"><use href="./assets/icons.svg#chevron"/></svg></div></div>
+          <p class="output-note"><svg aria-hidden="true"><use href="./assets/icons.svg#folder"/></svg><span id="destination-note">解压后，每篇论文的页面各存于独立子文件夹。</span></p>
+          </div>
+          <div id="name-options" class="option-grid" hidden>
+            <div id="image-options" class="field" hidden><label for="paper-size">页面尺寸</label><div class="select-wrap"><select id="paper-size"><option value="original">适应原图比例</option><option value="a4">A4 · 自动横竖版</option></select><svg aria-hidden="true"><use href="./assets/icons.svg#chevron"/></svg></div></div>
+            <div class="field"><label for="pdf-name">输出文件名</label><input id="pdf-name" type="text" maxlength="150" autocomplete="off" placeholder="自动命名"></div>
+          </div>
+          <div id="page-options" class="option-grid" hidden>
+            <div class="range-inputs"><div class="field"><label for="page-from">从第几页</label><input id="page-from" type="number" required min="1" step="1" value="1"></div><div class="field"><label for="page-to">到第几页</label><input id="page-to" type="number" required min="1" step="1" value="1"></div></div>
+            <button class="button secondary" id="add-range" type="button"><svg aria-hidden="true"><use href="./assets/icons.svg#plus"/></svg><span id="add-range-label">添加拆分组</span></button>
+            <ul class="ranges" id="ranges" aria-label="已选页面范围"></ul>
+            <p id="page-summary" class="output-note" aria-live="polite"></p>
+          </div>
+          <div id="watermark-options" class="option-grid" hidden>
+            <div class="field"><label for="watermark-type">水印类型</label><div class="select-wrap"><select id="watermark-type"><option value="text">文字水印</option><option value="image">图片水印</option></select><svg aria-hidden="true"><use href="./assets/icons.svg#chevron"/></svg></div></div>
+            <div id="watermark-text-field" class="field"><label for="watermark-text">水印文字</label><input id="watermark-text" type="text" maxlength="80" placeholder="例如：内部审阅"></div>
+            <div id="watermark-image-field" class="field" hidden><label for="watermark-image">水印图片</label><input id="watermark-image" type="file" accept="image/png,image/jpeg,image/webp"></div>
+            <div class="field"><label for="watermark-position">位置</label><div class="select-wrap"><select id="watermark-position"><option value="center">居中</option><option value="tl">左上</option><option value="tr">右上</option><option value="bl">左下</option><option value="br">右下</option><option value="tile">平铺</option></select><svg aria-hidden="true"><use href="./assets/icons.svg#chevron"/></svg></div></div>
+            <div class="range-inputs"><div class="field"><label for="watermark-opacity">不透明度（%）</label><input id="watermark-opacity" type="number" min="5" max="100" step="1" value="25" required></div><div class="field"><label for="watermark-angle">旋转（°）</label><input id="watermark-angle" type="number" min="-180" max="180" step="1" value="30" required></div></div>
+            <div class="field" id="watermark-color-field"><label for="watermark-color">文字颜色</label><input id="watermark-color" type="color" value="#5148db"></div>
+          </div>
+        </fieldset>
+        <div class="run-controls">
+          <button id="start" class="button primary run-button" type="button" disabled><svg aria-hidden="true"><use href="./assets/icons.svg#convert"/></svg><span id="start-label">开始转换</span></button>
+          <button id="cancel" class="button secondary" type="button" hidden>取消</button>
+        </div>
+      </section>
+    </div>
+
+    <section id="operation" class="card operation" aria-labelledby="progress-title" hidden>
+      <span class="section-icon" id="operation-icon"><svg aria-hidden="true"><use href="./assets/icons.svg#convert"/></svg></span>
+      <div class="operation-main"><h2 id="progress-title">正在转换</h2><p id="progress-detail" role="status"></p><progress id="progress" max="1" value="0" aria-label="转换进度"></progress></div>
+      <button id="download" type="button" class="button primary" hidden><svg aria-hidden="true"><use href="./assets/icons.svg#download"/></svg><span id="download-label">下载 ZIP</span></button>
+    </section>
+
+    <footer><span>Paperframe</span><span>浏览器 PDF 工具</span></footer>
+  </main>
+
+  <dialog id="help-dialog" aria-labelledby="help-title">
+    <div class="dialog-heading"><h2 id="help-title">使用帮助</h2><form method="dialog"><button class="button plain icon-button" aria-label="关闭"><svg aria-hidden="true"><use href="./assets/icons.svg#close"/></svg></button></form></div>
+    <ol>
+      <li>拖放或选择多份 PDF，勾选要转换的论文。</li>
+      <li>选择图片格式与分辨率。PNG 适合保留文字和公式的细线。</li>
+      <li>点击开始转换，再下载 ZIP 并解压。支持目录选择的浏览器也可直接保存到文件夹。</li>
+    </ol>
+    <p>文件夹默认取论文标题，标题缺失时使用 PDF 文件名。点击文件行上的铅笔可修改名称。同名文件夹会自动加编号。</p>
+    <p>图片清晰度受 PDF 中原始内容影响。扫描页和低清插图保留原有画质。超大页面若超出浏览器画布上限，可调低 DPI 后重试。需要密码的 PDF 请先解锁。</p>
+    <p>合并与图片转 PDF 可拖拽文件行排序。拆分和删除页面可拖拽选择页码，也可填写范围。水印可添加到所选 PDF 的每一页。</p>
+  </dialog>
+
+  <dialog id="rename-dialog" aria-labelledby="rename-title">
+    <form id="rename-form">
+      <div class="dialog-heading"><h2 id="rename-title">修改输出文件夹</h2></div>
+      <label for="folder-title">论文标题</label>
+      <input type="text" id="folder-title" maxlength="300" required>
+      <div class="dialog-actions"><button id="rename-cancel" class="button secondary" type="button">取消</button><button class="button primary" type="submit">保存标题</button></div>
+    </form>
+  </dialog>
+</body>
+</html>
