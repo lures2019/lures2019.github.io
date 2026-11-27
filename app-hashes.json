@@ -1,0 +1,17 @@
+{
+  "package.json": "1e2360aefd9553913fb23e6db8a4d8b207498eb56775eebe5052574038ea3f12",
+  "desktop/app.ico": "f2e8c1cb12a9321d61c8392fb81ae837a6765b4b6af49b2c39e46043db4441b4",
+  "desktop/main.cjs": "3a8b2b8215e47cb1e1c0d823ca6cc646caabafa070fccd5ee547732328fbb30c",
+  "desktop/preload.cjs": "a20ff4640d18b7ffbcd00712e5d2ba2fb648f4c65cebf67df7c35650853fa8e1",
+  "web/.nojekyll": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+  "web/app.js": "300e9ddcdb71389e90ba9af0218a9bce179f3a9857f2748eefa486d3b020e056",
+  "web/board.js": "bec97dcb598e71e617459ec35fc34e46b97fb6aa9ac433a6812460979ad03fc8",
+  "web/config.js": "44eaba9c43b2db4b22e07894ed228f2b1b91e918951427d7cfeca9d790089380",
+  "web/index.html": "1592433060fcb72efed556062e3cd14a1ecf9e10374aeb1df3160ba58de512e3",
+  "web/rtc.js": "bfe6af60432a29c02c2ab438d623b9283de65f38b704bcb53ba8f3d11fbb7b83",
+  "web/style.css": "8c5873535d89c553adf002f5048103a93972ed835a5e7d4c875dd183eed63748",
+  "web/ui.js": "bf50c232a31abc0206412dab1456b5b2b242c6df3aaa91c606876b7586610c9a",
+  "web/assets/app.png": "5ef066a5a1043ad9c9fb016cbfd6ab3b51ed27b2a0f685a2e29dbf87ebba4303",
+  "web/assets/mark.svg": "68fbb18dc0904e1c774645776ac746a959e00debd46f3ecec7ea5d5a59d4ee31",
+  "web/assets/night.webp": "0ec8e30e866845b8438b77914dc763b6d1109abd3e1b31a1b33751e70ba28003"
+}
