@@ -1,0 +1,61 @@
+name: Publish Studyroom 0.1.1 Windows
+on:
+  push:
+    branches:
+      - codex/studyroom-release-0.1.1
+
+permissions:
+  contents: write
+
+concurrency:
+  group: studyroom-0.1.1-windows
+  cancel-in-progress: false
+
+jobs:
+  release:
+    runs-on: windows-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v6
+        with:
+          persist-credentials: false
+      - name: Build and verify the portable package
+        shell: pwsh
+        run: |
+          $ErrorActionPreference = 'Stop'
+          $work = Join-Path $env:RUNNER_TEMP 'studyroom-release'
+          New-Item -ItemType Directory -Force -Path $work | Out-Null
+          $runtime = Join-Path $work 'electron.zip'
+          curl.exe -fsSL --retry 3 --max-time 180 'https://github.com/electron/electron/releases/download/v45.5.0/electron-v45.5.0-win32-x64.zip' -o $runtime
+          if ($LASTEXITCODE -ne 0) { throw 'Electron download failed' }
+          if ((Get-FileHash -LiteralPath $runtime -Algorithm SHA256).Hash -ne '20155c8b8aa5b1f575f3757bdf21490e0bac2f19a65a26ce9ba99bcf9f2c69bd') { throw 'Electron hash mismatch' }
+          $product = Join-Path $work 'Studyroom-Windows-x64'
+          New-Item -ItemType Directory -Path $product | Out-Null
+          tar.exe -xf $runtime -C $product
+          if ($LASTEXITCODE -ne 0) { throw 'Electron extraction failed' }
+          Rename-Item -LiteralPath (Join-Path $product 'electron.exe') -NewName 'Studyroom.exe'
+          $app = Join-Path $product 'resources/app'
+          $web = Join-Path $app 'web'
+          New-Item -ItemType Directory -Force -Path $web | Out-Null
+          Copy-Item -LiteralPath 'tools/studyroom-release/desktop' -Destination $app -Recurse
+          foreach ($name in @('app.js', 'board.js', 'config.js', 'index.html', 'rtc.js', 'signaling.js', 'style.css', 'ui.js', 'assets')) {
+            Copy-Item -LiteralPath (Join-Path 'toolbox/studyroom' $name) -Destination $web -Recurse
+          }
+          $appSettings = @{ name = 'studyroom'; productName = '松间'; version = '0.1.1'; main = 'desktop/main.cjs'; localPreview = $false }
+          $appSettings | ConvertTo-Json | Set-Content -LiteralPath (Join-Path $app 'package.json') -Encoding utf8
+          $asset = Join-Path $work 'Studyroom-0.1.1-Windows-x64.zip'
+          tar.exe -a -cf $asset -C $work 'Studyroom-Windows-x64'
+          if ($LASTEXITCODE -ne 0) { throw 'Windows archive creation failed' }
+          $entries = tar.exe -tf $asset
+          if ($LASTEXITCODE -ne 0 -or 'Studyroom-Windows-x64/Studyroom.exe' -notin $entries -or 'Studyroom-Windows-x64/resources/app/web/signaling.js' -notin $entries) {
+            throw 'Windows archive is incomplete'
+          }
+          Get-FileHash -LiteralPath $asset -Algorithm SHA256
+      - name: Publish the verified Windows archive
+        shell: pwsh
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          $asset = Join-Path $env:RUNNER_TEMP 'studyroom-release/Studyroom-0.1.1-Windows-x64.zip'
+          gh release create 'studyroom-v0.1.1' $asset --repo $env:GITHUB_REPOSITORY --target '35cf234fc1663cb786079d55bbea3fd5f968277c' --title '松间 0.1.1 · Windows x64' --notes-file 'tools/studyroom-release/notes.md'
+          if ($LASTEXITCODE -ne 0) { throw 'Release publication failed' }
