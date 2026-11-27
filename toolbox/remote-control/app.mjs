@@ -1,4 +1,4 @@
-import {publicSignal, PairTicket, Signal, base64, confirmationCode, credentialKind, endpoint, invitationLimit, isLoopback, localDescription, rtcServers, timeLimit} from './transport.mjs';
+import {publicSignal, unlockBookmark, PairTicket, Signal, base64, confirmationCode, credentialKind, endpoint, invitationLimit, isLoopback, localDescription, rtcServers, timeLimit} from './transport.mjs?v=pair3';
 import {fileChannel} from './files.mjs';
 
 export const $ = id => document.getElementById(id);
@@ -27,9 +27,9 @@ export function compatibilityIssue() {
   return '';
 }
 
-export function watchPeer(peer, abort, update, fail) {
+export function watchPeer(peer, abort, update, fail, negotiationTimeout = 35000) {
   let disconnected;
-  const timeout = setTimeout(() => fail('协商超时。请检查两端网络和 TURN 设置。'), 35000);
+  const timeout = setTimeout(() => fail('画面连接超时。请确认对方已完成协商；若两端网络限制直连，需要双方网络允许的媒体中继。'), negotiationTimeout);
   abort.addEventListener('abort', () => {
     clearTimeout(timeout);
     clearTimeout(disconnected);
@@ -54,6 +54,7 @@ const screen = $('screen');
 const video = $('video');
 const updateLocalAddress = trackLocalAddress('endpoint', 'endpoint-hint');
 let session;
+let deviceBookmark;
 let savePairedDevice;
 let signPairedDevice;
 
@@ -223,12 +224,18 @@ async function connect(event) {
   $('reveal').textContent = '显示';
   $('reveal').ariaLabel = '显示密钥';
   try {
-    const address = endpoint($('endpoint').value);
-    const credential = $('key').value.trim();
+    const manual = !deviceBookmark && $('manual-control').checked;
+    const address = manual ? publicSignal : endpoint($('endpoint').value);
+    let credential;
+    if (deviceBookmark) {
+      const password = $('device-password').value;
+      $('device-password').value = '';
+      credential = await unlockBookmark(deviceBookmark, password);
+      if (abort.signal.aborted) return;
+    } else credential = $('key').value.trim();
     const kind = credentialKind(credential);
     const remember = kind === 'pair' && $('remember-peer').checked && savePairedDevice;
-    $('key').value = '';
-    updateRemember();
+    if (manual && kind !== 'invite') throw new Error('手动连接请使用共享方生成的一次性 RD1 邀请。');
     if (!kind) throw new Error('请输入完整的 RD1 邀请或 RD2 长期配对码。');
     status('status', kind === 'pair' ? '正在查找配对设备…' : '正在发送连接请求…');
     wait = timeLimit(abort.signal, invitationLimit);
@@ -238,10 +245,16 @@ async function connect(event) {
       const directory = await PairTicket.open(address, credential);
       invitation = await directory.read(handshake);
     }
-    const signal = await Signal.open(address, invitation, 1, handshake);
+    const Transport = manual ? (await import('./manual.mjs?v=pair3')).ManualSignal : Signal;
+    if (abort.signal.aborted) return;
+    const signal = await Transport.open(address, invitation, 1, handshake);
+    if (manual) abort.signal.addEventListener('abort', () => signal.finish(), {once:true});
+    if (abort.signal.aborted) { if (manual) signal.finish(); return; }
     const nonce = base64(crypto.getRandomValues(new Uint8Array(16)));
     const proof = kind === 'pair' && signPairedDevice ? await signPairedDevice({invitation, nonce, phase: 'request'}) : undefined;
     await signal.send('request', {version: 1, nonce, proof});
+    $('key').value = '';
+    updateRemember();
     status('status', `等待对方接入。首次连接请与对方核对确认码 ${confirmationCode(nonce)}。`);
     const offer = await signal.next('offer');
     if (abort.signal.aborted) return;
@@ -285,6 +298,7 @@ async function connect(event) {
     };
     let saved = false;
     watchPeer(peer, abort.signal, message => {
+      if (manual && message === '已连接') signal.finish();
       status('session-status', message === '已连接' && offer.unattended ? '已连接 · 受信任设备' : message);
       if (message === '已连接' && remember && !saved) {
         saved = true;
@@ -292,7 +306,7 @@ async function connect(event) {
           if (!abort.signal.aborted) status('session-status', '已连接 · 配对码保存失败', true);
         });
       }
-    }, m => end(m, true));
+    }, m => end(m, true), manual ? 180000 : 35000);
     watchStats(peer, abort.signal);
     await peer.setRemoteDescription(offer.description);
     const description = await localDescription(peer, await peer.createAnswer(), handshake);
@@ -300,7 +314,7 @@ async function connect(event) {
     await signal.send('answer', {nonce, description, proof: answerProof});
   } catch (error) {
     if (!abort.signal.aborted) end(wait?.expired ? '连接请求已超时，请重新发起。' :
-      error instanceof TypeError || error.name === 'AbortError' ? '无法访问该信令服务，请检查地址、网络和跨域设置。' : error.message, true);
+      error instanceof TypeError || error.name === 'AbortError' ? '连接请求未完成。请点「检测信令服务」。若服务不可达，可与共享方改用「手动交换连接信息」。' : error.message, true);
   } finally {
     wait?.dispose();
   }
@@ -308,6 +322,18 @@ async function connect(event) {
 
 $('connect').addEventListener('submit', connect);
 $('key').addEventListener('input', updateRemember);
+$('test-relay').onclick = async () => {
+  const button = $('test-relay');
+  button.disabled = true;
+  const timeout = timeLimit(null, 8000);
+  try {
+    const url = endpoint($('endpoint').value);
+    status('status', '正在从这台设备检测信令服务…');
+    const reply = await fetch(url + '/healthz', {signal:timeout.signal, cache:'no-store', credentials:'omit', redirect:'error'});
+    status('status', reply.status === 204 ? '这台设备可以访问信令服务。请让共享方也检查服务地址，并重新开启等待。' : '服务返回 HTTP ' + reply.status + '，请检查信令地址。', reply.status !== 204);
+  } catch { status('status', '这台设备未能读取信令服务响应。可用手动交换连接信息，或向网络管理员确认此服务是否可访问。', true); }
+  finally { timeout.dispose();button.disabled = false; }
+};
 for (const id of ['key', 'endpoint']) {
   $(id).addEventListener('paste', event => {
     const [address, invitation, extra] = event.clipboardData.getData('text').trim().split(/\r?\n/);
@@ -351,8 +377,20 @@ if (location.pathname === '/desktop/' && location.hostname === '127.0.0.1' && /^
   import('./host.mjs').then(({startDesktop}) => startDesktop(fragment)).catch(error => status('status', error.message, true));
 } else {
   $('back').hidden = $('win-guide').hidden = !location.pathname.startsWith('/toolbox/remote-control/');
-  if (fragment) {
-    const fields = new URLSearchParams(fragment);
+  const fields = new URLSearchParams(fragment);
+  if (fields.has('device')) {
+    deviceBookmark = fields.get('device') || 'invalid';
+    $('endpoint').value = publicSignal;
+    $('endpoint').readOnly = true;
+    $('key').required = false;
+    $('key').parentElement.hidden = true;
+    document.querySelector('label[for=key]').hidden = true;
+    $('device-password-row').hidden = false;
+    $('manual-control-row').hidden = true;
+    $('device-password').required = true;
+    $('device-password').focus();
+  } else if (fragment) {
+    $('manual-control').checked = fields.get('manual') === '1';
     $('endpoint').value = (fields.get('relay') || '').slice(0, 300);
     $('key').value = (fields.get('key') || '').slice(0, 70);
     history.replaceState(null, '', location.pathname + location.search);

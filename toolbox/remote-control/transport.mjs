@@ -44,16 +44,54 @@ export function credentialKind(value) {
   return '';
 }
 
+export async function publicPairCode(code, owner) {
+  if (credentialKind(code) !== 'pair' || !/^[\w-]{43}$/.test(owner)) throw new Error('本机配对记录不完整，请重新生成。');
+  const digest = await crypto.subtle.digest('SHA-256', encoder.encode('YuanZhuo cloud owner v1:' + owner));
+  return 'RD2.' + base64(digest.slice(0, 16)) + '.' + code.split('.')[2];
+}
+
+// Version 1 password links are scoped to the built-in public service.
+// Only the encrypted device code goes in the bookmark. The password stays in memory.
+async function bookmarkKey(password, salt) {
+  const material = await crypto.subtle.importKey('raw', encoder.encode(password.normalize('NFC')), 'PBKDF2', false, ['deriveKey']);
+  return crypto.subtle.deriveKey({name:'PBKDF2', hash:'SHA-256', iterations:600000, salt}, material,
+    {name:'AES-GCM', length:256}, false, ['encrypt','decrypt']);
+}
+
+export async function sealBookmark(code, password) {
+  if (credentialKind(code) !== 'pair') throw new Error('请先开启长期配对。');
+  if ([...password.trim()].length < 12 || password.length > 128) throw new Error('请设置至少 12 个字符的密码，可使用一句容易记住的长句。');
+  const salt = crypto.getRandomValues(new Uint8Array(16));
+  const iv = crypto.getRandomValues(new Uint8Array(12));
+  const key = await bookmarkKey(password, salt);
+  const encrypted = await crypto.subtle.encrypt({name:'AES-GCM', iv, additionalData:encoder.encode('YuanZhuo bookmark v1')}, key, encoder.encode(code));
+  return ['v1',base64(salt),base64(iv),base64(encrypted)].join('.');
+}
+
+export async function unlockBookmark(bookmark, password) {
+  const parts = /^v1\.([\w-]{22})\.([\w-]{16})\.([\w-]{115})$/.exec(bookmark);
+  if (!parts) throw new Error('设备链接不完整，请重新复制。');
+  try {
+    const key = await bookmarkKey(password, from64(parts[1]));
+    const plain = await crypto.subtle.decrypt({name:'AES-GCM', iv:from64(parts[2]), additionalData:encoder.encode('YuanZhuo bookmark v1')}, key, from64(parts[3]));
+    const code = decoder.decode(plain);
+    if (credentialKind(code) === 'pair') return code;
+  } catch { /* Invalid ciphertext and a wrong password have the same outcome. */ }
+  throw new Error('密码不正确，或设备链接已损坏。');
+}
+
 export class PairTicket {
   static async open(address, credential) {
     if (credentialKind(credential) !== 'pair') throw new Error('长期配对码格式有误。');
     const [, device, secret] = credential.split('.');
     const root = await crypto.subtle.importKey('raw', from64(secret), 'HKDF', false, ['deriveBits', 'deriveKey']);
     const params = info => ({name: 'HKDF', hash: 'SHA-256', salt: from64(device), info: encoder.encode(`YuanZhuo pairing v2 ${info}`)});
-    const id = base64(await crypto.subtle.deriveBits(params('locator'), root, 128));
+    const service = endpoint(address);
+    const cloud = service === publicSignal;
+    const id = cloud ? device : base64(await crypto.subtle.deriveBits(params('locator'), root, 128));
     const bearer = base64(await crypto.subtle.deriveBits(params('access'), root, 256));
     const cipher = await crypto.subtle.deriveKey(params('ticket'), root, {name: 'AES-GCM', length: 256}, false, ['encrypt', 'decrypt']);
-    return new PairTicket(`${endpoint(address)}/v1/pairs/${id}`, id, bearer, cipher);
+    return new PairTicket(`${service}/v1/${cloud ? 'attended-pairs' : 'pairs'}/${id}`, id, bearer, cipher);
   }
 
   constructor(url, id, bearer, cipher) {
@@ -144,7 +182,7 @@ export class Signal {
       {name: 'AES-GCM', length: 256}, false, [use]);
     const outgoing = await key(role, 'encrypt');
     const incoming = await key(1 - role, 'decrypt');
-    return new Signal(`${endpoint(address)}/v1/rooms/${room}`, bearer, role, outgoing, incoming, abort);
+    return new this(`${endpoint(address)}/v1/rooms/${room}`, bearer, role, outgoing, incoming, abort);
   }
 
   constructor(url, bearer, role, outgoing, incoming, abort) {
@@ -174,7 +212,8 @@ export class Signal {
 
   async create(key, temporary) {
     this.closeKey = base64(crypto.getRandomValues(new Uint8Array(32)));
-    const {headers} = await this.request('PUT', temporary ? '?temporary=1' : '', undefined, key);
+    const query = temporary && new URL(this.url).origin === publicSignal ? '?attended=1' : '?temporary=1';
+    const {headers} = await this.request('PUT', temporary ? query : '', undefined, key);
     // Releases through v0.2 omit this header and keep their five-minute lifetime.
     const lifetime = Number(headers.get('X-Invite-Lifetime')) * 1000;
     return lifetime === invitationLimit ? lifetime : temporaryLimit;

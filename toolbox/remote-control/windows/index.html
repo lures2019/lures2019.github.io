@@ -1,6 +1,6 @@
 <!doctype html>
 <html lang="zh-CN"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
-<title>远桌 · 远程控制 · Windows 下载与说明 · Zaydenの树屋</title><meta name="description" content="通过一次性邀请远程协助 Windows 电脑，支持共享屏幕、按需授权键鼠和文件传输。">
+<title>远桌 · 远程控制 · Windows 下载与说明 · Zaydenの树屋</title><meta name="description" content="用一次性邀请或带密码的设备链接协助 Windows 电脑，按需共享屏幕、键鼠和文件。">
 <link rel="canonical" href="https:&#x2F;&#x2F;lures2019.github.io&#x2F;toolbox&#x2F;remote-control&#x2F;windows&#x2F;"><link rel="icon" href="/img/favicon.png"><link rel="stylesheet" href="/assets/toolbox/toolbox.css?v=3">
 </head><body><header class="mast"><nav aria-label="面包屑"><a class="brand" href="/">Zaydenの树屋</a><span aria-hidden="true">/</span><a href="/toolbox/">百宝箱</a></nav></header>
 <main><article class="app-guide app-remote-control"><header class="app-hero"><img class="tool-symbol" src="/toolbox/remote-control/mark.svg" width="40" height="40" alt=""><div><h1>远桌 · Windows 客户端</h1><p>用 Windows 10/11 x64 电脑发起或接受远程协助。客户端需要 Microsoft Edge WebView2 Runtime。</p><div class="guide-actions"><a class="download-app" href="/toolbox/remote-control/downloads/YuanZhuo.zip" download="">下载 Windows 便携包</a><a href="/toolbox/remote-control/">打开网页版 ↗</a></div></div></header><div class="guide-body">
@@ -13,9 +13,26 @@
 <li>两端核对六位确认码，由共享者选择屏幕及本次允许的操作。文件接收另行确认。</li>
 <li>使用「停止共享」结束会话。共享方也可以按 <code>Ctrl + Alt + Shift + F12</code> 立即撤销控制。</li>
 </ol>
+<h2 id="长期配对与固定密码">长期配对与固定密码</h2>
+<ol>
+<li>在被共享的电脑打开新版 <code>YuanZhuo.exe</code>，选「共享本机 → 长期配对 → 开始等待配对电脑」，保留预填的树屋服务地址。</li>
+<li>展开「创建带密码的设备链接」，设置至少 12 个字符的密码，点「生成设备链接」，将链接复制到另一台电脑并收藏。可以用一句自己容易记住的长句。</li>
+<li>下次打开同一收藏，输入同一个密码，点「发起连接」。两端核对六位确认码，共享方点「同意并选择屏幕」。共享电脑重开软件后，再点「开始等待配对电脑」即可沿用原链接。</li>
+<li>两端都用 Windows 客户端时，也可直接复制完整配对码，在控制端勾选「连接后将配对码保存在此 Windows 账户」。成功连接一次后即可从「已配对的电脑」进入。</li>
+<li>要让旧链接和旧配对码一起失效，在共享端停止等待，进入「管理本机长期配对码 → 更换配对码」。仅重新生成一个密码链接会保留此前的链接。忘记密码可以在共享端创建新链接。</li>
+</ol>
+<h3 id="单位网或手机热点连不上时">单位网或手机热点连不上时</h3>
+<p>先在控制端点「检测信令服务」，共享端也可在同一台电脑打开网页运行检测。两端都显示可达时，再核对服务地址、邀请是否有效，以及共享端是否仍在等待。页面出现六位确认码，说明双方已交换连接请求。</p>
+<p>若有一端无法访问树屋服务，可以在双方获准使用远程协助的网络上进行一次性手动连接。两端只需能私发文本，并允许设备之间建立 WebRTC 连接。</p>
+<ol>
+<li>共享方在新版 Windows 客户端选「共享本机 → 手动交换连接信息 → 生成手动连接邀请」，把「复制邀请链接」得到的链接私发给对方。</li>
+<li>控制方打开链接，点「发起连接」，把页面生成的「连接请求」发回。共享方粘贴后核对六位码，点「同意并选择屏幕」。</li>
+<li>共享方将「共享应答」发给控制方。控制方粘贴后，把「连接回执」发回共享方。共享方粘贴回执后，两端开始建立画面连接。</li>
+<li>若已交换回执仍然没有画面，问题处在设备直连阶段。单位网络可能需要管理员允许 WebRTC 或提供获准使用的 TURN 中继。当前公共服务只负责介绍两端，未开通按流量收费的媒体中继。</li>
+</ol>
 <h2 id="跨网使用">跨网使用</h2>
-<p><code>127.0.0.1</code> 只适合同机测试。一次性邀请默认连接树屋的免费 HTTPS 信令服务。屏幕和文件由设备直连传输；严格网络可能需要改用移动热点。长期开启的配对设置可以在本机的配对管理中撤销。</p>
-<p>便携包另附 <code>YuanZhuo-Signal.exe</code>，供有公网 HTTPS 入口的用户自托管。在服务器上启动信令进程，将已有的 HTTPS 反向代理转发到本机 8787 端口，再把自己的 HTTPS 地址发给参与协助的双方。常规的一次性协助可直接使用预填的公共服务；长期配对需自备信令。</p>
+<p><code>127.0.0.1</code> 只适合同机测试。一次性邀请和长期配对默认连接树屋的免费 HTTPS 信令服务。屏幕和文件由设备直连传输；严格网络可能需要改用移动热点。长期开启的配对设置可以在本机的配对管理中撤销。</p>
+<p>便携包另附 <code>YuanZhuo-Signal.exe</code>，供有公网 HTTPS 入口的用户自托管。在服务器上启动信令进程，将已有的 HTTPS 反向代理转发到本机 8787 端口，再把自己的 HTTPS 地址发给参与协助的双方。日常使用直接保留客户端预填的树屋地址即可。</p>
 <pre><code class="language-powershell">.\YuanZhuo-Signal.exe -listen 127.0.0.1:8787 -origins https://lures2019.github.io
 </code></pre>
 </div></article><a class="back" href="/toolbox/">← 返回软件目录</a></main></body></html>

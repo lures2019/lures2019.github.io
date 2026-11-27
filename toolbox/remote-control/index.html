@@ -9,7 +9,7 @@
   <title>远桌 · 远程控制</title>
   <link rel="icon" href="./mark.svg" type="image/svg+xml">
   <link rel="stylesheet" href="./style.css">
-  <script type="module" src="./app.mjs"></script>
+  <script type="module" src="./app.mjs?v=pair3"></script>
 </head>
 <body>
   <header class="top"><div class="top-content"><a class="brand" href="./"><img src="./mark.svg" width="38" height="38" alt=""><span>远桌</span></a><span id="environment" class="environment">网页控制端</span><a class="back" id="win-guide" href="/toolbox/remote-control/windows/" hidden>Windows 下载与说明</a><a class="back" id="back" href="../" hidden>返回百宝箱</a></div></header>
@@ -27,8 +27,11 @@
           <label for="endpoint">信令服务地址</label>
           <input id="endpoint" type="text" inputmode="url" placeholder="https://relay.example.com" required spellcheck="false" autocapitalize="off" aria-describedby="endpoint-hint">
           <p class="field-hint" id="endpoint-hint" hidden>这是本机测试地址。跨网时请填共享方提供的公网 HTTPS 信令地址。</p>
+          <button class="quiet" id="test-relay" type="button">检测信令服务</button>
+          <label id="manual-control-row" class="check"><input type="checkbox" id="manual-control">手动交换连接信息</label>
           <label for="key">邀请或配对码</label>
           <div class="secret"><input id="key" type="password" placeholder="RD1.… 或 RD2.…" required spellcheck="false" maxlength="70"><button id="reveal" class="quiet" type="button" aria-label="显示密钥">显示</button></div>
+          <div id="device-password-row" hidden><label for="device-password">设备链接密码</label><input id="device-password" type="password" maxlength="128" autocomplete="current-password"><p class="field-hint">可收藏本页。每次连接时输入同一个密码，由共享方确认。若信令服务不可达，可与对方改用<a href="./">一次性手动连接</a>。</p></div>
           <label class="check remember" id="remember-row" hidden><input id="remember-peer" type="checkbox">连接后将配对码保存在此 Windows 账户</label>
           <button class="primary wide" type="submit">发起连接</button>
           <button class="subtle wide" id="cancel" type="button" hidden>取消连接</button>
@@ -37,7 +40,7 @@
       </section>
       <section class="panel support" id="support"><h2>连接前的三个步骤</h2>
         <ol class="steps"><li>在被控电脑的 Windows 客户端中选择「共享本机」。</li><li>复制信令地址和密钥，在这里粘贴。</li><li>与对方核对六位确认码，由对方开始共享。</li></ol>
-        <details><summary>关于跨网连接</summary><p>一次性邀请使用树屋的免费公网配对服务。双方需要能通过 WebRTC 直连。校园网或公司网限制直连时，可以更换网络。长期配对支持自备信令服务。</p></details>
+        <details><summary>关于跨网连接</summary><p>一次性邀请和长期配对都可以使用预填的树屋服务。长期配对支持收藏设备链接和自设密码。共享端须开机并开启等待，每次连接由本机确认。若双方已配对却没有画面，可尝试让一端换用移动热点。</p></details>
       </section>
       <section class="panel" id="share-panel" hidden aria-labelledby="share-title">
         <h2 id="share-title">共享此电脑</h2>
@@ -45,6 +48,7 @@
           <fieldset class="share-kinds"><legend>接入方式</legend>
             <label><input id="invite-mode" type="radio" name="share-kind" value="invite" checked><span><strong>一次性邀请</strong><small>适合临时协助 · 最长 2 小时</small></span></label>
             <label><input id="pair-mode" type="radio" name="share-kind" value="pair"><span><strong>长期配对</strong><small>适合自己的常用电脑</small></span></label>
+            <label><input id="manual-host" type="radio" name="share-kind" value="manual"><span><strong>手动交换连接信息</strong><small>两端能直连，但信令服务不可达时使用</small></span></label>
           </fieldset>
           <label for="share-endpoint">信令服务地址</label><input id="share-endpoint" type="text" inputmode="url" spellcheck="false" maxlength="300" aria-describedby="share-endpoint-hint">
           <p class="field-hint" id="share-endpoint-hint" hidden>本机测试地址。连接另一台电脑时，请换用两端都能访问的公网 HTTPS 信令地址。</p>
@@ -53,7 +57,7 @@
             <p id="pair-info">首次开始长期等待时自动生成配对码。</p>
             <p id="device-info">在首次 Windows 连接时，可以把对方登记为信任设备。</p>
             <button id="untrust-device" class="danger" type="button" hidden>撤销信任</button>
-            <label for="pair-phrase">自定义口令（可选）</label><input id="pair-phrase" type="password" maxlength="64" placeholder="参与生成完整配对码" autocomplete="new-password">
+            <label for="pair-phrase">配对码生成短语（可选）</label><input id="pair-phrase" type="password" maxlength="64" placeholder="参与生成完整配对码" autocomplete="new-password">
             <button id="reset-pair" type="button">生成配对码</button>
             <div id="confirm-reset" class="actions" hidden><span>更换后，之前的配对码将失效。</span><button id="confirm-reset-yes" class="danger" type="button">确认更换</button><button id="confirm-reset-no" type="button">取消</button></div>
           </details>
@@ -70,14 +74,25 @@
           </details>
           <button class="primary wide" type="submit">生成一次性邀请</button>
         </form>
-        <div id="invite" hidden><label id="invite-label" for="invite-key">一次性密钥 · 2 小时有效</label><div class="secret"><input id="invite-key" type="password" readonly><button id="reveal-invite" class="quiet" type="button">显示</button></div><div class="actions"><button id="copy" type="button">复制地址与密钥</button><button id="copy-link" type="button">复制邀请链接</button></div></div>
+        <div id="invite" hidden><label id="invite-label" for="invite-key">一次性密钥 · 2 小时有效</label><div class="secret"><input id="invite-key" type="password" readonly><button id="reveal-invite" class="quiet" type="button">显示</button></div><div class="actions"><button id="copy" type="button">复制地址与密钥</button><button id="copy-link" type="button">复制邀请链接</button></div>
+          <details id="bookmark-tools" hidden><summary>创建带密码的设备链接</summary>
+            <label for="bookmark-password">设置设备链接密码</label><input id="bookmark-password" type="password" maxlength="128" autocomplete="new-password" placeholder="至少 12 个字符，可以是一句长句">
+            <button id="make-bookmark" type="button">生成设备链接</button>
+            <div id="bookmark-output-row" hidden><label for="bookmark-output">可重复使用的设备链接</label><input id="bookmark-output" type="text" readonly><button id="copy-bookmark" type="button">复制设备链接</button></div>
+          </details></div>
         <div id="approval" hidden><h3>收到连接请求</h3><p>请与对方核对确认码 <strong id="confirm-code"></strong>，然后选择屏幕。</p><label class="check"><input id="allow-input" type="checkbox">允许鼠标与键盘控制</label><label class="check"><input id="allow-files" type="checkbox">允许传输文件</label><label class="check"><input id="allow-audio" type="checkbox">尝试共享系统音频</label><label class="check" id="trust-row" hidden><input id="trust-device" type="checkbox"><span id="trust-text">登记这台 Windows 控制端为信任设备</span></label><button id="approve" class="primary wide" type="button">同意并选择屏幕</button></div>
         <p id="unattended-banner" class="unattended-banner" role="status" hidden></p>
         <p class="status" id="share-status" role="status" aria-live="polite">准备共享</p>
         <button class="danger wide" id="end-share" type="button" hidden>停止共享 / 撤销邀请</button>
       </section>
-      <section class="panel support" id="share-support" hidden><h2>共享权限</h2><p>默认由本机确认连接。先登记你自己的 Windows 控制端，再开启免确认等待。</p><p id="hotkey-hint">按 <kbd>Ctrl</kbd> + <kbd>Alt</kbd> + <kbd>Shift</kbd> + <kbd>F12</kbd> 可在本机立即撤销共享。</p><p>共享端需保持应用运行、电脑处于唤醒状态并开启等待接入。</p></section>
+      <section class="panel support" id="share-support" hidden><h2>共享权限</h2><p>使用树屋公共服务时，每次连接都由本机确认。你可以为每次共享单独选择屏幕和操作权限。</p><p id="hotkey-hint">按 <kbd>Ctrl</kbd> + <kbd>Alt</kbd> + <kbd>Shift</kbd> + <kbd>F12</kbd> 可在本机立即撤销共享。</p><p>共享端需保持应用运行、电脑处于唤醒状态并开启等待接入。</p></section>
     </div>
+    <section class="panel" id="manual-panel" hidden aria-labelledby="manual-title">
+      <h2 id="manual-title">手动交换连接信息</h2><p>双方按提示私发文本，每个步骤各复制一次。只有共享方同意并选屏后才能看到画面。</p>
+      <div id="manual-out" hidden><label for="manual-export" id="manual-export-label"></label><input type="text" id="manual-export" readonly><button id="manual-copy" type="button">复制发给对方</button></div>
+      <div id="manual-in" hidden><label for="manual-import" id="manual-import-label"></label><input type="text" id="manual-import" maxlength="82000" spellcheck="false" autocomplete="off"><button id="manual-submit" type="button">接收这段信息</button></div>
+      <p id="manual-status" role="status" aria-live="polite"></p>
+    </section>
     <section class="session" id="session" hidden>
       <div class="toolbar"><span id="session-status" role="status">正在协商连接</span><span id="stats" class="stats"></span><div class="actions"><button id="mute" type="button" hidden>静音</button><button id="fullscreen" type="button" hidden>全屏</button><button id="disconnect" class="danger" type="button">结束会话</button></div></div>
       <div class="screen" id="screen" tabindex="0" aria-label="远程桌面"><video id="video" autoplay playsinline></video><span id="screen-tip">正在等待共享画面</span><button id="play-video" type="button" hidden>播放画面</button></div>
