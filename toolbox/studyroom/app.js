@@ -1,7 +1,8 @@
 import { config } from './config.js'
 import { $, avatar, element, formatCode, icon, setIcon, toast } from './ui.js'
-import { MeetingMedia } from './rtc.js'
-import { makeBoard } from './board.js'
+import { MeetingMedia } from './rtc.js?v=0.1.1'
+import { makeBoard } from './board.js?v=0.1.1'
+import { MeetingSignal } from './signaling.js'
 
 const desktop = window.studyDesktop
 const CODE = /^[0-9A-HJKMNP-TV-Z]{16}$/
@@ -17,10 +18,6 @@ const sample = [
   { id: 'timer', name: '阿禾', tone: 1, screen: true },
   { id: 'board', name: '橘子', tone: 2, screen: true }
 ]
-const closeText = {
-  4404: '此会议已结束或会议码有误。', 4408: '会议人数已满。', 4423: '房主已锁定会议。',
-  4410: '房主已结束会议。', 4403: '你已被房主移出会议。', 1008: '操作过于频繁，请重新加入。'
-}
 let identity = { ...defaultProfile, ...load('study-profile') }
 let active
 let pending
@@ -54,9 +51,9 @@ function send(message) {
       Object.assign(active.players.get(active.id), identity)
       renderPeople()
     }
-    return
+    return true
   }
-  if (active.ws.readyState === WebSocket.OPEN) active.ws.send(JSON.stringify(message))
+  return active.signal.send(message)
 }
 
 function normalizeCode(input) {
@@ -81,8 +78,8 @@ function endpoint(value) {
 function signalServer() {
   if (localSignal) return endpoint(localSignal)
   if (config.signalUrl) return endpoint(config.signalUrl)
-  if (local) return endpoint(`ws://${location.host}`)
   if (config.sameOriginSignal && location.protocol === 'https:') return endpoint(`wss://${location.host}`)
+  if (local) return endpoint(`ws://${location.host}`)
   return null
 }
 
@@ -108,41 +105,81 @@ function connect(code) {
   }
   error()
   waiting(true)
-  address.pathname = `${address.pathname.replace(/\/$/, '')}/signal/${code || 'create'}`
-  const ws = new WebSocket(address)
-  pending = ws
-  const timeout = setTimeout(() => ws.close(4000, 'timeout'), 11500)
-  ws.addEventListener('message', event => {
-    let incoming
-    try { incoming = JSON.parse(event.data) } catch { return }
-    if (incoming.type === 'welcome' && pending === ws) {
-      clearTimeout(timeout)
+  const signal = new MeetingSignal({
+    address, code, message: handle, status: connectionStatus,
+    welcome(incoming, resumed) {
+      if (resumed) {
+        restoreRoom(active, incoming)
+        return
+      }
       pending = undefined
       waiting(false)
       openRoom(makeRoom({
-        ws, id: incoming.id, code: incoming.code, started: incoming.createdAt, locked: incoming.locked,
+        signal, id: incoming.id, code: incoming.code, started: incoming.createdAt, locked: incoming.locked,
         players: new Map(incoming.players.map(player => [player.id, player])), capacity: incoming.capacity, boardFull: incoming.boardFull
       }), incoming.strokes, incoming.chat)
-      active.rtc = new MeetingMedia({ self: active.id, iceServers: incoming.iceServers, send, remote: receiveTrack, status: peerStatus })
-      for (const person of active.players.values()) active.rtc.add(person.id)
-      send({ type: 'profile', ...identity })
-      return
-    }
-    if (active?.ws === ws) handle(incoming)
-  })
-  ws.addEventListener('close', event => {
-    clearTimeout(timeout)
-    const message = closeText[event.code] ?? '与会议服务的连接已断开，请检查网络后重新加入。'
-    if (pending === ws) {
-      pending = undefined
-      waiting(false)
-      error(message)
-    } else if (active?.ws === ws) {
-      if (active.code) $('meeting-code').value = formatCode(active.code)
-      exitRoom()
+      connectMedia(active, incoming.iceServers)
+    },
+    failure(message) {
+      if (pending === signal) {
+        pending = undefined
+        waiting(false)
+      } else if (active?.signal === signal) {
+        $('meeting-code').value = formatCode(active.code)
+        exitRoom()
+      }
       error(message)
     }
   })
+  pending = signal
+  signal.start()
+}
+
+function connectionStatus(reconnecting) {
+  if (!active) return
+  $('reconnect-status').hidden = !reconnecting
+  $('canvas').dataset.offline = String(reconnecting)
+  $('chat-form').querySelector('button').disabled = reconnecting
+  $('lock').disabled = $('end-room').disabled = $('clear-board').disabled = reconnecting
+}
+
+function connectMedia(room, iceServers) {
+  room.rtc = new MeetingMedia({ self: room.id, iceServers, send, remote: receiveTrack, status: peerStatus })
+  const media = {}
+  for (const kind of Object.keys(mediaLabels)) {
+    const track = room.media[kind]?.getTracks()[0]
+    media[kind] = track?.readyState === 'live'
+    if (media[kind]) void room.rtc.replace(kind, track)
+    else room.media[kind] = null
+  }
+  Object.assign(room.players.get(room.id), media)
+  send({ type: 'profile', ...identity })
+  send({ type: 'media', ...media })
+  for (const person of room.players.values()) room.rtc.add(person.id)
+}
+
+function restoreRoom(room, snapshot) {
+  room.rtc.close()
+  for (const entry of room.incoming.values()) entry.audio?.remove()
+  room.incoming.clear()
+  room.status.clear()
+  room.id = snapshot.id
+  room.players = new Map(snapshot.players.map(player => [player.id, player]))
+  room.locked = snapshot.locked
+  if (room.players.get(room.id)?.mutedByHost) {
+    room.media.mic?.getTracks().forEach(track => track.stop())
+    room.media.mic = null
+  }
+  room.strokes = snapshot.strokes
+  $('canvas').dataset.full = String(Boolean(snapshot.boardFull))
+  board.reset(room.strokes)
+  $('chat-list').replaceChildren()
+  for (const entry of snapshot.chat) appendChat(entry)
+  connectMedia(room, snapshot.iceServers)
+  updateControls()
+  renderPeople()
+  renderScreens()
+  toast('已重新连接会议')
 }
 
 function handle(message) {
@@ -156,11 +193,11 @@ function handle(message) {
         if (message.player.mutedByHost && active.media.mic) updateMedia(active, 'mic', null)
         if (wasMuted !== undefined) toast(message.player.mutedByHost ? '房主已关闭你的麦克风。' : '房主已允许你自行打开麦克风。')
         updateControls()
-    }
+      }
       renderPeople()
       renderScreens()
       break
-      }
+    }
     case 'left':
       active.players.delete(message.id)
       active.rtc.remove(message.id)
@@ -207,6 +244,7 @@ function handle(message) {
 
 function openRoom(room, strokes = [], chat = []) {
   active = room
+  connectionStatus(false)
   room.strokes = strokes
   $('canvas').dataset.full = String(Boolean(room.boardFull))
   if (!room.demo) history.replaceState(null, '', `#room=${room.code}`)
@@ -246,7 +284,7 @@ function exitRoom() {
   active = undefined
   clearInterval(clock)
   room.rtc?.close()
-  room.ws?.close()
+  room.signal?.stop()
   for (const stream of Object.values(room.media)) stream?.getTracks().forEach(track => track.stop())
   for (const entry of room.incoming.values()) entry.audio?.remove()
   for (const id of ['screen-grid', 'focus-view', 'people-list', 'chat-list']) $(id).replaceChildren()
@@ -570,7 +608,9 @@ function invitation() {
   if (room.demo) return ''
   const address = signalServer()
   const fallback = address?.protocol === 'ws:' && desktop ? `http://${address.host}/` : (!desktop ? location.href : '')
-  const base = address?.protocol === 'ws:' ? fallback : config.webUrl || fallback
+  const localHttps = address?.protocol === 'wss:' &&
+    /^(10\.|192\.168\.|172\.(1[6-9]|2\d|3[01])\.)[\d.]+$/.test(address.hostname) ? `https://${address.host}/` : ''
+  const base = address?.protocol === 'ws:' ? fallback : localHttps || config.webUrl || fallback
   if (!base) return ''
   const url = new URL(base)
   url.hash = `room=${room.code}`
@@ -688,8 +728,8 @@ $('chat-form').addEventListener('submit', event => {
   const field = $('chat-input')
   const body = field.value.trim()
   if (!body || Date.now() - (active.lastChatAt ?? 0) < 600) return
+  if (!send({ type: 'chat', body })) return
   active.lastChatAt = Date.now()
-  send({ type: 'chat', body })
   field.value = ''
 })
 $('lock').addEventListener('click', () => send({ type: 'lock', locked: !active.locked }))
@@ -715,8 +755,8 @@ $('end-room').addEventListener('click', () => {
   exitRoom()
 })
 window.addEventListener('pagehide', () => {
-  pending?.close()
-  active?.ws?.close()
+  pending?.stop()
+  active?.signal?.stop()
 })
 
 if (desktop) {

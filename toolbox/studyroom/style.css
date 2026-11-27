@@ -252,3 +252,5 @@ dialog::backdrop{background:#080913c9;backdrop-filter:blur(3px)}
 #meeting-code, #room-code { font-variant-numeric: tabular-nums }
 @media (prefers-reduced-motion: reduce) { *, *::before, *::after { scroll-behavior: auto !important; transition-duration: 0s !important; animation-duration: 0s !important } }
 
+
+.reconnect-status{margin:12px 15px 0;padding:9px 13px;border:1px solid #8c703a;border-radius:9px;background:#3a2c1b;color:#ffe4a4;font-size:14px}

@@ -57,7 +57,7 @@ export function makeBoard(send) {
   }
 
   canvas.addEventListener('pointerdown', event => {
-    if (drawing || event.button !== 0 || canvas.dataset.full === 'true') return
+    if (drawing || event.button !== 0 || canvas.dataset.full === 'true' || canvas.dataset.offline === 'true') return
     canvas.setPointerCapture(event.pointerId)
     const points = [point(event)]
     drawing = {

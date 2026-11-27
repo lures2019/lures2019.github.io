@@ -9,8 +9,8 @@
   <meta http-equiv="Content-Security-Policy" content="default-src 'none'; script-src 'self'; style-src 'self'; img-src 'self' data: blob:; media-src 'self' blob:; connect-src wss: ws://localhost:* ws://127.0.0.1:*; base-uri 'none'; object-src 'none'; form-action 'none'">
   <title>松间 · 多人在线自习室</title>
   <link rel="icon" href="./assets/mark.svg" type="image/svg+xml">
-  <link rel="stylesheet" href="./style.css">
-  <script type="module" src="./app.js"></script>
+  <link rel="stylesheet" href="./style.css?v=0.1.1">
+  <script type="module" src="./app.js?v=0.1.1"></script>
 </head>
 <body>
   <header class="site-header" id="site-header">
@@ -80,6 +80,7 @@
       <div class="room-brand"><img src="./assets/mark.svg" alt="" width="38" height="38"><div><h1 id="room-title">松间会议</h1><button id="copy-code" class="code-copy" title="复制会议码"><span id="room-code"></span><i data-i="copy"></i></button></div></div>
       <div class="room-top-actions"><span id="room-clock"></span><button id="invite" class="button outline"><i data-i="link"></i> 邀请参会</button><button class="avatar avatar-button" id="room-profile" title="编辑个人资料" aria-label="编辑个人资料"></button></div>
     </header>
+    <p id="reconnect-status" class="reconnect-status" role="status" hidden>网络中断，正在重新连接会议…</p>
     <div class="room-layout">
       <section class="workspace">
         <div class="view-nav"><div role="group" aria-label="工作区"><button id="view-screens" aria-pressed="true"><i data-i="layers"></i> 屏幕与视频</button><button id="view-board" aria-pressed="false"><i data-i="pen"></i> 协作白板</button></div><span id="screen-count"></span></div>

@@ -34,12 +34,26 @@ export class MeetingMedia {
       if (slot && event.track.kind === (slot === 'mic' ? 'audio' : 'video')) this.remote(id, slot, new MediaStream([event.track]))
     }
     pc.onconnectionstatechange = () => {
+      if (this.peers.get(id) !== peer) return
       this.status(id, pc.connectionState)
       clearTimeout(peer.recoveryTimer)
+      if (pc.connectionState === 'connected') peer.recoveryAttempts = 0
       if (pc.connectionState === 'failed' || pc.connectionState === 'disconnected') {
-        peer.recoveryTimer = setTimeout(() => this.requestRestart(peer), 1800)
+        this.scheduleRecovery(peer)
       }
     }
+  }
+
+  scheduleRecovery(peer) {
+    const attempts = peer.recoveryAttempts ?? 0
+    if (attempts >= 3) return
+    const delay = Math.max(attempts ? 9000 : 1800, 8100 - (Date.now() - peer.lastRestart))
+    peer.recoveryTimer = setTimeout(() => {
+      if (this.peers.get(peer.id) !== peer || !['failed', 'disconnected'].includes(peer.pc.connectionState)) return
+      peer.recoveryAttempts = attempts + 1
+      this.requestRestart(peer)
+      this.scheduleRecovery(peer)
+    }, delay)
   }
 
   enqueue(peer, action) {
