@@ -148,3 +148,12 @@ span.tool-symbol { display:grid; place-items:center; background:#e5edff; color:#
   .app-hero h1 { font-size:clamp(1.5rem,6.3vw,2.1rem); }
   .guide-actions { gap:10px 16px; }
 }
+
+.readme .flowline-heading { display:flex; flex-wrap:wrap; align-items:center; gap:clamp(12px,3vw,20px); padding:clamp(16px,4vw,27px); }
+.readme .flowline-heading img { width:64px; height:64px; margin:0; border:0; border-radius:15px; }
+.readme .flowline-heading p { margin:.46em 0 0; color:var(--muted); }
+.flowline-risk { display:block; margin:22px 0 0; padding:clamp(14px,3vw,22px); border:1px solid #e8b8a6; border-left:5px solid #a3462b; border-radius:8px; background:#fff1e9; color:#532920; }
+.flowline-risk p:first-child { margin-top:0; }
+.flowline-risk p:last-child { margin-bottom:0; }
+.flowline-risk a { color:#77311f; }
+.flowline-download:disabled { padding:.63em 1.12em; border:1px solid #d0cdd4; border-radius:8px; background:#eeedf0; color:#5d5864; font:inherit; font-size:.95rem; font-weight:600; cursor:not-allowed; }

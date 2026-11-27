@@ -1,0 +1,44 @@
+<!doctype html>
+<html lang="zh-CN"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Flowline · 流线 · Zaydenの树屋</title><meta name="description" content="网络代理与连通性测试的个人学习项目。公开提供使用说明，下载仅供站主访问。">
+<link rel="canonical" href="https:&#x2F;&#x2F;lures2019.github.io&#x2F;toolbox&#x2F;flowline&#x2F;"><link rel="icon" href="/img/favicon.png"><link rel="stylesheet" href="/assets/toolbox/toolbox.css?v=3">
+</head><body><header class="mast"><nav aria-label="面包屑"><a class="brand" href="/">Zaydenの树屋</a><span aria-hidden="true">/</span><a href="/toolbox/">百宝箱</a></nav></header>
+<main><article class="readme"><div class="flowline-heading">
+  <img src="/toolbox/flowline/logo.png" width="64" height="64" alt="">
+  <section>
+    <h1>Flowline · 流线</h1>
+    <p>用于学习代理配置、路由模式和 HTTPS 连通性测试的客户端。</p>
+  </section>
+</div>
+<aside class="flowline-risk" aria-labelledby="flowline-risk-title">
+  <p id="flowline-risk-title"><strong>法律风险提示 · 仅供个人学习</strong></p>
+  <p>本项目仅供站主个人学习与在自有或明确授权的环境中进行技术实验，不作其他用途。个人学习同样受适用法律约束。使用前请确认网络接入方式、节点来源和测试目标均获得所需授权。</p>
+  <p>在中国大陆进行国际联网，应遵守有关国际联网信道和接入方式的规定。违反相关规定可能被责令停止联网、给予警告或并处罚款。<a href="https://xzfg.moj.gov.cn/front/law/detail?LawID=1713">国家行政法规库 · 第六、十及十四条</a></p>
+  <p>第三方节点运营者可能接触连接信息或未加密的流量。请勿通过公共节点传输账户口令、支付信息或其他敏感数据。</p>
+</aside>
+<h2 id="下载">下载</h2>
+<p><button class="flowline-download" type="button" disabled="" aria-describedby="flowline-download-status">下载安装包</button></p>
+<p id="flowline-download-status">下载权限仅限站主。公开页面提供使用说明。</p>
+<h2 id="使用说明">使用说明</h2>
+<p>首次打开程序会读取公开订阅并执行连通性测试。启动前请确认所在网络允许这些操作。学习时可使用自己管理或已明确获准使用的节点，在「设置 → 添加 HTTPS 订阅」填入地址，再点「更新节点」。节点列表默认显示近期复测通过的线路。</p>
+<h3 id="Windows 客户端">Windows 客户端</h3>
+<ol>
+<li>选择与处理器匹配的 x64 或 ARM64 包，完整解压后运行 <code>Flowline.exe</code>。</li>
+<li>在「节点雷达」查看延迟并选择获准使用的线路。规则模式按域名规则分流，全局模式让进入客户端的流量经过所选节点，直连模式直接连接目标。</li>
+<li>仅在需要接管 Windows 测试流量时开启「系统代理」。实验完成后关闭代理，再退出客户端。</li>
+</ol>
+<h3 id="Chrome / Edge 扩展">Chrome / Edge 扩展</h3>
+<ol>
+<li>保持 Windows 客户端运行，在其「设置」中复制配对码。</li>
+<li>打开浏览器的扩展管理页，开启开发人员模式，加载解压后的 <code>Flowline-Chromium</code> 文件夹。</li>
+<li>打开扩展，完成配对，再按需启用「浏览器代理」。完成实验后关闭该开关。配对码请自行保管。</li>
+</ol>
+<h3 id="Android 客户端">Android 客户端</h3>
+<ol>
+<li>在 Android 8.0 或更高版本的 ARM64 或 x86 设备安装签名 APK。</li>
+<li>打开应用，选用获准使用的节点。需要接管设备流量时，开启「系统 VPN」并在 Android 权限提示中确认。</li>
+<li>实验完成后关闭「系统 VPN」。</li>
+</ol>
+<h2 id="安装包校验">安装包校验</h2>
+<p>站主取得文件后，可用 PowerShell 的 <code>Get-FileHash -Algorithm SHA256</code> 查看文件摘要，并与私有下载目录中的 <code>SHA256SUMS.txt</code> 对照。</p>
+</article><a class="back" href="/toolbox/">← 返回软件目录</a></main></body></html>
