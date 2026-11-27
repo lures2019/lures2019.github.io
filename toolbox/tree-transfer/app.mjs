@@ -1,9 +1,10 @@
-import {Pair, invite} from './transfer.mjs';
+import {Pair, invite} from './transfer.mjs?v=2';
 import {peerOptions} from './config.mjs';
+import {listDownloads, openDownloadFolder, stageDownload, supportsLocalDownloads} from './downloads.mjs';
 
 const $ = id => document.getElementById(id);
 const dialog = $('notice');
-const MAX_BUFFER = 128 * 1024 * 1024;
+const downloads = new Set();
 let pair, directory, lastPaint = 0, promptTask;
 
 function bytes(size) {
@@ -21,8 +22,8 @@ function time(seconds) {
   return [hours && hours + ' 小时', minutes && minutes + ' 分钟', sec % 60 + ' 秒'].filter(Boolean).join(' ');
 }
 
-function prompt(title, text, files) {
-  if (dialog.open) dialog.close();
+function prompt(title, text, files, action) {
+  if (dialog.open) closePrompt(false);
   const task = {};
   promptTask = task;
   $('notice-title').textContent = title;
@@ -33,13 +34,14 @@ function prompt(title, text, files) {
     li.textContent = file.name + ' · ' + bytes(file.size);
     return li;
   }));
-  $('decline').hidden = !files;
-  $('accept').textContent = files ? '接收文件' : '知道了';
+  $('decline').hidden = !files && !action;
+  $('decline').textContent = files ? '拒绝' : '取消';
+  $('accept').textContent = action || (files ? '接收文件' : '知道了');
   dialog.returnValue = '';
   dialog.showModal();
   return new Promise(resolve => {
     task.resolve = resolve;
-    if (files) $('decline').focus();
+    if (files || action) $('decline').focus();
   });
 }
 dialog.addEventListener('submit', event => {
@@ -57,9 +59,17 @@ function error(message) {
   void prompt('传输提示', message);
 }
 
+function storageError(err) {
+  if (err?.name === 'QuotaExceededError') {
+    return '浏览器暂存空间或磁盘空间不足。可移除已下载的暂存文件，或选择有足够空间的保存目录后重试。';
+  }
+  return err?.message || '浏览器存储出现异常，请重试。';
+}
+
 function showStorage() {
   $('storage').textContent = directory ? '保存到：' + directory.name :
-    '浏览器下载模式，每批最多 128 MiB。' + (window.showDirectoryPicker ? '选择保存目录可直接写入大文件。' : '使用桌面版 Chrome 或 Edge 可选择保存目录。');
+    supportsLocalDownloads() ? '文件校验通过后可下载。' + (window.showDirectoryPicker ? '也可选择保存目录，直接写入磁盘。' : '') :
+      '此浏览器无法暂存下载，请选择保存目录，或更换新版浏览器。';
 }
 $('folder').hidden = !window.showDirectoryPicker;
 showStorage();
@@ -102,36 +112,35 @@ async function diskWriter(folder, file) {
   throw new Error('保存目录包含过多同名文件。');
 }
 
-function downloadWriter(file) {
-  let parts = [];
-  return {
-    write: chunk => parts.push(chunk),
-    commit() {
-      const url = URL.createObjectURL(new Blob(parts, {type:'application/octet-stream'}));
-      parts = [];
-      const li = document.createElement('li');
-      const link = document.createElement('a');
-      link.href = url;
-      link.download = safeName(file.name);
-      link.textContent = '保存 ' + file.name;
-      link.addEventListener('click', () => {
-        link.textContent = '再次保存 ' + file.name;
-      });
-      const dismiss = document.createElement('button');
-      dismiss.className = 'quiet';
-      dismiss.textContent = '清除';
-      dismiss.addEventListener('click', () => {
-        URL.revokeObjectURL(url);
-        li.remove();
-        $('downloads').hidden = !$('downloads').childElementCount;
-      });
-      li.append(link, ' ', dismiss);
-      $('downloads').append(li);
-      $('downloads').hidden = false;
-    },
-    async abort() { parts = []; },
-  };
+function presentDownload(item) {
+  if (downloads.has(item.id)) return;
+  const url = URL.createObjectURL(item.file);
+  const li = document.createElement('li');
+  const link = document.createElement('a');
+  link.href = url;
+  link.download = safeName(item.name);
+  link.textContent = '下载 ' + item.name + ' · ' + bytes(item.file.size);
+  const dismiss = document.createElement('button');
+  dismiss.className = 'quiet';
+  dismiss.textContent = '移除暂存';
+  dismiss.addEventListener('click', async () => {
+    const approved = await prompt('移除暂存文件？','如果已开始下载，请先确认浏览器下载列表里的文件已下载完成。',null,'移除');
+    if (!approved) return;
+    try {
+      await item.remove();
+      URL.revokeObjectURL(url);
+      downloads.delete(item.id);
+      li.remove();
+      $('downloads').hidden = !downloads.size;
+    } catch (err) { error(storageError(err)); }
+  });
+  li.append(link, ' ', dismiss);
+  $('downloads').append(li);
+  $('downloads').hidden = false;
+  downloads.add(item.id);
 }
+
+if (supportsLocalDownloads()) void listDownloads().then(items => items.forEach(presentDownload)).catch(() => {});
 
 const ui = {
   status(label, live = false) {
@@ -145,21 +154,24 @@ const ui = {
     $('drop-hint').textContent = value ? '支持批量发送，保留文件原始内容' : pair?.authenticated ? '正在处理文件' : '配对成功后即可发送';
   },
   error,
-  ended(message) {
+  ended(err) {
     pair = null;
     showPair(false);
     $('transfer').hidden = true;
-    error(message);
+    error(storageError(err));
   },
   async consent(files) {
+    const current = pair;
     const folder = directory;
-    if (!folder && (files.reduce((sum,file) => sum + file.size,0) > MAX_BUFFER || $('downloads').childElementCount)) {
-      error('当前下载模式每批限 128 MiB，且只保留一批待保存文件。请清除已保存文件，或选择保存目录后请对方重新发送。');
-      return null;
+    let downloadFolder;
+    if (!folder) {
+      try { downloadFolder = await openDownloadFolder(); }
+      catch (err) { if (pair === current) error(storageError(err)); return null; }
     }
-    const approved = await prompt('接收文件？', folder ? '文件将保存到「' + folder.name + '」。' : '传输完成后，请点击文件名保存。', files);
+    if (!current || pair !== current) return null;
+    const approved = await prompt('接收文件？', folder ? '文件将保存到「' + folder.name + '」。' : '文件校验通过后，请点击文件名下载。', files);
     if (!approved) return null;
-    return folder ? file => diskWriter(folder,file) : downloadWriter;
+    return folder ? file => diskWriter(folder,file) : file => stageDownload(downloadFolder,file,presentDownload);
   },
   progress(action,file,count,start) {
     const now = performance.now();

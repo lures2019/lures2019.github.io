@@ -334,7 +334,7 @@ export class Pair {
   fail(error) {
     if (!this.active) return;
     this.stop();
-    this.ui.ended(error.message);
+    this.ui.ended(error);
   }
 
   stop() {
