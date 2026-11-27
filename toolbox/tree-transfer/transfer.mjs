@@ -50,7 +50,8 @@ export class Pair {
     this.connectTimer = setTimeout(() => this.fail(new Error('无法连接信令服务，请检查网络后重试。')), 25000);
     this.peer.on('open', () => {
       clearTimeout(this.connectTimer);
-      if (!this.active) return;
+      this.signalDown = false;
+      if (!this.active || this.channel) return;
       if (host) this.ui.status('等待对方');
       else this.attach(this.peer.connect(this.credentials.id, {serialization:'raw', reliable:true}));
     });
