@@ -9,7 +9,7 @@
   <title>远桌 · 远程控制</title>
   <link rel="icon" href="./mark.svg" type="image/svg+xml">
   <link rel="stylesheet" href="./style.css">
-  <script type="module" src="./app.mjs?v=pair3"></script>
+  <script type="module" src="./app.mjs?v=media4"></script>
 </head>
 <body>
   <header class="top"><div class="top-content"><a class="brand" href="./"><img src="./mark.svg" width="38" height="38" alt=""><span>远桌</span></a><span id="environment" class="environment">网页控制端</span><a class="back" id="win-guide" href="/toolbox/remote-control/windows/" hidden>Windows 下载与说明</a><a class="back" id="back" href="../" hidden>返回百宝箱</a></div></header>
@@ -40,7 +40,15 @@
       </section>
       <section class="panel support" id="support"><h2>连接前的三个步骤</h2>
         <ol class="steps"><li>在被控电脑的 Windows 客户端中选择「共享本机」。</li><li>复制信令地址和密钥，在这里粘贴。</li><li>与对方核对六位确认码，由对方开始共享。</li></ol>
-        <details><summary>关于跨网连接</summary><p>一次性邀请和长期配对都可以使用预填的树屋服务。长期配对支持收藏设备链接和自设密码。共享端须开机并开启等待，每次连接由本机确认。若双方已配对却没有画面，可尝试让一端换用移动热点。</p></details>
+        <details><summary>在这台电脑上测试媒体中继</summary>
+          <p>填入获准使用的 TURN 凭据，检查当前网络能否取得中继线路。此处的设置仅用于测试，连接时使用共享端发送的配置。</p>
+          <label for="probe-turn">TURN 地址</label><input id="probe-turn" type="text" spellcheck="false" autocomplete="off">
+          <label for="probe-turn-user">TURN 用户名</label><input id="probe-turn-user" type="text" autocomplete="off">
+          <label for="probe-turn-secret">TURN 密码</label><input id="probe-turn-secret" type="password" autocomplete="off">
+          <button id="probe-test-turn" type="button">测试媒体中继</button>
+          <p id="probe-turn-result" class="status" role="status"></p>
+        </details>
+        <details><summary>关于跨网连接</summary><p>一次性邀请和长期配对都可以使用预填的树屋服务。长期配对支持收藏设备链接和自设密码。共享端须开机并开启等待，每次连接由本机确认。若双方已配对却一直没有画面，可以由共享方配置获准使用的 TURN 媒体中继。</p></details>
       </section>
       <section class="panel" id="share-panel" hidden aria-labelledby="share-title">
         <h2 id="share-title">共享此电脑</h2>
@@ -65,12 +73,14 @@
             <label class="check"><input id="allow-unattended" type="checkbox">本次等待允许信任设备免确认控制</label>
             <p class="field-hint">允许查看和操作当前 Windows 桌面。需要单显示器、桌面已解锁、电脑保持唤醒。</p>
           </div>
-          <details id="network"><summary>信令认证与 STUN / TURN</summary>
+          <details id="network"><summary>网络设置 · 信令与媒体中继</summary>
             <label for="create-key">信令建房口令</label><input id="create-key" type="password" maxlength="200" placeholder="信令管理员提供，未启用时留空">
             <label for="stun">STUN 地址</label><input id="stun" type="text" value="stun:stun.cloudflare.com:3478" placeholder="stun:relay.example.com:3478" spellcheck="false" maxlength="240">
             <label for="turn">TURN 地址</label><input id="turn" type="text" placeholder="turns:relay.example.com:5349" spellcheck="false" maxlength="240">
             <label for="turn-user">TURN 用户名</label><input id="turn-user" type="text" spellcheck="false" maxlength="150">
             <label for="turn-secret">TURN 密码</label><input id="turn-secret" type="password" maxlength="200">
+            <button id="test-turn" type="button">测试媒体中继</button><p id="turn-result" class="status" role="status"></p>
+            <label class="check"><input id="relay-only" type="checkbox">本次只用中继传输</label>
           </details>
           <button class="primary wide" type="submit">生成一次性邀请</button>
         </form>

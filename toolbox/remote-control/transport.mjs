@@ -268,11 +268,44 @@ export function rtcServers(stun, turn, username, credential) {
   return servers;
 }
 
+export function hasTurn(servers) {
+  return servers.some(server => [server.urls].flat().some(url => /^turns?:/i.test(url)));
+}
+
+export function hasRelay(description) {
+  return /^a=candidate:[^\r\n]*\styp relay(?:\s|$)/m.test(description?.sdp || '');
+}
+
+export async function testRelay(servers) {
+  if (!hasTurn(servers)) throw new Error('请填写媒体中继的 TURN 地址、用户名和密码。');
+  const peer = new RTCPeerConnection({iceServers:servers, iceTransportPolicy:'relay'});
+  try {
+    peer.createDataChannel('relay-check');
+    const offer = await peer.createOffer();
+    return await new Promise((resolve, reject) => {
+      const timer = setTimeout(() => finish(false), 22000);
+      function finish(ok) {
+        clearTimeout(timer);
+        peer.onicecandidate = peer.onicegatheringstatechange = null;
+        if (ok) resolve();
+        else reject(new Error('这台电脑没有取得中继线路。请核对 TURN 凭据、有效期和本网络是否允许访问该地址。'));
+      }
+      peer.onicecandidate = ({candidate}) => { if (candidate?.type === 'relay') finish(true); };
+      peer.onicegatheringstatechange = () => {
+        if (peer.iceGatheringState === 'complete') finish(hasRelay(peer.localDescription));
+      };
+      peer.setLocalDescription(offer).catch(() => finish(false));
+    });
+  } finally { peer.close(); }
+}
+
 export async function localDescription(peer, description, abort) {
   await peer.setLocalDescription(description);
   if (peer.iceGatheringState !== 'complete') {
     await new Promise((resolve, reject) => {
-      const timer = setTimeout(() => finish(), 8500);
+      // Both signaling modes send one complete SDP. A slow TURN allocation
+      // discovered after sending that SDP cannot be used by the other peer.
+      const timer = setTimeout(() => finish(), hasTurn(peer.getConfiguration().iceServers || []) ? 22000 : 8500);
       function finish(error) {
         clearTimeout(timer);
         peer.removeEventListener('icegatheringstatechange', onState);

@@ -1,4 +1,4 @@
-import {publicSignal, unlockBookmark, PairTicket, Signal, base64, confirmationCode, credentialKind, endpoint, invitationLimit, isLoopback, localDescription, rtcServers, timeLimit} from './transport.mjs?v=pair3';
+import {publicSignal, unlockBookmark, PairTicket, Signal, base64, confirmationCode, credentialKind, endpoint, hasRelay, hasTurn, invitationLimit, isLoopback, localDescription, rtcServers, testRelay, timeLimit} from './transport.mjs?v=media4';
 import {fileChannel} from './files.mjs';
 
 export const $ = id => document.getElementById(id);
@@ -28,8 +28,23 @@ export function compatibilityIssue() {
 }
 
 export function watchPeer(peer, abort, update, fail, negotiationTimeout = 35000) {
-  let disconnected;
-  const timeout = setTimeout(() => fail('画面连接超时。请确认对方已完成协商；若两端网络限制直连，需要双方网络允许的媒体中继。'), negotiationTimeout);
+  let disconnected, connected = false, negotiated = false;
+  function failure() {
+    if (connected) return '已建立的画面通道中断。请确认两端仍在共享并保持联网。';
+    if (!peer.localDescription || !peer.remoteDescription) return '双方尚未完成画面协商。请确认共享端已选屏，手动模式下还需传回连接回执。';
+    const local = hasRelay(peer.localDescription), remote = hasRelay(peer.remoteDescription);
+    if (local || remote) return '媒体通道未能建立。中继线路：本机' + (local ? '有' : '无') + '，对端' + (remote ? '有' : '无') + '。请在两端分别测试 TURN，并确认双方网络均允许使用该中继。';
+    if (hasTurn(peer.getConfiguration().iceServers || [])) return '媒体通道未能建立。两端都未提供可用的中继线路。请测试 TURN 的地址、用户名和密码。';
+    return '双方已交换画面连接信息，但本次未能直连，也未配置媒体中继。请在共享端的「网络设置」中填写并测试 TURN，再生成新邀请。';
+  }
+  // Leave time for both ends to gather their candidates and exchange the answer.
+  let timeout = setTimeout(() => fail(failure()), Math.max(65000, negotiationTimeout));
+  peer.addEventListener('signalingstatechange', () => {
+    if (abort.aborted || connected || negotiated || !peer.localDescription || !peer.remoteDescription || peer.signalingState !== 'stable') return;
+    negotiated = true;
+    clearTimeout(timeout);
+    timeout = setTimeout(() => fail(failure()), negotiationTimeout);
+  });
   abort.addEventListener('abort', () => {
     clearTimeout(timeout);
     clearTimeout(disconnected);
@@ -40,12 +55,13 @@ export function watchPeer(peer, abort, update, fail, negotiationTimeout = 35000)
     if (abort.aborted) return;
     clearTimeout(disconnected);
     switch (peerState(peer)) {
-      case 'connected': clearTimeout(timeout); update('已连接'); break;
+      case 'connected': connected = true; clearTimeout(timeout); update('已连接'); break;
       case 'disconnected':
         update('连接中断，正在恢复');
-        disconnected = setTimeout(() => fail('网络连接已中断。'), 5000);
+        disconnected = setTimeout(() => fail(failure()), 12000);
         break;
-      case 'failed': case 'closed': fail('会话已结束，或当前网络无法互通。'); break;
+      case 'failed': fail(failure()); break;
+      case 'closed': fail('本次画面连接已关闭。如需继续，请重新发起连接。'); break;
     }
   });
 }
@@ -245,7 +261,7 @@ async function connect(event) {
       const directory = await PairTicket.open(address, credential);
       invitation = await directory.read(handshake);
     }
-    const Transport = manual ? (await import('./manual.mjs?v=pair3')).ManualSignal : Signal;
+    const Transport = manual ? (await import('./manual.mjs?v=media4')).ManualSignal : Signal;
     if (abort.signal.aborted) return;
     const signal = await Transport.open(address, invitation, 1, handshake);
     if (manual) abort.signal.addEventListener('abort', () => signal.finish(), {once:true});
@@ -261,7 +277,9 @@ async function connect(event) {
     if (offer?.nonce !== nonce || offer.description?.type !== 'offer' || typeof offer.description.sdp !== 'string') throw new Error('连接响应与当前请求不匹配。');
     const st = offer.ice?.find(item => typeof item.urls === 'string' && item.urls.startsWith('stun'));
     const tr = offer.ice?.find(item => typeof item.urls === 'string' && item.urls.startsWith('turn'));
-    const peer = new RTCPeerConnection({iceServers: rtcServers(st?.urls, tr?.urls, tr?.username, tr?.credential)});
+    const iceServers = rtcServers(st?.urls, tr?.urls, tr?.username, tr?.credential);
+    if (offer.relayOnly === true && !hasTurn(iceServers)) throw new Error('共享端选择了只用中继，但没有提供 TURN 配置。');
+    const peer = new RTCPeerConnection({iceServers, iceTransportPolicy:offer.relayOnly === true ? 'relay' : 'all'});
     $('connect-panel').hidden = true;
     $('support').hidden = true;
     $('session').hidden = false;
@@ -321,6 +339,20 @@ async function connect(event) {
 }
 
 $('connect').addEventListener('submit', connect);
+for (const prefix of ['', 'probe-']) {
+  const field = name => $(prefix + name);
+  const button = field('test-turn');
+  button.onclick = async () => {
+    button.disabled = true;
+    try {
+      const servers = rtcServers('', field('turn').value.trim(), field('turn-user').value.trim(), field('turn-secret').value);
+      status(prefix + 'turn-result', '正在向中继申请临时线路…');
+      await testRelay(servers);
+      status(prefix + 'turn-result', '此电脑已取得 TURN 中继线路。两端实际互通以会话中的「TURN 中继」为准。');
+    } catch (error) { status(prefix + 'turn-result', error.message, true); }
+    finally { button.disabled = false; }
+  };
+}
 $('key').addEventListener('input', updateRemember);
 $('test-relay').onclick = async () => {
   const button = $('test-relay');
