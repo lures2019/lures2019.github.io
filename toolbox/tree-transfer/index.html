@@ -1,0 +1,54 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<meta name="referrer" content="no-referrer">
+<meta name="description" content="树屋百宝箱的文件传输工具。用同一个配对密钥在两台设备间传输原始文件。">
+<title>树屋快传 · 百宝箱</title>
+<link rel="icon" href="data:,">
+<link rel="stylesheet" href="./style.css">
+<script defer src="./vendor/peerjs.min.js"></script>
+<script defer src="./vendor/sha256.umd.min.js"></script>
+<script type="module" src="./app.mjs"></script>
+</head>
+<body>
+<header class="bar"><div class="wrap nav">
+<a class="brand" href="/toolbox/"><span class="mark" aria-hidden="true">⇄</span><span>树屋快传</span></a>
+<a class="nav-link" href="/toolbox/">返回百宝箱</a>
+</div></header>
+<main class="wrap">
+<section class="hero"><span class="eyebrow">在线文件传输</span>
+<h1>两台设备，<br>一个配对密钥。</h1>
+<p>生成密钥并发给对方。配对后，双方都能发送文件。</p>
+<div class="hero-graphic" aria-hidden="true"><i></i><i></i><b>⇄</b></div></section>
+<div class="workspace">
+<section class="panel">
+<header class="panel-head"><div><span class="eyebrow">配对</span><h2>连接设备</h2></div><span id="status" class="status" role="status">未连接</span></header>
+<div class="pair-actions" id="pair-actions">
+<button class="primary" id="create">生成配对密钥</button>
+<form id="join-form"><label for="join-code">已有密钥</label><div class="input-row"><input id="join-code" placeholder="粘贴对方的配对密钥" spellcheck="false" autocomplete="off" required><button>连接</button></div></form>
+</div>
+<div class="pair-actions" id="waiting" hidden><label for="own-code">配对密钥</label>
+<div class="input-row"><input id="own-code" readonly aria-label="配对密钥"><button id="copy">复制密钥</button></div>
+<p class="hint" id="pair-note"></p><button class="quiet" id="disconnect">结束配对</button></div>
+<details class="relay"><summary>网络设置</summary>
+<p class="hint">跨网直连失败时，可在配对前填写可用的 TURN 中继。</p>
+<label>TURN 地址<input id="turn-url" placeholder="turns:relay.example.com:443" spellcheck="false"></label>
+<div class="input-row"><label>用户名<input id="turn-user" autocomplete="off"></label><label>凭据<input id="turn-pass" type="password" autocomplete="off"></label></div>
+</details>
+</section>
+<section class="panel">
+<header class="panel-head"><div><span class="eyebrow">文件</span><h2>发送与接收</h2></div><button class="quiet" id="folder">选择保存目录</button></header>
+<button class="drop" id="pick" disabled><span class="drop-icon" aria-hidden="true">＋</span><strong>点击选择，或拖入文件</strong><span id="drop-hint">配对成功后即可发送</span></button>
+<input id="files" type="file" multiple hidden>
+<p class="hint" id="storage"></p>
+<div class="transfer" id="transfer" hidden><div class="transfer-title"><strong id="progress-name"></strong><span id="percent"></span></div><progress id="progress" max="100" value="0"></progress><p class="hint" id="stats"></p></div>
+<ul class="downloads" id="downloads" hidden></ul>
+</section>
+</div>
+<footer>传输期间请保持双方页面打开。接收前，先核对发送方和文件列表。</footer>
+</main>
+<dialog id="notice"><form method="dialog"><h2 id="notice-title"></h2><p id="notice-text"></p><ul id="notice-files" hidden></ul><div class="dialog-actions"><button value="no" id="decline">拒绝</button><button class="primary" value="yes" id="accept">知道了</button></div></form></dialog>
+</body>
+</html>
