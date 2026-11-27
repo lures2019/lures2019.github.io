@@ -6,17 +6,19 @@ export const disconnectMessages = {
   1009: '会议消息超出大小限制。',
   4401: '重连时限已过，请重新加入会议。',
   4403: '你已被房主移出会议。',
-  4404: '此会议已结束或会议码有误。',
+  4404: '当前会议服务找不到这个会议码。请确认房主仍在会中，并使用同一个会议服务。若房主用的是本机测试版，请切到线上会议重新建房。',
   4408: '会议人数已满。',
   4409: '此会议会话已在别处恢复。',
   4410: '房主已结束会议。',
-  4423: '房主已锁定会议。'
+  4423: '房主已锁定会议。',
+  4425: '开房需要有效的房主密钥。受邀者可以直接输入会议码或打开邀请链接。'
 }
 
 export class MeetingSignal {
-  constructor({ address, code, welcome, message, status, failure }) {
+  constructor({ address, code, createKey, welcome, message, status, failure }) {
     this.address = address
     this.code = code
+    this.createKey = createKey
     this.welcome = welcome
     this.message = message
     this.status = status
@@ -38,7 +40,10 @@ export class MeetingSignal {
     const url = new URL(this.address)
     url.pathname = `${url.pathname.replace(/\/$/, '')}/signal/${this.code || 'create'}`
     let socket
-    try { socket = new WebSocket(url, this.token ? ['studyroom-resume', this.token] : []) }
+    const protocols = this.token ? ['studyroom-resume', this.token] :
+      this.createKey ? ['studyroom-create', this.createKey] : []
+    this.createKey = undefined
+    try { socket = new WebSocket(url, protocols) }
     catch { this.fail('会议服务地址无效。'); return }
     this.socket = socket
     this.handshake = setTimeout(() => this.dropped(socket, 4000), 11500)

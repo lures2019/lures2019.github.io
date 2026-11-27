@@ -254,3 +254,7 @@ dialog::backdrop{background:#080913c9;backdrop-filter:blur(3px)}
 
 
 .reconnect-status{margin:12px 15px 0;padding:9px 13px;border:1px solid #8c703a;border-radius:9px;background:#3a2c1b;color:#ffe4a4;font-size:14px}
+
+.connection-label{margin-bottom:8px;color:var(--muted);font-size:13px}
+.connection-label[data-scope="online"]{color:#9deacd}
+.connection-label[data-scope="local"]{color:#ffe4a4}

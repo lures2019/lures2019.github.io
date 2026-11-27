@@ -2,7 +2,7 @@ import { config } from './config.js'
 import { $, avatar, element, formatCode, icon, setIcon, toast } from './ui.js'
 import { MeetingMedia } from './rtc.js?v=0.1.1'
 import { makeBoard } from './board.js?v=0.1.1'
-import { MeetingSignal } from './signaling.js'
+import { MeetingSignal } from './signaling.js?v=0.1.2'
 
 const desktop = window.studyDesktop
 const CODE = /^[0-9A-HJKMNP-TV-Z]{16}$/
@@ -23,7 +23,10 @@ let active
 let pending
 let draft
 let clock
-let localSignal = load('study-signal') || ''
+const savedSignal = load('study-service') ?? load('study-signal')
+const savedAddress = typeof savedSignal === 'string' && endpoint(savedSignal)
+const onlineBuild = Boolean(config.webUrl)
+let localSignal = savedAddress && (!onlineBuild || !isLoopback(savedAddress)) ? savedAddress.href : ''
 const board = makeBoard(send)
 
 function load(key) {
@@ -57,22 +60,29 @@ function send(message) {
 }
 
 function normalizeCode(input) {
-  let value = input.trim()
-  if (value.includes('://')) {
-    try { value = new URLSearchParams(new URL(value).hash.slice(1)).get('room') ?? '' } catch { return '' }
-  }
-  value = value.replace(/[\s-]/g, '').toUpperCase()
+  const value = input.replace(/[\s-]/g, '').toUpperCase()
   return CODE.test(value) ? value : ''
+}
+
+function readInvitation(input) {
+  try {
+    const params = new URLSearchParams(new URL(input).hash.slice(1))
+    return { code: normalizeCode(params.get('room') ?? ''), service: params.get('service') }
+  } catch { return { code: normalizeCode(input), service: null } }
 }
 
 function endpoint(value) {
   try {
     const address = new URL(value)
     const secure = address.protocol === 'wss:'
-    const loopback = address.protocol === 'ws:' && ['localhost', '127.0.0.1'].includes(address.hostname)
+    const loopback = address.protocol === 'ws:' && isLoopback(address)
     if ((!secure && !loopback) || address.username || address.password || address.search || address.hash) return null
     return address
   } catch { return null }
+}
+
+function isLoopback(address) {
+  return ['localhost', '127.0.0.1', '[::1]'].includes(address.hostname)
 }
 
 function signalServer() {
@@ -81,6 +91,33 @@ function signalServer() {
   if (config.sameOriginSignal && location.protocol === 'https:') return endpoint(`wss://${location.host}`)
   if (local) return endpoint(`ws://${location.host}`)
   return null
+}
+
+function scopeOf(address) {
+  if (!address) return 'unconfigured'
+  if (isLoopback(address)) return 'local'
+  if (/^(10\.|192\.168\.|172\.(1[6-9]|2\d|3[01])\.)[\d.]+$/.test(address.hostname)) return 'lan'
+  return config.webUrl && endpoint(config.signalUrl)?.href === address.href ? 'online' : 'custom'
+}
+
+const scopeLabels = { online: '线上会议', local: '本机测试', lan: '局域网会议', custom: '自建服务', unconfigured: '尚未配置服务' }
+
+function showConnection() {
+  const scope = scopeOf(signalServer())
+  const hint = { online: '网页和 Windows 可跨设备加入', local: '本机会议码仅在这台电脑有效',
+    lan: '使用同一局域网地址加入', custom: '参会者需使用相同服务地址' }[scope]
+  const label = $('connection-label')
+  label.dataset.scope = scope
+  label.textContent = hint ? `${scopeLabels[scope]} · ${hint}` : scopeLabels[scope]
+}
+
+function matchesService(invite) {
+  const invited = endpoint(invite.service)
+  if (invite.service === null || (invited && invited.href === signalServer()?.href)) return true
+  const scope = scopeOf(invited)
+  error(scope === 'local' ? '这是本机测试邀请，仅房主的电脑可用。请房主在线上会议重新建房。' :
+    '这份邀请使用了不同的会议服务。请核对连接设置，或请房主从线上会议发送新邀请。')
+  return false
 }
 
 function error(message = '') {
@@ -92,7 +129,7 @@ function waiting(on) {
   for (const id of ['create', 'join', 'open-demo']) $(id).disabled = on
 }
 
-function connect(code) {
+function connect(code, createKey) {
   if (pending || active) return
   const address = signalServer()
   if (!address) {
@@ -106,7 +143,7 @@ function connect(code) {
   error()
   waiting(true)
   const signal = new MeetingSignal({
-    address, code, message: handle, status: connectionStatus,
+    address, code, createKey, message: handle, status: connectionStatus,
     welcome(incoming, resumed) {
       if (resumed) {
         restoreRoom(active, incoming)
@@ -252,7 +289,7 @@ function openRoom(room, strokes = [], chat = []) {
   $('meeting').hidden = false
   document.body.classList.add('in-room')
   window.scrollTo(0, 0)
-  $('room-title').textContent = room.demo ? '深夜自习室 · 演示' : '松间会议'
+  $('room-title').textContent = room.demo ? '深夜自习室 · 演示' : scopeLabels[scopeOf(room.signal.address)]
   $('room-code').textContent = room.demo ? '演示房间' : formatCode(room.code)
   $('copy-code').disabled = room.demo
   $('invite').hidden = room.demo
@@ -606,14 +643,18 @@ async function jpegAvatar(file) {
 function invitation() {
   const room = active
   if (room.demo) return ''
-  const address = signalServer()
-  const fallback = address?.protocol === 'ws:' && desktop ? `http://${address.host}/` : (!desktop ? location.href : '')
-  const localHttps = address?.protocol === 'wss:' &&
-    /^(10\.|192\.168\.|172\.(1[6-9]|2\d|3[01])\.)[\d.]+$/.test(address.hostname) ? `https://${address.host}/` : ''
-  const base = address?.protocol === 'ws:' ? fallback : localHttps || config.webUrl || fallback
+  const address = room.signal.address
+  const scope = scopeOf(address)
+  const samePage = !desktop && config.sameOriginSignal && location.protocol === 'https:' &&
+    address.href === `wss://${location.host}/`
+  const base = {
+    online: config.webUrl,
+    local: desktop ? `${address.protocol === 'wss:' ? 'https' : 'http'}://${address.host}/` : location.href,
+    lan: `https://${address.host}/`
+  }[scope] || (samePage ? location.href : '')
   if (!base) return ''
   const url = new URL(base)
-  url.hash = `room=${room.code}`
+  url.hash = new URLSearchParams({ room: room.code, service: address.href }).toString()
   return url.href
 }
 
@@ -639,6 +680,7 @@ for (const [tone, label] of ['紫色', '绿色', '珊瑚色', '蓝色', '粉色'
   $('tones').append(button)
 }
 avatar($('profile'), identity)
+showConnection()
 for (const id of ['profile', 'room-profile']) $(id).addEventListener('click', showProfile)
 $('display-name').addEventListener('input', refreshDraft)
 $('avatar-reset').addEventListener('click', () => { draft.avatar = ''; $('avatar-file').value = ''; refreshDraft() })
@@ -670,6 +712,9 @@ $('profile-form').addEventListener('submit', event => {
 $('show-network').addEventListener('click', () => {
   $('signal-url').value = localSignal
   $('signal-url').placeholder = config.signalUrl || (local ? `ws://${location.host}` : 'wss://你的会议服务')
+  $('network-note').textContent = onlineBuild ?
+    '留空使用默认线上服务。自建会议可以填入所有参会设备都能访问的 WSS 地址。' :
+    '留空使用当前预设服务。自建服务可填写 WSS 地址，本机调试可填写 WS 回环地址。'
   $('network-error').hidden = true
   $('network-dialog').showModal()
 })
@@ -682,25 +727,51 @@ $('network-form').addEventListener('submit', event => {
     $('network-error').hidden = false
     return
   }
+  if (address && onlineBuild && isLoopback(address)) {
+    $('network-error').textContent = '线上版需要其他设备可访问的服务地址。清空此项可恢复默认线上服务。'
+    $('network-error').hidden = false
+    return
+  }
   localSignal = address ? address.href : ''
-  store('study-signal', localSignal)
+  store('study-service', localSignal)
   $('network-dialog').close()
   error()
+  showConnection()
+  loadInvitation()
 })
-$('create').addEventListener('click', () => connect(''))
+$('create').addEventListener('click', () => {
+  if (config.ownerOnly && scopeOf(signalServer()) === 'online') {
+    $('owner-error').hidden = true
+    $('owner-dialog').showModal()
+  } else connect('')
+})
+$('owner-dialog').addEventListener('close', () => { $('owner-key').value = '' })
+$('owner-form').addEventListener('submit', event => {
+  event.preventDefault()
+  const key = $('owner-key').value.trim()
+  if (!/^[A-Za-z0-9_-]{43}$/.test(key)) {
+    $('owner-error').textContent = '请输入房主的开房密钥。'
+    $('owner-error').hidden = false
+    return
+  }
+  $('owner-dialog').close()
+  connect('', key)
+})
 $('join-form').addEventListener('submit', event => {
   event.preventDefault()
-  const code = normalizeCode($('meeting-code').value)
-  if (!code) { error('请输入有效的 16 位会议码或松间邀请链接。'); return }
-  connect(code)
+  const entered = readInvitation($('meeting-code').value.trim())
+  const linked = readInvitation(location.href)
+  if (!entered.code) { error('请输入有效的 16 位会议码或松间邀请链接。'); return }
+  if (matchesService(entered.service === null && entered.code === linked.code ? linked : entered)) connect(entered.code)
 })
 $('open-demo').addEventListener('click', () => showDemo())
 for (const button of document.querySelectorAll('[data-preview]')) button.addEventListener('click', () => showDemo(button.dataset.preview))
 function loadInvitation() {
   if (active) return
-  const linkedCode = normalizeCode(new URLSearchParams(location.hash.slice(1)).get('room') ?? '')
-  if (linkedCode) {
-    $('meeting-code').value = formatCode(linkedCode)
+  const invite = readInvitation(location.href)
+  if (invite.code) {
+    $('meeting-code').value = formatCode(invite.code)
+    matchesService(invite)
     $('join').focus({ preventScroll: true })
   }
 }
@@ -737,6 +808,12 @@ for (const [type, id] of Object.entries(controls)) $(id).addEventListener('click
 $('empty-share').addEventListener('click', () => void toggleMedia('screen'))
 $('invite').addEventListener('click', () => {
   $('invite-code').textContent = formatCode(active.code)
+  $('invite-note').textContent = {
+    online: '把邀请链接发给同伴。网页和 Windows 线上版都能加入。',
+    local: '这场会议仅限本机。要邀请其他设备，请切到线上服务重新建房。',
+    lan: '同伴需连接同一局域网，打开相同的服务地址后加入。',
+    custom: '请同伴在连接设置中填入与你相同的服务地址，再输入会议码。'
+  }[scopeOf(active.signal.address)]
   $('invite-url').hidden = true
   $('copy-link').disabled = !invitation()
   $('invite-dialog').showModal()
