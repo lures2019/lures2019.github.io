@@ -114,7 +114,8 @@ async function diskWriter(folder, file) {
 
 function presentDownload(item) {
   if (downloads.has(item.id)) return;
-  const url = URL.createObjectURL(item.file);
+  const download = item.file.slice(0,item.file.size,'application/octet-stream');
+  const url = URL.createObjectURL(download);
   const li = document.createElement('li');
   const link = document.createElement('a');
   link.href = url;
