@@ -9,7 +9,7 @@
   <title>远桌 · 远程控制</title>
   <link rel="icon" href="./mark.svg" type="image/svg+xml">
   <link rel="stylesheet" href="./style.css">
-  <script type="module" src="./app.mjs?v=media4"></script>
+  <script type="module" src="./app.mjs?v=private-turn1"></script>
 </head>
 <body>
   <header class="top"><div class="top-content"><a class="brand" href="./"><img src="./mark.svg" width="38" height="38" alt=""><span>远桌</span></a><span id="environment" class="environment">网页控制端</span><a class="back" id="win-guide" href="/toolbox/remote-control/windows/" hidden>Windows 下载与说明</a><a class="back" id="back" href="../" hidden>返回百宝箱</a></div></header>
@@ -40,15 +40,27 @@
       </section>
       <section class="panel support" id="support"><h2>连接前的三个步骤</h2>
         <ol class="steps"><li>在被控电脑的 Windows 客户端中选择「共享本机」。</li><li>复制信令地址和密钥，在这里粘贴。</li><li>与对方核对六位确认码，由对方开始共享。</li></ol>
-        <details><summary>在这台电脑上测试媒体中继</summary>
-          <p>填入获准使用的 TURN 凭据，检查当前网络能否取得中继线路。此处的设置仅用于测试，连接时使用共享端发送的配置。</p>
-          <label for="probe-turn">TURN 地址</label><input id="probe-turn" type="text" spellcheck="false" autocomplete="off">
-          <label for="probe-turn-user">TURN 用户名</label><input id="probe-turn-user" type="text" autocomplete="off">
-          <label for="probe-turn-secret">TURN 密码</label><input id="probe-turn-secret" type="password" autocomplete="off">
+        <details id="control-network"><summary>本机媒体中继 · 可选</summary>
+          <p>远桌默认尝试直连。需要中继时，填入你自己的 TURN 凭据。本页设置会用于控制连接，关闭页面后清除。</p>
+          <label class="check" id="probe-personal-row" hidden><input id="probe-use-personal" type="checkbox">使用我的 Cloudflare 中继</label>
+          <div id="probe-turn-fields">
+            <label for="probe-import-turn">导入 Cloudflare 临时凭据</label><input id="probe-import-turn" type="password" spellcheck="false" autocomplete="off" maxlength="4096" placeholder="粘贴 Windows 客户端复制的网页临时凭据">
+            <label for="probe-turn">TURN 地址</label><input id="probe-turn" type="text" spellcheck="false" autocomplete="off" maxlength="240" placeholder="turns:relay.example.com:5349">
+            <label for="probe-turn-user">TURN 用户名</label><input id="probe-turn-user" type="text" spellcheck="false" autocomplete="off" maxlength="150">
+            <label for="probe-turn-secret">TURN 密码</label><input id="probe-turn-secret" type="password" autocomplete="off" maxlength="200">
+          </div>
+          <label class="check"><input id="probe-relay-only" type="checkbox">本次只用本机中继</label>
           <button id="probe-test-turn" type="button">测试媒体中继</button>
           <p id="probe-turn-result" class="status" role="status"></p>
         </details>
-        <details><summary>关于跨网连接</summary><p>一次性邀请和长期配对都可以使用预填的树屋服务。长期配对支持收藏设备链接和自设密码。共享端须开机并开启等待，每次连接由本机确认。若双方已配对却一直没有画面，可以由共享方配置获准使用的 TURN 媒体中继。</p></details>
+        <details id="private-relay" hidden><summary>我的 Cloudflare 中继</summary>
+          <p>将 Cloudflare Realtime TURN 密钥加密保存在此 Windows 账户。远桌连接时会自动申请临时凭据。</p>
+          <label for="cloudflare-key-id">TURN Key ID</label><input id="cloudflare-key-id" type="text" spellcheck="false" autocomplete="off" maxlength="32">
+          <label for="cloudflare-key-token">TURN Key API Token</label><input id="cloudflare-key-token" type="password" autocomplete="off" maxlength="64">
+          <div class="actions"><button id="cloudflare-save" type="button">验证并保存</button><button id="cloudflare-copy" type="button" hidden>复制网页临时凭据</button><button class="quiet" id="cloudflare-clear" type="button" hidden>移除</button></div>
+          <p id="cloudflare-result" class="status" role="status"></p>
+        </details>
+        <details><summary>关于跨网连接</summary><p>一次性邀请和长期配对都可以使用预填的树屋服务。长期配对支持收藏设备链接和自设密码。共享端须开机并开启等待，每次连接由本机确认。跨网直连失败时，两端可以分别配置自己的 TURN。</p></details>
       </section>
       <section class="panel" id="share-panel" hidden aria-labelledby="share-title">
         <h2 id="share-title">共享此电脑</h2>
@@ -76,11 +88,14 @@
           <details id="network"><summary>网络设置 · 信令与媒体中继</summary>
             <label for="create-key">信令建房口令</label><input id="create-key" type="password" maxlength="200" placeholder="信令管理员提供，未启用时留空">
             <label for="stun">STUN 地址</label><input id="stun" type="text" value="stun:stun.cloudflare.com:3478" placeholder="stun:relay.example.com:3478" spellcheck="false" maxlength="240">
-            <label for="turn">TURN 地址</label><input id="turn" type="text" placeholder="turns:relay.example.com:5349" spellcheck="false" maxlength="240">
-            <label for="turn-user">TURN 用户名</label><input id="turn-user" type="text" spellcheck="false" maxlength="150">
-            <label for="turn-secret">TURN 密码</label><input id="turn-secret" type="password" maxlength="200">
+            <label class="check" id="personal-row" hidden><input id="use-personal" type="checkbox">使用我的 Cloudflare 中继</label>
+            <div id="turn-fields">
+              <label for="turn">TURN 地址</label><input id="turn" type="text" placeholder="turns:relay.example.com:5349" spellcheck="false" maxlength="240">
+              <label for="turn-user">TURN 用户名</label><input id="turn-user" type="text" spellcheck="false" maxlength="150">
+              <label for="turn-secret">TURN 密码</label><input id="turn-secret" type="password" maxlength="200">
+            </div>
             <button id="test-turn" type="button">测试媒体中继</button><p id="turn-result" class="status" role="status"></p>
-            <label class="check"><input id="relay-only" type="checkbox">本次只用中继传输</label>
+            <label class="check"><input id="relay-only" type="checkbox">本次只用本机中继</label>
           </details>
           <button class="primary wide" type="submit">生成一次性邀请</button>
         </form>

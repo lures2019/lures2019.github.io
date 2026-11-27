@@ -2,6 +2,8 @@ const encoder = new TextEncoder();
 const decoder = new TextDecoder();
 
 export const publicSignal = 'https://treehouse-assist.vault-cloud.workers.dev';
+export const defaultStun = 'stun:stun.cloudflare.com:3478';
+export const cloudflareTurnTLS = 'turns:turn.cloudflare.com:443?transport=tcp';
 export const invitationLimit = 2 * 60 * 60 * 1000;
 const temporaryLimit = 5 * 60 * 1000;
 
@@ -259,7 +261,7 @@ export function rtcServers(stun, turn, username, credential) {
     if (!/^stuns?:[A-Za-z0-9.:[\]-]+$/.test(stun)) throw new Error('STUN 地址格式有误。');
     servers.push({urls: stun});
   }
-  if (turn) {
+  if (turn || username || credential) {
     if (!/^turns?:[A-Za-z0-9.:[\]-]+(?:\?transport=(?:udp|tcp))?$/.test(turn) || !username || !credential) {
       throw new Error('请检查 TURN 地址、用户名和密码。');
     }

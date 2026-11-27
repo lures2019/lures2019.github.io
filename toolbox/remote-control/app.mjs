@@ -1,4 +1,4 @@
-import {publicSignal, unlockBookmark, PairTicket, Signal, base64, confirmationCode, credentialKind, endpoint, hasRelay, hasTurn, invitationLimit, isLoopback, localDescription, rtcServers, testRelay, timeLimit} from './transport.mjs?v=media4';
+import {publicSignal, defaultStun, cloudflareTurnTLS, unlockBookmark, PairTicket, Signal, base64, confirmationCode, credentialKind, endpoint, hasRelay, hasTurn, invitationLimit, isLoopback, localDescription, rtcServers, testRelay, timeLimit} from './transport.mjs?v=private-turn1';
 import {fileChannel} from './files.mjs';
 
 export const $ = id => document.getElementById(id);
@@ -35,7 +35,7 @@ export function watchPeer(peer, abort, update, fail, negotiationTimeout = 35000)
     const local = hasRelay(peer.localDescription), remote = hasRelay(peer.remoteDescription);
     if (local || remote) return '媒体通道未能建立。中继线路：本机' + (local ? '有' : '无') + '，对端' + (remote ? '有' : '无') + '。请在两端分别测试 TURN，并确认双方网络均允许使用该中继。';
     if (hasTurn(peer.getConfiguration().iceServers || [])) return '媒体通道未能建立。两端都未提供可用的中继线路。请测试 TURN 的地址、用户名和密码。';
-    return '双方已交换画面连接信息，但本次未能直连，也未配置媒体中继。请在共享端的「网络设置」中填写并测试 TURN，再生成新邀请。';
+    return '双方已交换画面连接信息，但未能直连。请在「本机媒体中继」或共享端的「网络设置」中配置并测试自己的 TURN，再重新连接。';
   }
   // Leave time for both ends to gather their candidates and exchange the answer.
   let timeout = setTimeout(() => fail(failure()), Math.max(65000, negotiationTimeout));
@@ -73,6 +73,30 @@ let session;
 let deviceBookmark;
 let savePairedDevice;
 let signPairedDevice;
+let getPersonalRelay;
+
+export function configurePersonalRelay(fetchCredentials, configured) {
+  getPersonalRelay = configured ? fetchCredentials : undefined;
+  for (const prefix of ['', 'probe-']) {
+    const checkbox = $(prefix + 'use-personal');
+    $(prefix + 'personal-row').hidden = !configured;
+    checkbox.checked = configured;
+    $(prefix + 'turn-fields').hidden = checkbox.checked;
+  }
+}
+
+export function relayOptions(prefix, stun = '') {
+  const field = name => $(prefix + name);
+  const personal = field('use-personal').checked ? getPersonalRelay : undefined;
+  const servers = personal ? rtcServers(stun)
+    : rtcServers(stun, field('turn').value.trim(), field('turn-user').value.trim(), field('turn-secret').value);
+  const relayOnly = field('relay-only').checked;
+  if (relayOnly && !personal && !hasTurn(servers)) throw new Error('请选择我的 Cloudflare 中继或填写本机 TURN 凭据，再启用只用本机中继。');
+  return {relayOnly, async ice(signal) {
+    if (!personal) return servers;
+    return [...servers, await personal(signal)];
+  }};
+}
 
 export function configureSavedPeer(save, profile, sign) {
   signPairedDevice = sign;
@@ -253,6 +277,7 @@ async function connect(event) {
     const remember = kind === 'pair' && $('remember-peer').checked && savePairedDevice;
     if (manual && kind !== 'invite') throw new Error('手动连接请使用共享方生成的一次性 RD1 邀请。');
     if (!kind) throw new Error('请输入完整的 RD1 邀请或 RD2 长期配对码。');
+    const relay = relayOptions('probe-', defaultStun);
     status('status', kind === 'pair' ? '正在查找配对设备…' : '正在发送连接请求…');
     wait = timeLimit(abort.signal, invitationLimit);
     const handshake = wait.signal;
@@ -261,7 +286,7 @@ async function connect(event) {
       const directory = await PairTicket.open(address, credential);
       invitation = await directory.read(handshake);
     }
-    const Transport = manual ? (await import('./manual.mjs?v=media4')).ManualSignal : Signal;
+    const Transport = manual ? (await import('./manual.mjs?v=private-turn1')).ManualSignal : Signal;
     if (abort.signal.aborted) return;
     const signal = await Transport.open(address, invitation, 1, handshake);
     if (manual) abort.signal.addEventListener('abort', () => signal.finish(), {once:true});
@@ -275,11 +300,9 @@ async function connect(event) {
     const offer = await signal.next('offer');
     if (abort.signal.aborted) return;
     if (offer?.nonce !== nonce || offer.description?.type !== 'offer' || typeof offer.description.sdp !== 'string') throw new Error('连接响应与当前请求不匹配。');
-    const st = offer.ice?.find(item => typeof item.urls === 'string' && item.urls.startsWith('stun'));
-    const tr = offer.ice?.find(item => typeof item.urls === 'string' && item.urls.startsWith('turn'));
-    const iceServers = rtcServers(st?.urls, tr?.urls, tr?.username, tr?.credential);
-    if (offer.relayOnly === true && !hasTurn(iceServers)) throw new Error('共享端选择了只用中继，但没有提供 TURN 配置。');
-    const peer = new RTCPeerConnection({iceServers, iceTransportPolicy:offer.relayOnly === true ? 'relay' : 'all'});
+    const iceServers = await relay.ice(handshake);
+    if (abort.signal.aborted) return;
+    const peer = new RTCPeerConnection({iceServers, iceTransportPolicy:relay.relayOnly ? 'relay' : 'all'});
     $('connect-panel').hidden = true;
     $('support').hidden = true;
     $('session').hidden = false;
@@ -328,6 +351,7 @@ async function connect(event) {
     watchStats(peer, abort.signal);
     await peer.setRemoteDescription(offer.description);
     const description = await localDescription(peer, await peer.createAnswer(), handshake);
+    if (relay.relayOnly && !hasRelay(description)) throw new Error('本机未能取得中继线路。请测试本机 TURN 凭据后重新连接。');
     const answerProof = proof ? await signPairedDevice({invitation, nonce, phase: 'answer', sdp: description.sdp}) : undefined;
     await signal.send('answer', {nonce, description, proof: answerProof});
   } catch (error) {
@@ -341,18 +365,31 @@ async function connect(event) {
 $('connect').addEventListener('submit', connect);
 for (const prefix of ['', 'probe-']) {
   const field = name => $(prefix + name);
+  field('use-personal').onchange = () => { field('turn-fields').hidden = field('use-personal').checked; };
   const button = field('test-turn');
   button.onclick = async () => {
     button.disabled = true;
     try {
-      const servers = rtcServers('', field('turn').value.trim(), field('turn-user').value.trim(), field('turn-secret').value);
       status(prefix + 'turn-result', '正在向中继申请临时线路…');
-      await testRelay(servers);
+      await testRelay(await relayOptions(prefix).ice());
       status(prefix + 'turn-result', '此电脑已取得 TURN 中继线路。两端实际互通以会话中的「TURN 中继」为准。');
     } catch (error) { status(prefix + 'turn-result', error.message, true); }
     finally { button.disabled = false; }
   };
 }
+$('probe-import-turn').addEventListener('paste', event => {
+  event.preventDefault();
+  try {
+    const {url, username, credential} = JSON.parse(event.clipboardData.getData('text'));
+    if (url !== cloudflareTurnTLS || typeof username !== 'string' || username.length > 150 ||
+        typeof credential !== 'string' || credential.length > 200) throw new Error();
+    rtcServers('', url, username, credential);
+    $('probe-turn').value = url;
+    $('probe-turn-user').value = username;
+    $('probe-turn-secret').value = credential;
+    status('probe-turn-result', '已导入临时凭据。可以测试中继或直接发起连接。');
+  } catch { status('probe-turn-result', '未能导入。请粘贴 Windows 客户端复制的网页临时凭据，或在下方手动填写。', true); }
+});
 $('key').addEventListener('input', updateRemember);
 $('test-relay').onclick = async () => {
   const button = $('test-relay');
