@@ -1,5 +1,5 @@
 import {publicSignal, defaultStun, cloudflareTurnTLS, unlockBookmark, PairTicket, Signal, base64, confirmationCode, credentialKind, endpoint, hasRelay, hasTurn, invitationLimit, isLoopback, localDescription, rtcServers, testRelay, timeLimit} from './transport.mjs?v=private-turn1';
-import {fileChannel} from './files.mjs';
+import {fileChannel} from './files.mjs?v=input-clipboard1';
 
 export const $ = id => document.getElementById(id);
 export function status(id, message, error = false) {
@@ -68,12 +68,16 @@ export function watchPeer(peer, abort, update, fail, negotiationTimeout = 35000)
 
 const screen = $('screen');
 const video = $('video');
+const sessionPanel = $('session');
 const updateLocalAddress = trackLocalAddress('endpoint', 'endpoint-hint');
 let session;
 let deviceBookmark;
 let savePairedDevice;
 let signPairedDevice;
 let getPersonalRelay;
+let fileClipboard;
+
+export function configureFileClipboard(clipboard) { fileClipboard = clipboard; }
 
 export function configurePersonalRelay(fetchCredentials, configured) {
   getPersonalRelay = configured ? fetchCredentials : undefined;
@@ -133,7 +137,7 @@ function end(message, error = false) {
   session.abort.abort();
   session = undefined;
   video.srcObject = null;
-  if (document.fullscreenElement === screen) document.exitFullscreen().catch(() => {});
+  if (document.fullscreenElement === sessionPanel) document.exitFullscreen().catch(() => {});
   $('session').hidden = true;
   screen.hidden = false;
   $('connect-panel').hidden = false;
@@ -144,8 +148,9 @@ function end(message, error = false) {
   status('status', message, error);
 }
 
-function bindInput(channel, abort) {
-  let pendingMove, frame;
+function bindInput(channel, pointerChannel, shortcuts, abort) {
+  let pendingMove, frame, settleTimer;
+  let epoch = 0, sequence = 0;
   const listeners = [];
   function listen(target, name, handler, options) {
     target.addEventListener(name, handler, options);
@@ -155,6 +160,11 @@ function bindInput(channel, abort) {
     if (channel.readyState === 'open' && channel.bufferedAmount < (urgent ? 128 : 16) * 1024) {
       channel.send(JSON.stringify(message));
     }
+  }
+  function pointerBarrier(message, urgent = true) {
+    discardMove();
+    clearTimeout(settleTimer);
+    send({...message, epoch:++epoch}, urgent);
   }
   function position(event, clamp = false) {
     if (!video.videoWidth || !video.videoHeight) return null;
@@ -171,7 +181,7 @@ function bindInput(channel, abort) {
     pendingMove = undefined;
     frame = undefined;
   }
-  const release = () => { discardMove(); send({kind: 'release'}, true); };
+  const release = () => { pointerBarrier({kind:'release'}); };
   for (const name of ['pointerdown', 'pointerup']) {
     listen(screen, name, event => {
       const down = name === 'pointerdown';
@@ -182,20 +192,29 @@ function bindInput(channel, abort) {
         screen.focus({preventScroll: true});
         if (screen.setPointerCapture && event.pointerId != null) screen.setPointerCapture(event.pointerId);
       }
-      discardMove();
-      send({kind: 'button', button: event.button, down, ...point}, true);
+      pointerBarrier({kind:'button', button:event.button, down, ...point});
     });
   }
   listen(screen, 'pointermove', event => {
-    if (document.activeElement !== screen) return;
+    if (document.activeElement !== screen && !document.hasFocus()) return;
     const point = position(event, !!event.buttons);
     if (!point) return;
-    pendingMove = {kind: 'move', ...point};
+    const pointer = pointerChannel();
+    const sample = !event.buttons && pointer?.readyState === 'open' ? {...point, epoch, sequence:++sequence} : undefined;
+    clearTimeout(settleTimer);
+    // Keep the final hover even when a render frame or the fast packet is lost.
+    if (sample) settleTimer = setTimeout(() => send({kind:'hover', ...sample}), 85);
+    pendingMove = {point, sample};
     if (frame === undefined) frame = requestAnimationFrame(() => {
-      if (pendingMove) send(pendingMove);
+      const move = pendingMove;
       discardMove();
+      if (!move) return;
+      if (move.sample && pointer?.readyState === 'open') {
+        if (pointer.bufferedAmount < 1024) pointer.send(JSON.stringify(move.sample));
+      } else send({kind:'move', ...move.point});
     });
   });
+  listen(screen, 'pointerleave', () => { discardMove(); clearTimeout(settleTimer); });
   listen(screen, 'pointercancel', release);
   listen(screen, 'contextmenu', event => event.preventDefault());
   listen(screen, 'wheel', event => {
@@ -204,7 +223,7 @@ function bindInput(channel, abort) {
     event.preventDefault();
     const factor = event.deltaMode === 0 ? 2 : 120;
     const bound = delta => Math.max(-960, Math.min(960, Math.round(delta * factor)));
-    send({kind: 'wheel', wheel: -bound(event.deltaY), pan: bound(event.deltaX), ...point});
+    pointerBarrier({kind:'wheel', wheel:-bound(event.deltaY), pan:bound(event.deltaX), ...point});
   }, {passive: false});
   for (const name of ['keydown', 'keyup']) {
     listen(screen, name, event => {
@@ -228,6 +247,18 @@ function bindInput(channel, abort) {
   });
   $('input-tip').hidden = false;
   $('text-form').hidden = false;
+  if (shortcuts) {
+    const menu = $('remote-shortcuts');
+    menu.hidden = false;
+    for (const button of menu.querySelectorAll('button[data-shortcut]')) {
+      listen(button, 'click', () => {
+        send({kind:'shortcut', code:button.dataset.shortcut}, true);
+        menu.open = false;
+        screen.focus({preventScroll:true});
+      });
+    }
+    abort.addEventListener('abort', () => { menu.open = false; menu.hidden = true; }, {once:true});
+  }
 }
 
 function watchStats(peer, abort) {
@@ -293,7 +324,7 @@ async function connect(event) {
     if (abort.signal.aborted) { if (manual) signal.finish(); return; }
     const nonce = base64(crypto.getRandomValues(new Uint8Array(16)));
     const proof = kind === 'pair' && signPairedDevice ? await signPairedDevice({invitation, nonce, phase: 'request'}) : undefined;
-    await signal.send('request', {version: 1, nonce, proof});
+    await signal.send('request', {version:1, nonce, proof, features:{pointer:true, fileBatch:true, shortcuts:true}});
     $('key').value = '';
     updateRemember();
     status('status', `等待对方接入。首次连接请与对方核对确认码 ${confirmationCode(nonce)}。`);
@@ -309,7 +340,7 @@ async function connect(event) {
     $('screen-tip').hidden = false;
     $('screen-tip').textContent = '正在等待共享画面';
     $('play-video').hidden = true;
-    $('fullscreen').hidden = !screen.requestFullscreen;
+    $('fullscreen').hidden = !sessionPanel.requestFullscreen;
     $('input-tip').hidden = true;
     $('text-form').hidden = true;
     $('mute').hidden = true;
@@ -318,7 +349,10 @@ async function connect(event) {
     video.muted = true;
     const tracks = new MediaStream();
     video.srcObject = tracks;
-    peer.ontrack = ({track}) => {
+    peer.ontrack = ({track, receiver}) => {
+      if (track.kind === 'video' && receiver && 'jitterBufferTarget' in receiver) {
+        try { receiver.jitterBufferTarget = 0; } catch { /* Use the browser's default on older runtimes. */ }
+      }
       tracks.addTrack(track);
       if (track.kind === 'audio') {
         $('mute').hidden = false;
@@ -326,13 +360,20 @@ async function connect(event) {
       }
     };
     const opened = new Set();
+    let pointer, filesOpened = false;
     peer.ondatachannel = ({channel}) => {
       if (opened.has(channel.label)) return channel.close();
       opened.add(channel.label);
-      if (channel.label === 'files-v1') fileChannel(channel, abort.signal);
+      if (channel.label === 'files-v1' || channel.label === 'files-v2') {
+        if (filesOpened) return channel.close();
+        filesOpened = true;
+        fileChannel(channel, abort.signal, fileClipboard);
+      }
+      else if (channel.label === 'pointer-v1') pointer = channel;
       else if (channel.label === 'input-v1') {
-        if (channel.readyState === 'open') bindInput(channel, abort.signal);
-        else channel.onopen = () => bindInput(channel, abort.signal);
+        const bind = () => bindInput(channel, () => pointer, offer.shortcuts === true, abort.signal);
+        if (channel.readyState === 'open') bind();
+        else channel.onopen = bind;
       }
       else if (channel.label === 'session-v1') channel.onclose = () => { if (!abort.signal.aborted) end('共享方已结束会话。'); };
       else channel.close();
@@ -423,7 +464,11 @@ $('reveal').onclick = () => {
   $('reveal').ariaLabel = `${$('reveal').textContent}密钥`;
 };
 $('cancel').onclick = $('disconnect').onclick = () => end('会话已结束。');
-$('fullscreen').onclick = () => screen.requestFullscreen().catch(() => status('session-status', '此环境无法进入全屏。'));
+$('fullscreen').onclick = () => {
+  const change = document.fullscreenElement === sessionPanel ? document.exitFullscreen() : sessionPanel.requestFullscreen();
+  change.then(() => screen.focus({preventScroll:true})).catch(() => status('session-status', '此环境无法切换全屏。'));
+};
+document.addEventListener('fullscreenchange', () => { $('fullscreen').textContent = document.fullscreenElement === sessionPanel ? '退出全屏' : '全屏'; });
 $('mute').onclick = () => { video.muted = !video.muted; $('mute').textContent = video.muted ? '打开声音' : '静音'; };
 function playVideo() {
   const stream = video.srcObject;

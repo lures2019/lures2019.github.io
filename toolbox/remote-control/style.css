@@ -494,6 +494,7 @@ kbd {
 }
 
 .toolbar {
+  position:relative;
   color:#e8efff;
   background:#17233b;
   border-radius:14px 14px 0 0;
@@ -539,13 +540,87 @@ kbd {
   top:calc(50% + 1.65rem);
 }
 
-.screen:fullscreen {
+.session:fullscreen {
+  display:flex;
+  flex-direction:column;
+  margin:0;
+  background:#0c1427;
+}
+
+.session:fullscreen .screen {
+  flex:1;
+  min-height:0;
   border-radius:0;
 }
 
-.screen:fullscreen video {
+.session:fullscreen video {
+  position:absolute;
   width:100%;
   height:100%;
+}
+
+.session:fullscreen #input-tip,.session:fullscreen .text-form {
+  display:none;
+}
+
+.shortcuts {
+  margin:0;
+  padding:0;
+  border:0;
+}
+
+.shortcuts summary {
+  padding:.45rem .65rem;
+  border-radius:8px;
+  background:#f6f8fd;
+  color:#17233b;
+}
+
+.shortcut-menu {
+  position:absolute;
+  inset-inline-end:.7rem;
+  top:calc(100% + .35rem);
+  z-index:2;
+  width:min(18rem,80vw);
+  max-height:65vh;
+  overflow:auto;
+  display:grid;
+  gap:.4rem;
+  padding:.65rem;
+  border-radius:10px;
+  background:#fff;
+  color:#17233b;
+  box-shadow:0 10px 32px #0c142747;
+}
+
+.shortcut-menu button {
+  display:flex;
+  align-items:center;
+  justify-content:space-between;
+  gap:.6rem;
+  text-align:left;
+}
+
+.shortcut-menu p {
+  margin:.15rem .25rem;
+  color:var(--muted);
+  font-size:.85rem;
+}
+
+.file-paste-area {
+  margin:.65rem 0;
+  padding:.65rem .8rem;
+  border:1px dashed var(--line);
+  border-radius:9px;
+  font-size:.9rem;
+  color:var(--muted);
+}
+
+.file-downloads {
+  display:flex;
+  flex-wrap:wrap;
+  gap:.35rem .9rem;
+  overflow-wrap:anywhere;
 }
 
 .text-form {

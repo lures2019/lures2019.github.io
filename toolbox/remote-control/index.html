@@ -8,8 +8,8 @@
   <meta name="description" content="通过长期配对或一次性邀请连接 Windows 桌面。">
   <title>远桌 · 远程控制</title>
   <link rel="icon" href="./mark.svg" type="image/svg+xml">
-  <link rel="stylesheet" href="./style.css">
-  <script type="module" src="./app.mjs?v=private-turn1"></script>
+  <link rel="stylesheet" href="./style.css?v=input-clipboard1">
+  <script type="module" src="./app.mjs?v=input-clipboard1"></script>
 </head>
 <body>
   <header class="top"><div class="top-content"><a class="brand" href="./"><img src="./mark.svg" width="38" height="38" alt=""><span>远桌</span></a><span id="environment" class="environment">网页控制端</span><a class="back" id="win-guide" href="/toolbox/remote-control/windows/" hidden>Windows 下载与说明</a><a class="back" id="back" href="../" hidden>返回百宝箱</a></div></header>
@@ -105,7 +105,7 @@
             <button id="make-bookmark" type="button">生成设备链接</button>
             <div id="bookmark-output-row" hidden><label for="bookmark-output">可重复使用的设备链接</label><input id="bookmark-output" type="text" readonly><button id="copy-bookmark" type="button">复制设备链接</button></div>
           </details></div>
-        <div id="approval" hidden><h3>收到连接请求</h3><p>请与对方核对确认码 <strong id="confirm-code"></strong>，然后选择屏幕。</p><label class="check"><input id="allow-input" type="checkbox">允许鼠标与键盘控制</label><label class="check"><input id="allow-files" type="checkbox">允许传输文件</label><label class="check"><input id="allow-audio" type="checkbox">尝试共享系统音频</label><label class="check" id="trust-row" hidden><input id="trust-device" type="checkbox"><span id="trust-text">登记这台 Windows 控制端为信任设备</span></label><button id="approve" class="primary wide" type="button">同意并选择屏幕</button></div>
+        <div id="approval" hidden><h3>收到连接请求</h3><p>请与对方核对确认码 <strong id="confirm-code"></strong>，然后选择屏幕。</p><label class="check"><input id="allow-input" type="checkbox">允许鼠标与键盘控制</label><label class="check"><input id="allow-files" type="checkbox">允许文件传输与文件剪贴板</label><label class="check"><input id="allow-audio" type="checkbox">尝试共享系统音频</label><label class="check" id="trust-row" hidden><input id="trust-device" type="checkbox"><span id="trust-text">登记这台 Windows 控制端为信任设备</span></label><button id="approve" class="primary wide" type="button">同意并选择屏幕</button></div>
         <p id="unattended-banner" class="unattended-banner" role="status" hidden></p>
         <p class="status" id="share-status" role="status" aria-live="polite">准备共享</p>
         <button class="danger wide" id="end-share" type="button" hidden>停止共享 / 撤销邀请</button>
@@ -119,16 +119,33 @@
       <p id="manual-status" role="status" aria-live="polite"></p>
     </section>
     <section class="session" id="session" hidden>
-      <div class="toolbar"><span id="session-status" role="status">正在协商连接</span><span id="stats" class="stats"></span><div class="actions"><button id="mute" type="button" hidden>静音</button><button id="fullscreen" type="button" hidden>全屏</button><button id="disconnect" class="danger" type="button">结束会话</button></div></div>
+      <div class="toolbar"><span id="session-status" role="status">正在协商连接</span><span id="stats" class="stats"></span><div class="actions">
+        <details class="shortcuts" id="remote-shortcuts" hidden>
+          <summary>远程快捷键</summary>
+          <div class="shortcut-menu" aria-label="在被控电脑执行">
+            <button type="button" data-shortcut="task-view">任务视图 <kbd>Win+Tab</kbd></button>
+            <button type="button" data-shortcut="switch-window">切换窗口 <kbd>Alt+Tab</kbd></button>
+            <button type="button" data-shortcut="desktop">显示桌面 <kbd>Win+D</kbd></button>
+            <button type="button" data-shortcut="explorer">文件资源管理器 <kbd>Win+E</kbd></button>
+            <button type="button" data-shortcut="task-manager">任务管理器 <kbd>Ctrl+Shift+Esc</kbd></button>
+            <button type="button" data-shortcut="next-tab">下一标签页 <kbd>Ctrl+Tab</kbd></button>
+            <button type="button" data-shortcut="previous-tab">上一标签页 <kbd>Ctrl+Shift+Tab</kbd></button>
+            <p>便携版无法调用 Windows 安全屏幕（Ctrl+Alt+Delete）。</p>
+          </div>
+        </details>
+        <button id="mute" type="button" hidden>静音</button><button id="fullscreen" type="button" hidden>全屏</button><button id="disconnect" class="danger" type="button">结束会话</button>
+      </div></div>
       <div class="screen" id="screen" tabindex="0" aria-label="远程桌面"><video id="video" autoplay playsinline></video><span id="screen-tip">正在等待共享画面</span><button id="play-video" type="button" hidden>播放画面</button></div>
-      <p id="input-tip" hidden>点击画面后使用键鼠。浏览器或本机系统可能拦截部分快捷键。</p>
+      <p id="input-tip" hidden>鼠标移入画面可悬停，点击画面后可使用键盘。系统组合键可用「远程快捷键」发送。</p>
       <form id="text-form" class="text-form" hidden autocomplete="off"><label for="send-text">发送文字</label><input id="send-text" type="text" maxlength="1000" placeholder="可粘贴中文或其他文字"><button type="submit">输入到远程电脑</button></form>
     </section>
     <section class="panel transfers" id="files" hidden aria-labelledby="files-title">
-      <div class="row"><h2 id="files-title">文件传输</h2><button id="send-file" type="button">选择文件</button><input id="file-picker" type="file" hidden></div>
-      <p id="file-status" role="status">单个文件最多 128 MiB。</p><progress id="file-progress" max="1" value="0" hidden></progress>
-      <div class="actions" id="file-actions" hidden><button id="file-accept" type="button">接收</button><button id="file-decline" type="button">拒绝</button></div>
-      <a id="file-download" class="download" hidden>保存文件</a>
+      <div class="row"><h2 id="files-title">文件传输</h2><div class="actions"><button id="send-clipboard" type="button" hidden>发送剪贴板文件</button><button id="send-file" type="button">选择文件</button></div><input id="file-picker" type="file" hidden></div>
+      <div class="file-paste-area" id="file-paste-area" tabindex="0" aria-label="粘贴或拖入文件"></div>
+      <p id="file-status" role="status">每批最多 16 个文件，合计 128 MiB。</p><progress id="file-progress" max="1" value="0" hidden></progress>
+      <div class="actions" id="file-actions" hidden><button id="file-accept" type="button">接收</button><button id="file-accept-copy" type="button" hidden>接收并复制</button><button id="file-decline" type="button">拒绝</button></div>
+      <button id="file-copy" type="button" hidden>复制到本机剪贴板</button>
+      <div class="file-downloads" id="file-downloads"></div>
     </section>
     <noscript><p>请启用 JavaScript，并使用支持 WebRTC 的浏览器打开远桌。</p></noscript>
   </main>
