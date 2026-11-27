@@ -11,3 +11,18 @@ a{color:var(--green);text-underline-offset:.21em}button,input{font:inherit}butto
 footer{padding:19px 2px 27px;color:var(--muted);display:flex;justify-content:space-between;flex-wrap:wrap;gap:8px 16px;font-size:14px}
 dialog{width:min(470px,calc(100% - 35px));border:1px solid var(--line);border-radius:17px;padding:23px;color:var(--ink);box-shadow:0 20px 70px #0b241f40}dialog::backdrop{background:#0b241f70}dialog p{color:var(--muted);white-space:pre-line;overflow-wrap:anywhere}dialog ul{max-height:210px;overflow:auto;padding-left:22px;overflow-wrap:anywhere}.dialog-actions{display:flex;justify-content:end;gap:10px}
 @media(max-width:670px){.wrap{width:calc(100% - 28px)}.workspace{grid-template-columns:1fr}.hero{padding:26px 22px;margin-top:16px;min-height:200px}.hero-graphic{right:-65px;opacity:.26}.panel{min-height:0;padding:17px}.nav{min-height:55px}}
+
+.hero {
+  background: radial-gradient(ellipse at 84% 0%, #36634d, transparent 54%), #133b32;
+  border: 1px solid #315d4c;
+}
+.hero-graphic b { background: none; box-shadow: none }
+.hero-graphic img { filter: drop-shadow(0 8px 12px #071e1799); transform: rotate(-5deg) }
+.panel { box-shadow: 0 6px 22px #1f503609 }
+.drop:not(:disabled):hover { background: #e3f5e9 }
+.relay[open] { border-top: 1px solid var(--line); padding-top: 12px }
+@media (max-width: 670px) { .hero-graphic { opacity: .15 } }
+@media (prefers-contrast: more) { .hint, .eyebrow, .status { color: #214e39 } }
+
+
+.app-links { display:flex; flex-wrap:wrap; align-items:center; justify-content:flex-end; gap:8px 16px; }

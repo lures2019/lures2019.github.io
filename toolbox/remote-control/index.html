@@ -1,0 +1,96 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="referrer" content="no-referrer">
+  <meta http-equiv="Content-Security-Policy" content="default-src 'none'; script-src 'self'; style-src 'self'; connect-src 'self' https: http://127.0.0.1:* http://localhost:*; img-src 'self'; media-src 'self' blob:; object-src 'none'; base-uri 'none'; form-action 'none'">
+  <meta name="description" content="通过长期配对或一次性邀请连接 Windows 桌面。">
+  <title>远桌 · 远程控制</title>
+  <link rel="icon" href="./mark.svg" type="image/svg+xml">
+  <link rel="stylesheet" href="./style.css">
+  <script type="module" src="./app.mjs"></script>
+</head>
+<body>
+  <header class="top"><div class="top-content"><a class="brand" href="./"><img src="./mark.svg" width="38" height="38" alt=""><span>远桌</span></a><span id="environment" class="environment">网页控制端</span><a class="back" id="win-guide" href="/toolbox/remote-control/windows/" hidden>Windows 下载与说明</a><a class="back" id="back" href="../" hidden>返回百宝箱</a></div></header>
+  <main>
+    <section class="intro"><div><h1 id="intro-title">远程控制</h1><p id="intro-text">使用一次性邀请或长期配对码连接 Windows 电脑。</p></div><div class="hero-art" aria-hidden="true"><div class="orbit orbit-outer"></div><div class="orbit orbit-inner"></div><img src="./mark.svg" width="104" height="104" alt=""></div></section>
+    <nav class="modes" id="modes" aria-label="工作模式" hidden>
+      <button id="mode-control" type="button" aria-pressed="true">控制电脑</button>
+      <button id="mode-share" type="button" aria-pressed="false">共享本机</button>
+    </nav>
+    <div class="layout" id="layout">
+      <section class="panel" id="connect-panel" aria-labelledby="connect-title">
+        <h2 id="connect-title">建立连接</h2>
+        <div class="saved" id="saved-peer" hidden><div><strong>已配对的电脑</strong><span id="saved-address"></span></div><button id="saved-connect" type="button">连接</button><button class="quiet" id="forget-peer" type="button">移除</button></div>
+        <form id="connect" autocomplete="off">
+          <label for="endpoint">信令服务地址</label>
+          <input id="endpoint" type="text" inputmode="url" placeholder="https://relay.example.com" required spellcheck="false" autocapitalize="off" aria-describedby="endpoint-hint">
+          <p class="field-hint" id="endpoint-hint" hidden>这是本机测试地址。跨网时请填共享方提供的公网 HTTPS 信令地址。</p>
+          <label for="key">邀请或配对码</label>
+          <div class="secret"><input id="key" type="password" placeholder="RD1.… 或 RD2.…" required spellcheck="false" maxlength="70"><button id="reveal" class="quiet" type="button" aria-label="显示密钥">显示</button></div>
+          <label class="check remember" id="remember-row" hidden><input id="remember-peer" type="checkbox">连接后将配对码保存在此 Windows 账户</label>
+          <button class="primary wide" type="submit">发起连接</button>
+          <button class="subtle wide" id="cancel" type="button" hidden>取消连接</button>
+        </form>
+        <p class="status" id="status" role="status" aria-live="polite">等待连接</p>
+      </section>
+      <section class="panel support" id="support"><h2>连接前的三个步骤</h2>
+        <ol class="steps"><li>在被控电脑的 Windows 客户端中选择「共享本机」。</li><li>复制信令地址和密钥，在这里粘贴。</li><li>与对方核对六位确认码，由对方开始共享。</li></ol>
+        <details><summary>关于跨网连接</summary><p>一次性邀请使用树屋的免费公网配对服务。双方需要能通过 WebRTC 直连。校园网或公司网限制直连时，可以更换网络。长期配对支持自备信令服务。</p></details>
+      </section>
+      <section class="panel" id="share-panel" hidden aria-labelledby="share-title">
+        <h2 id="share-title">共享此电脑</h2>
+        <form id="share-form" autocomplete="off">
+          <fieldset class="share-kinds"><legend>接入方式</legend>
+            <label><input id="invite-mode" type="radio" name="share-kind" value="invite" checked><span><strong>一次性邀请</strong><small>适合临时协助 · 最长 2 小时</small></span></label>
+            <label><input id="pair-mode" type="radio" name="share-kind" value="pair"><span><strong>长期配对</strong><small>适合自己的常用电脑</small></span></label>
+          </fieldset>
+          <label for="share-endpoint">信令服务地址</label><input id="share-endpoint" type="text" inputmode="url" spellcheck="false" maxlength="300" aria-describedby="share-endpoint-hint">
+          <p class="field-hint" id="share-endpoint-hint" hidden>本机测试地址。连接另一台电脑时，请换用两端都能访问的公网 HTTPS 信令地址。</p>
+          <label for="quality">画质档位</label><select id="quality"><option value="efficient">节省带宽 · 720p / 30 FPS</option><option value="smooth" selected>清晰流畅 · 1080p / 60 FPS</option><option value="qhd">QHD · 2560 宽 / 60 FPS</option><option value="ultra">超高清 · 4K / 60 FPS</option><option value="max">极致细节 · 8K / 60 FPS</option></select>
+          <details id="pair-manage" hidden><summary>管理本机长期配对码</summary>
+            <p id="pair-info">首次开始长期等待时自动生成配对码。</p>
+            <p id="device-info">在首次 Windows 连接时，可以把对方登记为信任设备。</p>
+            <button id="untrust-device" class="danger" type="button" hidden>撤销信任</button>
+            <label for="pair-phrase">自定义口令（可选）</label><input id="pair-phrase" type="password" maxlength="64" placeholder="参与生成完整配对码" autocomplete="new-password">
+            <button id="reset-pair" type="button">生成配对码</button>
+            <div id="confirm-reset" class="actions" hidden><span>更换后，之前的配对码将失效。</span><button id="confirm-reset-yes" class="danger" type="button">确认更换</button><button id="confirm-reset-no" type="button">取消</button></div>
+          </details>
+          <div id="unattended-settings" hidden>
+            <label class="check"><input id="allow-unattended" type="checkbox">本次等待允许信任设备免确认控制</label>
+            <p class="field-hint">允许查看和操作当前 Windows 桌面。需要单显示器、桌面已解锁、电脑保持唤醒。</p>
+          </div>
+          <details id="network"><summary>信令认证与 STUN / TURN</summary>
+            <label for="create-key">信令建房口令</label><input id="create-key" type="password" maxlength="200" placeholder="信令管理员提供，未启用时留空">
+            <label for="stun">STUN 地址</label><input id="stun" type="text" value="stun:stun.cloudflare.com:3478" placeholder="stun:relay.example.com:3478" spellcheck="false" maxlength="240">
+            <label for="turn">TURN 地址</label><input id="turn" type="text" placeholder="turns:relay.example.com:5349" spellcheck="false" maxlength="240">
+            <label for="turn-user">TURN 用户名</label><input id="turn-user" type="text" spellcheck="false" maxlength="150">
+            <label for="turn-secret">TURN 密码</label><input id="turn-secret" type="password" maxlength="200">
+          </details>
+          <button class="primary wide" type="submit">生成一次性邀请</button>
+        </form>
+        <div id="invite" hidden><label id="invite-label" for="invite-key">一次性密钥 · 2 小时有效</label><div class="secret"><input id="invite-key" type="password" readonly><button id="reveal-invite" class="quiet" type="button">显示</button></div><div class="actions"><button id="copy" type="button">复制地址与密钥</button><button id="copy-link" type="button">复制邀请链接</button></div></div>
+        <div id="approval" hidden><h3>收到连接请求</h3><p>请与对方核对确认码 <strong id="confirm-code"></strong>，然后选择屏幕。</p><label class="check"><input id="allow-input" type="checkbox">允许鼠标与键盘控制</label><label class="check"><input id="allow-files" type="checkbox">允许传输文件</label><label class="check"><input id="allow-audio" type="checkbox">尝试共享系统音频</label><label class="check" id="trust-row" hidden><input id="trust-device" type="checkbox"><span id="trust-text">登记这台 Windows 控制端为信任设备</span></label><button id="approve" class="primary wide" type="button">同意并选择屏幕</button></div>
+        <p id="unattended-banner" class="unattended-banner" role="status" hidden></p>
+        <p class="status" id="share-status" role="status" aria-live="polite">准备共享</p>
+        <button class="danger wide" id="end-share" type="button" hidden>停止共享 / 撤销邀请</button>
+      </section>
+      <section class="panel support" id="share-support" hidden><h2>共享权限</h2><p>默认由本机确认连接。先登记你自己的 Windows 控制端，再开启免确认等待。</p><p id="hotkey-hint">按 <kbd>Ctrl</kbd> + <kbd>Alt</kbd> + <kbd>Shift</kbd> + <kbd>F12</kbd> 可在本机立即撤销共享。</p><p>共享端需保持应用运行、电脑处于唤醒状态并开启等待接入。</p></section>
+    </div>
+    <section class="session" id="session" hidden>
+      <div class="toolbar"><span id="session-status" role="status">正在协商连接</span><span id="stats" class="stats"></span><div class="actions"><button id="mute" type="button" hidden>静音</button><button id="fullscreen" type="button" hidden>全屏</button><button id="disconnect" class="danger" type="button">结束会话</button></div></div>
+      <div class="screen" id="screen" tabindex="0" aria-label="远程桌面"><video id="video" autoplay playsinline></video><span id="screen-tip">正在等待共享画面</span><button id="play-video" type="button" hidden>播放画面</button></div>
+      <p id="input-tip" hidden>点击画面后使用键鼠。浏览器或本机系统可能拦截部分快捷键。</p>
+      <form id="text-form" class="text-form" hidden autocomplete="off"><label for="send-text">发送文字</label><input id="send-text" type="text" maxlength="1000" placeholder="可粘贴中文或其他文字"><button type="submit">输入到远程电脑</button></form>
+    </section>
+    <section class="panel transfers" id="files" hidden aria-labelledby="files-title">
+      <div class="row"><h2 id="files-title">文件传输</h2><button id="send-file" type="button">选择文件</button><input id="file-picker" type="file" hidden></div>
+      <p id="file-status" role="status">单个文件最多 128 MiB。</p><progress id="file-progress" max="1" value="0" hidden></progress>
+      <div class="actions" id="file-actions" hidden><button id="file-accept" type="button">接收</button><button id="file-decline" type="button">拒绝</button></div>
+      <a id="file-download" class="download" hidden>保存文件</a>
+    </section>
+    <noscript><p>请启用 JavaScript，并使用支持 WebRTC 的浏览器打开远桌。</p></noscript>
+  </main>
+</body>
+</html>

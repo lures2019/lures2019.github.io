@@ -1,0 +1,148 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <meta name="referrer" content="no-referrer">
+  <meta name="color-scheme" content="dark">
+  <meta name="description" content="在松间创建在线自习室，同时共享多路屏幕，随时切换视角。">
+  <meta http-equiv="Content-Security-Policy" content="default-src 'none'; script-src 'self'; style-src 'self'; img-src 'self' data: blob:; media-src 'self' blob:; connect-src wss: ws://localhost:* ws://127.0.0.1:*; base-uri 'none'; object-src 'none'; form-action 'none'">
+  <title>松间 · 多人在线自习室</title>
+  <link rel="icon" href="./assets/mark.svg" type="image/svg+xml">
+  <link rel="stylesheet" href="./style.css">
+  <script type="module" src="./app.js"></script>
+</head>
+<body>
+  <header class="site-header" id="site-header">
+    <div class="site-nav">
+      <a class="brand" href="./" aria-label="松间首页">
+        <img src="./assets/mark.svg" alt="" width="39" height="39">
+        <span>松间<small>在线自习室</small></span>
+      </a>
+      <nav aria-label="主导航">
+        <a href="#workspace" class="nav-current">会议大厅</a>
+        <a href="#features">功能介绍</a><a id="back-to-tools" href="/toolbox/" hidden>返回百宝箱</a>
+      </nav>
+      <div class="nav-tools">
+        <a class="button ghost download" id="download" hidden><i data-i="download"></i> Windows 下载与说明</a>
+        <button class="avatar avatar-button" id="profile" title="编辑个人资料" aria-label="编辑个人资料"></button>
+      </div>
+    </div>
+  </header>
+  <main id="home">
+    <section class="hero" id="workspace">
+      <div class="hero-info">
+        <span class="eyebrow"><i data-i="layers"></i> 多路共享 · 自由切换</span>
+        <h1>在一起，<br><em>各自专注。</em></h1>
+        <p class="intro">最多 6 人同时自习或开会。<br class="wide-break">并排看屏幕、共用白板，也可以只开麦。</p>
+        <div class="entry">
+          <div class="create-row"><button id="create" class="button primary"><i data-i="video"></i> 发起会议</button><button id="open-demo" class="button quiet"><i data-i="play"></i> 体验演示</button></div>
+          <form id="join-form">
+            <label class="field code-field"><i data-i="key"></i><input id="meeting-code" aria-label="请输入会议码或链接" placeholder="输入会议码或邀请链接" autocapitalize="characters" autocomplete="off" spellcheck="false" required maxlength="300"></label>
+            <button type="submit" class="button outline" id="join">加入会议</button>
+          </form>
+          <p id="entry-error" role="status" class="entry-error" hidden></p>
+        </div>
+      </div>
+      <section class="preview-wrap" aria-label="多路共享预览">
+        <div class="preview">
+          <div class="preview-top">
+            <div class="preview-heading"><div class="preview-icon"><i data-i="layers"></i></div><div><strong>深夜自习室</strong><small>多屏共享预览</small></div></div>
+            <span class="preview-status"><b></b> 3 路共享</span>
+          </div>
+          <div class="preview-grid">
+            <button class="preview-tile tile-code" data-preview="code" aria-label="演示小林的代码屏幕">
+              <div class="mock-code"><div class="editor-top"><span></span><span></span><span></span><small>focus.ts</small></div><div class="lines"><p><b>1</b><span class="code-lavender">const</span> session = {</p><p><b>2</b>&nbsp; mode: <span class="code-green">'focus'</span>,</p><p><b>3</b>&nbsp; minutes: <span class="code-orange">25</span>,</p><p><b>4</b>&nbsp; teammates: <span class="code-orange">3</span></p><p><b>5</b>};</p><p><b>6</b></p><p><b>7</b><span class="code-lavender">start</span>(session);</p></div></div>
+              <span class="tile-caption"><i data-i="monitor"></i> 小林的屏幕</span><span class="tile-expand"><i data-i="expand"></i></span>
+            </button>
+            <button class="preview-tile tile-timer" data-preview="timer" aria-label="演示阿禾的专注计时屏幕">
+              <div class="mock-timer"><span>专注时间</span><strong>24:18</strong></div>
+              <span class="tile-caption"><i data-i="monitor"></i> 阿禾的屏幕</span><span class="tile-expand"><i data-i="expand"></i></span>
+            </button>
+            <button class="preview-tile tile-board" data-preview="board" aria-label="演示橘子的白板屏幕">
+              <div class="mock-board"><span class="note note-one">先拆问题</span><span class="note note-two">列关键点</span><span class="note note-three">复盘一下</span></div>
+              <span class="tile-caption"><i data-i="monitor"></i> 橘子的屏幕</span><span class="tile-expand"><i data-i="expand"></i></span>
+            </button>
+          </div>
+          <div class="preview-footer"><div class="preview-people" aria-hidden="true"><span class="mini one">林</span><span class="mini two">禾</span><span class="mini three">橘</span></div><span>点开一块屏幕，进入专注视图</span><i data-i="cursor"></i></div>
+        </div>
+      </section>
+    </section>
+    <section class="features" id="features" aria-label="功能介绍">
+      <article><div class="feature-icon violet"><i data-i="layers"></i></div><div><h2>多屏并行</h2><p>共享同时进行，一键切换想看的屏幕。</p></div></article>
+      <article><div class="feature-icon mint"><i data-i="pen"></i></div><div><h2>实时协作白板</h2><p>在同一张画布上写写画画，随时导出。</p></div></article>
+      <article><div class="feature-icon sky"><i data-i="link"></i></div><div><h2>链接直达</h2><p>会议码或邀请链接，网页与桌面端互通。</p></div></article>
+    </section>
+    <footer class="site-footer"><span>松间 · 在线自习室</span><a id="toolbox" href="/toolbox/" hidden>返回百宝箱</a><button class="text-button" id="show-network"><i data-i="settings"></i> 连接设置</button></footer>
+  </main>
+  <main id="meeting" hidden class="meeting">
+    <header class="room-top">
+      <div class="room-brand"><img src="./assets/mark.svg" alt="" width="38" height="38"><div><h1 id="room-title">松间会议</h1><button id="copy-code" class="code-copy" title="复制会议码"><span id="room-code"></span><i data-i="copy"></i></button></div></div>
+      <div class="room-top-actions"><span id="room-clock"></span><button id="invite" class="button outline"><i data-i="link"></i> 邀请参会</button><button class="avatar avatar-button" id="room-profile" title="编辑个人资料" aria-label="编辑个人资料"></button></div>
+    </header>
+    <div class="room-layout">
+      <section class="workspace">
+        <div class="view-nav"><div role="group" aria-label="工作区"><button id="view-screens" aria-pressed="true"><i data-i="layers"></i> 屏幕与视频</button><button id="view-board" aria-pressed="false"><i data-i="pen"></i> 协作白板</button></div><span id="screen-count"></span></div>
+        <div id="screens">
+          <section id="focus-view" class="focus-view" hidden></section>
+          <div id="screen-grid" class="screen-grid"></div>
+          <div id="empty" class="empty"><div class="empty-icon"><i data-i="monitor"></i></div><h2>这里还没有共享画面</h2><p>开启屏幕共享或摄像头，邀请伙伴一起加入。</p><button id="empty-share" class="button primary"><i data-i="monitor"></i> 共享屏幕</button></div>
+        </div>
+        <section id="board" hidden>
+          <div class="board-tools"><div id="palette" role="group" aria-label="画笔颜色"></div><select id="brush-width" aria-label="画笔粗细"><option value="2">细笔</option><option value="4" selected>中笔</option><option value="8">粗笔</option></select><button class="button quiet" id="eraser"><i data-i="eraser"></i> 橡皮</button><button class="button quiet" id="clear-board"><i data-i="trash"></i> 清空</button><button class="button quiet" id="download-board"><i data-i="download"></i> 导出</button></div>
+          <canvas id="canvas" width="1200" height="750" aria-label="协作白板"></canvas>
+        </section>
+      </section>
+      <aside class="room-side" id="room-side" aria-label="成员与聊天">
+        <div class="side-tabs" role="group" aria-label="右侧面板"><button id="tab-people" aria-pressed="true"><i data-i="users"></i> 成员 <span id="people-count"></span></button><button id="tab-chat" aria-pressed="false"><i data-i="chat"></i> 聊天<span id="chat-count" hidden></span></button></div>
+        <section class="side-panel" id="people"><ul id="people-list"></ul><button id="lock" class="button outline" hidden><i data-i="lock"></i> <span>锁定会议</span></button></section>
+        <section id="chat" class="side-panel" hidden><ol id="chat-list" role="log" aria-live="polite"></ol><form id="chat-form"><label class="field"><input id="chat-input" aria-label="聊天消息" maxlength="480" autocomplete="off" placeholder="发送消息"></label><button class="button primary icon-only" aria-label="发送" type="submit"><i data-i="send"></i></button></form></section>
+      </aside>
+    </div>
+    <footer class="room-bar">
+      <div class="media-controls">
+        <button id="mic" class="control" aria-pressed="false"><i data-i="mic-off"></i><span>打开麦克风</span></button>
+        <button id="camera" class="control" aria-pressed="false"><i data-i="camera-off"></i><span>打开摄像头</span></button>
+        <button id="share" class="control share-control" aria-pressed="false"><i data-i="monitor"></i><span>共享屏幕</span></button>
+        <button id="toggle-side" class="control" aria-pressed="true"><i data-i="users"></i><span>成员与聊天</span></button>
+      </div>
+      <button class="button danger" id="leave"><i data-i="leave"></i> 离开</button>
+    </footer>
+  </main>
+  <dialog id="profile-dialog">
+    <form id="profile-form">
+      <header class="dialog-head"><h2>个人资料</h2><button type="button" data-close class="button icon-only quiet" aria-label="关闭"><i data-i="x"></i></button></header>
+      <div class="avatar-options"><span class="avatar avatar-large" id="avatar-preview"></span><div><label for="avatar-file" class="button outline">上传头像</label><input type="file" id="avatar-file" accept="image/jpeg,image/png,image/webp,image/gif" hidden><button id="avatar-reset" class="text-button" type="button">恢复默认</button></div></div>
+      <div class="tones" id="tones" aria-label="头像主题色"></div>
+      <label class="dialog-label" for="display-name">显示名称</label><input id="display-name" class="field" maxlength="20" required>
+      <button type="submit" class="button primary save">保存资料</button>
+    </form>
+  </dialog>
+  <dialog id="network-dialog">
+    <form id="network-form">
+      <header class="dialog-head"><h2>连接设置</h2><button type="button" data-close class="button icon-only quiet" aria-label="关闭"><i data-i="x"></i></button></header>
+      <label class="dialog-label" for="signal-url">会议服务地址</label><input id="signal-url" class="field" placeholder="wss://你的会议服务" autocomplete="off" spellcheck="false">
+      <p class="dialog-note">留空使用此版本预设的服务。自建服务可填写 WSS 地址，本机调试也可填写 WS 回环地址。</p>
+      <p id="network-error" class="entry-error" role="status" hidden></p>
+      <button type="submit" class="button primary save">保存设置</button>
+    </form>
+  </dialog>
+  <dialog id="invite-dialog">
+    <div class="dialog-head"><h2>邀请参会</h2><button type="button" data-close class="button icon-only quiet" aria-label="关闭"><i data-i="x"></i></button></div>
+    <p class="dialog-note">拥有会议码或邀请链接的人可在会议开放时加入。</p>
+    <div class="invite-code" id="invite-code"></div>
+    <div class="dialog-actions"><button class="button outline" id="copy-invite-code"><i data-i="copy"></i> 复制会议码</button><button class="button primary" id="copy-link"><i data-i="link"></i> 复制邀请链接</button></div>
+    <input id="invite-url" class="field" aria-label="邀请链接" readonly hidden>
+  </dialog>
+  <dialog id="leave-dialog">
+    <div class="dialog-head"><h2>离开会议</h2><button type="button" data-close class="button icon-only quiet" aria-label="关闭"><i data-i="x"></i></button></div>
+    <p class="dialog-note">离开后会关闭你的麦克风、摄像头和屏幕共享。</p>
+    <div class="dialog-actions"><button id="end-room" class="button danger" hidden>结束会议</button><button id="leave-room" class="button outline">仅离开</button></div>
+  </dialog>
+  <dialog id="source-dialog">
+    <div class="dialog-head"><h2>选择共享内容</h2><button type="button" data-close class="button icon-only quiet" aria-label="取消"><i data-i="x"></i></button></div>
+    <div id="source-list" class="source-list"></div>
+  </dialog>
+  <div id="toast" class="toast" role="status" hidden></div>
+</body>
+</html>

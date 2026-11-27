@@ -6,7 +6,7 @@
 <meta name="referrer" content="no-referrer">
 <meta name="description" content="树屋百宝箱的文件传输工具。用同一个配对密钥在两台设备间传输原始文件。">
 <title>树屋快传 · 百宝箱</title>
-<link rel="icon" href="data:,">
+<link rel="icon" href="./mark.svg" type="image/svg+xml">
 <link rel="stylesheet" href="./style.css">
 <script defer src="./vendor/peerjs.min.js"></script>
 <script defer src="./vendor/sha256.umd.min.js"></script>
@@ -14,14 +14,14 @@
 </head>
 <body>
 <header class="bar"><div class="wrap nav">
-<a class="brand" href="/toolbox/"><span class="mark" aria-hidden="true">⇄</span><span>树屋快传</span></a>
-<a class="nav-link" href="/toolbox/">返回百宝箱</a>
+<a class="brand" href="/toolbox/"><img src="./mark.svg" width="36" height="36" alt=""><span>树屋快传</span></a>
+<nav class="app-links" aria-label="快传导航"><a class="nav-link" href="/toolbox/tree-transfer/windows/">Windows 下载与说明</a><a class="nav-link" href="/toolbox/">返回百宝箱</a></nav>
 </div></header>
 <main class="wrap">
 <section class="hero"><span class="eyebrow">在线文件传输</span>
 <h1>两台设备，<br>一个配对密钥。</h1>
-<p>生成密钥并发给对方。配对后，双方都能发送文件。</p>
-<div class="hero-graphic" aria-hidden="true"><i></i><i></i><b>⇄</b></div></section>
+<p>在一端生成密钥，另一端粘贴连接。对方确认后，文件开始传输。</p>
+<div class="hero-graphic" aria-hidden="true"><i></i><i></i><b><img src="./mark.svg" width="88" height="88" alt=""></b></div></section>
 <div class="workspace">
 <section class="panel">
 <header class="panel-head"><div><span class="eyebrow">配对</span><h2>连接设备</h2></div><span id="status" class="status" role="status">未连接</span></header>
