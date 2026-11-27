@@ -7,10 +7,10 @@
 <meta name="description" content="树屋百宝箱的文件传输工具。用同一个配对密钥在两台设备间传输原始文件。">
 <title>树屋快传 · 百宝箱</title>
 <link rel="icon" href="./mark.svg" type="image/svg+xml">
-<link rel="stylesheet" href="./style.css">
+<link rel="stylesheet" href="./style.css?v=4">
 <script defer src="./vendor/peerjs.min.js"></script>
 <script defer src="./vendor/sha256.umd.min.js"></script>
-<script type="module" src="./app.mjs?v=3"></script>
+<script type="module" src="./app.mjs?v=4"></script>
 </head>
 <body>
 <header class="bar"><div class="wrap nav">
@@ -20,16 +20,18 @@
 <main class="wrap">
 <section class="hero"><span class="eyebrow">在线文件传输</span>
 <h1>两台设备，<br>一个配对密钥。</h1>
-<p>在一端生成密钥，另一端粘贴连接。对方确认后，文件开始传输。</p>
+<p>双方输入同一密钥，即可配对并互传文件。</p>
 <div class="hero-graphic" aria-hidden="true"><i></i><i></i><b><img src="./mark.svg" width="88" height="88" alt=""></b></div></section>
 <div class="workspace">
 <section class="panel">
 <header class="panel-head"><div><span class="eyebrow">配对</span><h2>连接设备</h2></div><span id="status" class="status" role="status">未连接</span></header>
-<div class="pair-actions" id="pair-actions">
-<button class="primary" id="create">生成配对密钥</button>
-<form id="join-form"><label for="join-code">已有密钥</label><div class="input-row"><input id="join-code" placeholder="粘贴对方的配对密钥" spellcheck="false" autocomplete="off" required><button>连接</button></div></form>
-</div>
-<div class="pair-actions" id="waiting" hidden><label for="own-code">配对密钥</label>
+<form class="pair-actions" id="pair-form" autocomplete="off">
+<div class="key-field"><label for="pair-code">配对密钥</label>
+<div class="input-row"><input id="pair-code" type="password" placeholder="输入自定义密钥，或粘贴随机密钥" spellcheck="false" autocapitalize="none" autocomplete="off" maxlength="128" aria-describedby="key-help" required><button id="show-code" type="button" aria-controls="pair-code" aria-pressed="false">显示</button></div></div>
+<p class="hint" id="key-help">自定义密钥为 8–64 个字符，支持中文。双方输入一样的内容，再点击「开始配对」。</p>
+<div class="pair-buttons"><button class="primary" type="submit">开始配对</button><button id="create" type="button">随机生成密钥</button></div>
+</form>
+<div class="pair-actions" id="waiting" hidden><label id="own-label" for="own-code">配对密钥</label>
 <div class="input-row"><input id="own-code" readonly aria-label="配对密钥"><button id="copy">复制密钥</button></div>
 <p class="hint" id="pair-note"></p><button class="quiet" id="disconnect">结束配对</button></div>
 <details class="relay"><summary>网络设置</summary>

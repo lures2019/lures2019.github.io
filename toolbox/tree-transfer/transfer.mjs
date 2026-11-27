@@ -11,11 +11,36 @@ function hex(bytes) {
   return Array.from(new Uint8Array(bytes), byte => byte.toString(16).padStart(2, '0')).join('');
 }
 
-async function identity(code) {
-  if (!/^ST1\.[0-9a-f]{32}$/.test(code)) throw new Error('配对密钥格式有误，请粘贴完整密钥。');
+export function readPairingCode(input) {
+  const code = input.trim().normalize('NFC');
+  if (code.startsWith('ST1.')) {
+    if (!/^ST1\.[0-9a-f]{32}$/.test(code)) throw new Error('随机密钥格式有误，请粘贴完整密钥。');
+    return {code,custom:false};
+  }
+  const length = Array.from(code).length;
+  if (length < 8 || length > 64 || /\p{Cc}/u.test(code)) {
+    throw new Error('请输入 8–64 个字符的自定义密钥，或粘贴完整的随机密钥。');
+  }
+  return {code,custom:true};
+}
+
+const hmac = {name:'HMAC', hash:'SHA-256'};
+
+async function identity({code,custom}) {
+  if (custom) {
+    // The room identifier and the channel proof key use separate derivations.
+    const password = await crypto.subtle.importKey('raw',encoder.encode(code),'PBKDF2',false,['deriveKey']);
+    const root = await crypto.subtle.deriveKey({
+      name:'PBKDF2', hash:'SHA-256', iterations:600000, salt:encoder.encode('TreeTransfer/1 custom pairing'),
+    },password,{...hmac,length:256},false,['sign']);
+    const [room,proof] = await Promise.all(['room','proof'].map(label =>
+      crypto.subtle.sign('HMAC',root,encoder.encode(label))));
+    const key = await crypto.subtle.importKey('raw',proof,hmac,false,['sign','verify']);
+    return {id:'tree-transfer-custom-' + hex(room).slice(0,40),key,custom};
+  }
   const id = hex(await crypto.subtle.digest('SHA-256', encoder.encode('TreeTransfer/1 room ' + code)));
-  const key = await crypto.subtle.importKey('raw', encoder.encode(code), {name:'HMAC', hash:'SHA-256'}, false, ['sign','verify']);
-  return {id: 'tree-transfer-' + id.slice(0, 40), key};
+  const key = await crypto.subtle.importKey('raw', encoder.encode(code), hmac, false, ['sign','verify']);
+  return {id:'tree-transfer-' + id.slice(0,40),key,custom};
 }
 
 function fingerprint(description) {
@@ -41,39 +66,60 @@ export class Pair {
     this.backlog = 0;
   }
 
-  async start(code, host) {
-    this.host = host;
-    this.credentials = await identity(code);
+  async start(credential, generated) {
+    this.credentials = await identity(credential);
     if (!this.active) return;
+    this.openPeer(generated || credential.custom);
+  }
+
+  openPeer(host) {
+    this.host = host;
+    this.signalDown = false;
     const options = {debug: 0, ...this.config};
-    this.peer = host ? new Peer(this.credentials.id, options) : new Peer(options);
+    const peer = host ? new Peer(this.credentials.id, options) : new Peer(options);
+    this.peer = peer;
+    const current = () => this.active && this.peer === peer;
+    clearTimeout(this.connectTimer);
     this.connectTimer = setTimeout(() => this.fail(new Error('无法连接信令服务，请检查网络后重试。')), 25000);
-    this.peer.on('open', () => {
+    peer.on('open', () => {
+      if (!current()) return;
       clearTimeout(this.connectTimer);
       this.signalDown = false;
-      if (!this.active || this.channel) return;
+      if (this.channel) return;
       if (host) this.ui.status('等待对方');
-      else this.attach(this.peer.connect(this.credentials.id, {serialization:'raw', reliable:true}));
+      else {
+        try { this.attach(peer.connect(this.credentials.id, {serialization:'raw', reliable:true})); }
+        catch (error) { this.fail(error); }
+      }
     });
-    this.peer.on('connection', channel => {
-      if (!host || this.channel) channel.close();
+    peer.on('connection', channel => {
+      if (!current() || !host || this.channel) channel.close();
       else this.attach(channel);
     });
-    this.peer.on('disconnected', () => {
-      if (!this.active) return;
+    peer.on('disconnected', () => {
+      if (!current()) return;
       this.signalDown = true;
       if (!this.channel) this.ui.status('信令重连中');
       clearTimeout(this.reconnectTimer);
       this.reconnectTimer = setTimeout(() => {
-        if (this.active && this.peer.disconnected && !this.peer.destroyed) this.peer.reconnect();
+        if (current() && peer.disconnected && !peer.destroyed) peer.reconnect();
       }, 2000);
     });
-    this.peer.on('error', error => {
+    peer.on('error', error => {
+      if (!current()) return;
+      if (error.type === 'unavailable-id' && this.credentials.custom && host && !this.channel) {
+        this.peer = null;
+        peer.destroy();
+        this.ui.status('正在连接');
+        try { this.openPeer(false); }
+        catch (failure) { this.fail(failure); }
+        return;
+      }
       if (this.authenticated && ['network', 'disconnected', 'server-error', 'socket-error', 'socket-closed'].includes(error.type)) return;
       if (host && this.signalDown && ['network','socket-error','socket-closed'].includes(error.type) && !this.peer.destroyed) return;
       const explanations = {
         'peer-unavailable':'找不到对方。请确认密钥正确，并确认对方页面仍在等待。',
-        'unavailable-id':'密钥房间已在使用，请重新生成密钥。',
+        'unavailable-id':'这组密钥正在使用，请换一组密钥。',
         'network':'无法连接信令服务，请检查网络后重试。',
         'socket-error':'无法连接信令服务，请检查网络后重试。',
         'socket-closed':'信令连接已关闭，请稍后重试。',

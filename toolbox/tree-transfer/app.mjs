@@ -1,4 +1,4 @@
-import {Pair, invite} from './transfer.mjs?v=2';
+import {Pair, invite, readPairingCode} from './transfer.mjs?v=4';
 import {peerOptions} from './config.mjs';
 import {listDownloads, openDownloadFolder, stageDownload, supportsLocalDownloads} from './downloads.mjs';
 
@@ -195,21 +195,29 @@ const ui = {
   },
 };
 
-function showPair(active, code = '') {
-  $('pair-actions').hidden = active;
+function showPair(active, credential = {}) {
+  const {code = '',custom = false} = credential;
+  $('pair-form').hidden = active;
   $('waiting').hidden = !active;
+  $('own-code').type = custom ? 'password' : 'text';
   $('own-code').value = code;
+  $('own-label').textContent = custom ? '自定义密钥' : '随机密钥';
   for (const id of ['turn-url','turn-user','turn-pass']) $(id).disabled = active;
-  $('pair-note').textContent = active ? '只将密钥分享给你要配对的人。等待期间请保持页面打开。' : '';
+  $('pair-note').textContent = !active ? '' : custom ?
+    '请保持页面打开。若双方都在等待，请核对密钥和大小写。' :
+    '请让对方粘贴这组密钥并点击「开始配对」。';
   ui.status(active ? '正在连接' : '未连接');
 }
 
-async function connect(code,host) {
+async function connect(input,generated) {
   if (pair) return;
   if (!window.isSecureContext || !window.RTCPeerConnection || !window.Peer || !window.hashwasm) {
     error('当前浏览器无法启动传输，请在 HTTPS 下使用较新的浏览器。');
     return;
   }
+  let code;
+  try { code = readPairingCode(input); }
+  catch (err) { error(err.message); return; }
   const iceServers = [...peerOptions.config.iceServers];
   const relay = $('turn-url').value.trim();
   if (relay) {
@@ -222,13 +230,20 @@ async function connect(code,host) {
   const next = new Pair(ui, {...peerOptions, config:{...peerOptions.config, iceServers}});
   pair = next;
   showPair(true,code);
-  try { await next.start(code,host); }
+  try { await next.start(code,generated); }
   catch (err) { next.fail(err); }
 }
 $('create').onclick = () => void connect(invite(),true);
-$('join-form').onsubmit = event => {
+$('pair-form').onsubmit = event => {
   event.preventDefault();
-  void connect($('join-code').value.trim(),false);
+  void connect($('pair-code').value,false);
+};
+$('show-code').onclick = () => {
+  const input = $('pair-code');
+  const visible = input.type === 'password';
+  input.type = visible ? 'text' : 'password';
+  $('show-code').textContent = visible ? '隐藏' : '显示';
+  $('show-code').setAttribute('aria-pressed',String(visible));
 };
 $('disconnect').onclick = () => {
   pair?.stop();
@@ -239,7 +254,7 @@ $('disconnect').onclick = () => {
 };
 $('copy').onclick = async () => {
   try { await navigator.clipboard.writeText($('own-code').value); $('pair-note').textContent = '密钥已复制。'; }
-  catch { $('own-code').select(); }
+  catch { $('own-code').type = 'text'; $('own-code').select(); }
 };
 $('folder').onclick = async () => {
   try { directory = await window.showDirectoryPicker({mode:'readwrite'}); showStorage(); }
