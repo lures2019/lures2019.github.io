@@ -1,4 +1,4 @@
-import {escape as e, normalized as norm, safeLink, clock} from './core.js?v=1.2.0'
+import {escape as e, normalized as norm, safeLink, clock} from './core.js?v=1.3.0'
 
 export const boards = {
   cet4:['四级 CET-4','短篇新闻、长对话和听力篇章'],
@@ -123,7 +123,7 @@ export function planPanel(board, plan) {
     '<p class="muted">建议用 15 分钟。先盲听做题，再重听定位句，最后把 2 个在原句里出现的词或短语加入生词本。</p><div class="actions">'+
     linkTo('开始本次专项','#exam-paper/'+encodeURIComponent(plan.paper.id),'primary')+linkTo('切换考试','#exam')+'</div></section>'
 }
-export function paperView(paper,{result,draft,favorite,paused,cueRows}) {
+export function paperView(paper,{result,draft,favorite,paused,cueRows,canExport,markerControls}) {
   const group=sectionName(paper.board,paper.group)
   const numbers=paperQuestions(paper)
   if (!paper) return ''
@@ -132,7 +132,7 @@ export function paperView(paper,{result,draft,favorite,paused,cueRows}) {
   const playback='<div class="actions">'+controls('toggle',paused?'播放音频':'暂停','id="detail-play"','primary')+
     (result && paper.cues?.length ? linkTo('在精听播放器打开','#episode/'+encodeURIComponent(paper.id)):'')+
     controls('exam-favorite',favorite?'已收藏':'收藏','data-key="'+e(paper.id)+'" aria-pressed="'+favorite+'"','quiet')+
-    (result ? controls('exam-retake','重新答题'):'')+'</div>'
+    (result ? controls('exam-retake','重新答题'):'') + (canExport ? controls('transcript-export','导出听力原文') : '')+'</div>'
   const fields=paper.questions.map((q,i)=>{
     const user=result?.answered[i] ?? draft[i] ?? ''
     const marked=result?.correct[i]
@@ -158,6 +158,6 @@ export function paperView(paper,{result,draft,favorite,paused,cueRows}) {
       controls('exam-word','收藏语境词','data-index="'+term.cue+'" data-word="'+e(term.term)+'" data-meaning="'+e(term.meaning)+'"')+'</div></div>'
   }).join('') : '<p class="muted">可以从已导入的字幕中点击生词，保存原句和释义。</p>'
   return title+'<div class="exam-layout">'+form+'<aside class="stack">'+ (result || !paper.questions.length ? '<section class="panel stack"><h2>语境词汇</h2>'+vocab+'</section>'+
-    (cueRows?'<section class="panel stack"><h2>双语原文</h2><div class="transcript" id="transcript">'+cueRows+'</div></section>':'') :
+    (cueRows?'<section class="panel stack"><h2>双语原文</h2>'+markerControls+'<div class="transcript" id="transcript">'+cueRows+'</div></section>':'') :
     '<section class="panel stack"><h2>交卷后复盘</h2><p class="muted">查看做错的题、定位原句和语境里的常考表达。</p></section>') + '</aside></div>'
 }

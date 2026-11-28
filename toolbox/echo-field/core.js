@@ -66,3 +66,11 @@ export function listeningBlanks(sentence, mode) {
   const positions = new Map(selected.map((token,index) => [token.index,index]))
   return {answers, tokens:tokens.map((text,index) => ({text, blank:positions.get(index)}))}
 }
+export function wordTokens(sentence) {
+  let start = 0
+  return String(sentence || '').split(/([a-zA-Z]+(?:['’\-][a-zA-Z]+)*)/g).map((text,index) => {
+    const token = {text,start,word:index % 2 === 1}
+    start += text.length
+    return token
+  })
+}

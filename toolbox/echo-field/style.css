@@ -181,3 +181,22 @@ dialog::backdrop{background:#14281f85}
 @media(max-width:1120px){.exam-grid{grid-template-columns:repeat(2,minmax(0,1fr))}}
 @media(max-width:770px){.exam-layout{grid-template-columns:minmax(0,1fr)}}
 @media(max-width:500px){.exam-grid{grid-template-columns:minmax(0,1fr)}.exam-progress{flex-wrap:wrap}}
+.export-options label{font-size:14px;color:var(--muted);display:inline-flex;align-items:center;gap:5px}
+.export-selection-head{display:flex;align-items:center;justify-content:space-between;gap:8px}.export-selection-head .btn{min-height:34px;padding:4px 8px}
+.export-lines{max-height:220px;overflow:auto;border:1px solid var(--line);border-radius:10px}
+.export-line{display:grid;grid-template-columns:22px 44px minmax(0,1fr);align-items:start;gap:7px;padding:7px 8px;border-bottom:1px solid var(--line);font-size:14px}
+.export-line:last-child{border-bottom:0}.export-line time{font-size:12px;color:var(--muted)}.export-line input{margin-top:4px}.export-line span{overflow-wrap:anywhere}
+@media print {
+  .transcript-print-head h1{font-size:25pt;margin:1mm 0 2mm;overflow-wrap:anywhere}
+  .transcript-print-byline{color:#4e6053;margin-bottom:1mm}
+  .transcript-print-cue{padding:2.6mm 0;border-bottom:1px solid #dce4dc;break-inside:avoid}
+  .transcript-print-cue.with-time{display:grid;grid-template-columns:12mm minmax(0,1fr);gap:3mm}
+  .transcript-print-cue time{font:9pt var(--sans);font-variant-numeric:tabular-nums;color:#466450;padding-top:1mm}
+  .transcript-print-en{font:11.5pt/1.4 var(--title);color:#213126;overflow-wrap:anywhere}
+  .transcript-print-zh{font:10pt/1.5 var(--sans);padding-top:.7mm;color:#485b4d;overflow-wrap:anywhere}
+  .transcript-print-zh.missing{color:#626e66}
+  .transcript-print-vocab{margin-top:6mm}.transcript-print-vocab h2{font:700 15pt var(--title);color:#1d4938;margin-bottom:2mm;break-after:avoid}
+  .transcript-print-vocab td:first-child{font-size:11pt}.transcript-word-example{font:10.5pt/1.35 var(--title)}.transcript-example-zh{color:#4e6053;font-size:9pt;margin-top:1mm}
+  mark.print-word-gold,mark.print-word-sage{color:#18261d;text-decoration:underline;text-decoration-color:#80661b;text-underline-offset:1px;padding:0 1px;border-radius:2px;print-color-adjust:exact;-webkit-print-color-adjust:exact}
+  mark.print-word-gold{background:#f7e7a7}mark.print-word-sage{background:#d8e8cf;text-decoration-color:#436347}
+}

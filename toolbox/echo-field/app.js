@@ -1,5 +1,6 @@
-import {escape as e, normalized as norm, clock, safeLink, localDay, dayOffset, parseTimed, pairTimed, wordScore, listeningBlanks} from './core.js?v=1.2.0'
-import {boards,sections,libraryView,paperView,gradePaper,nextExamPlan,planPanel} from './exam-ui.js?v=1.2.0'
+import {escape as e, normalized as norm, clock, safeLink, localDay, dayOffset, parseTimed, pairTimed, wordScore, listeningBlanks, wordTokens} from './core.js?v=1.3.0'
+import {boards,sections,libraryView,paperView,gradePaper,nextExamPlan,planPanel} from './exam-ui.js?v=1.3.0'
+import {highlightedVocabulary, transcriptHtml, transcriptText} from './transcript-export.js?v=1.3.0'
 
 const $ = id => document.getElementById(id)
 const page = $('page'), audio = $('audio'), modal = $('modal')
@@ -140,12 +141,8 @@ const savedWord = word => s.books.some(book => book.items.some(item => norm(item
 function cueRow(cue, i) {
   const words = Object.keys(current.vocab || {}).flatMap(phrase => norm(phrase).split(' '))
   const painted = s.highlights?.[current.id]?.[i] || {}
-  const tokens = cue.en.split(/([a-zA-Z]+(?:['’\-][a-zA-Z]+)*)/g)
-  let offset = 0
-  const html = tokens.map((word,n)=>{
-    const start=offset
-    offset+=word.length
-    if (!(n%2)) return e(word)
+  const html = wordTokens(cue.en).map(({text:word,start,word:isWord})=>{
+    if (!isWord) return e(word)
     const color=['gold','sage'].includes(painted[start]) ? ' highlight-'+painted[start] : ''
     return '<span role="button" tabindex="0" class="word'+(words.includes(norm(word))?' key':'')+(savedWord(word)?' saved':'')+color+
       '" data-action="word" data-word="'+e(word)+'" data-cue="'+i+'" data-offset="'+start+'">'+e(word)+'</span>'
@@ -169,6 +166,7 @@ function detail(item) {
     (sourcePage ? '<a class="btn outline" href="' + sourcePage + '"' + external + '>原站节目</a>' : '') +
     (safeLink(item.transcript) ? '<a class="btn outline" href="' + safeLink(item.transcript) + '"' + external + '>原站英文文稿</a>' : '') +
     (item.kind !== 'lesson' ? btn('导入字幕','attach','outline') : '') +
+    (cues.length ? btn('导出听力原文','transcript-export','outline') : '') +
     '</div><div class="player-tools">' +
     select('sub-mode','字幕',[['both','中英双语'],['en','仅英语'],['zh','仅中文'],['off','关闭字幕']],s.mode) +
     select('speed','速度',[.5,.65,.75,.85,1,1.1,1.25,1.5,1.75,2].map(n=>[n,n+'×']),s.rate) +
@@ -779,7 +777,8 @@ function render() {
     selectEpisode(paper)
     const result=examRetakes.has(paper.id) ? null : s.examResults[paper.id]?.latest
     page.innerHTML=paperView(paper,{result,draft:examDrafts.get(paper.id) || [],favorite:Boolean(s.favorites[paper.id]),
-      paused:audio.paused,cueRows:(result || !paper.questions.length) && s.mode!=='off' ? cues.map(cueRow).join('') : ''})
+      paused:audio.paused,canExport:cues.length>0 && (Boolean(result) || !paper.questions.length),
+      markerControls:cues.some(cue=>cue.en) && ['both','en'].includes(s.mode) ? highlightTools() : '',cueRows:(result || !paper.questions.length) && s.mode!=='off' ? cues.map(cueRow).join('') : ''})
     if (cues.length) updateCues(true)
     return
   }
@@ -818,6 +817,12 @@ const actions = {
   sleep:sleepDialog, 'set-sleep':el=>{setSleep(el.dataset.key);modal.close()},
   loop:()=>{loop=!loop;if(loop && cues[active]) seekTo(cues[active].start);render()},
   'paint-selection':el=>paintSelection(el.dataset.color),
+  'transcript-export':transcriptDialog,
+  'transcript-pick':el=>{
+    const yes=el.dataset.key==='all'
+    for (const box of $('transcript-export-form').querySelectorAll('input[name="line"]')) box.checked=yes
+    updateExportCount()
+  },
   favorite:()=>{s.favorites[current.id]=!s.favorites[current.id];persist();render()},
   'seek-cue':el=>{seekTo(cues[Number(el.dataset.index)].start); playAudio()},
   word:el=>{if(!selectedWords().length)wordDialog(el.dataset.word, Number(el.dataset.cue))},
@@ -898,6 +903,7 @@ document.addEventListener('submit', event => {
     case 'exam-answer-form': submitExam(f);break
     case 'exam-import-form': importExam(form,f);break
     case 'exam-log-form': logExamResult(f);break
+    case 'transcript-export-form': exportTranscript(form,f,event.submitter?.value);break
     case 'feed-refresh-form': refreshTopics(form,f);break
     case 'custom-feed-form': addCustomFeed(form,f);break
     case 'profile-form': saveProfile(f.get('name'));break
@@ -920,6 +926,7 @@ document.addEventListener('submit', event => {
 })
 document.addEventListener('change',event=>{
   const {id,value,checked}=event.target
+  if (event.target.closest('#transcript-export-form')) updateExportCount()
   const examFilter={'exam-year':'year','exam-group':'group','exam-origin':'origin','exam-status':'status'}[id]
   if(examFilter){s.examFilters={...examSettings(),[examFilter]:value};persist();render();$(id)?.focus();return}
   if(id==='exam-import-board'){renderImportGroups(value);return}
@@ -1476,6 +1483,84 @@ async function importExam(form,data) {
     toast('已导入考试资料。')
   } catch(error){toast(error.message || '考试资料导入失败。')}
   finally{button.disabled=false}
+}
+
+let exportSnapshot
+function transcriptDialog() {
+  if (!current || !cues.length) return
+  const rows=cues.map((cue,index)=>({cue,index})).filter(({cue})=>cue.en || cue.zh)
+  if (!rows.length) return toast('没有可导出的字幕。')
+  const item=current, marks=s.highlights?.[current.id] || {}
+  exportSnapshot={item,rows,marks,byIndex:new Map(rows.map(({index,cue})=>[index,cue]))}
+  const paired=rows.filter(({cue})=>cue.en && cue.zh).length
+  const hasEnglish=rows.some(({cue})=>cue.en)
+  const hasChinese=rows.some(({cue})=>cue.zh)
+  const seenWords=highlightedVocabulary(rows,marks).length
+  const languages=[...(hasEnglish && hasChinese ? [['both','中英双语']] : []), ...(hasEnglish ? [['en','仅英文']] : []), ...(hasChinese ? [['zh','仅中文']] : [])]
+  message('导出听力原文','<p class="muted">'+e(item.zh || item.title)+'</p>'+
+    (paired<rows.length ? '<p class="notice">'+(hasChinese ? '这份稿件有 '+paired+' / '+rows.length+' 句同时含中英文。' : '当前只有英文稿，可以导入中文字幕后再导出双语。')+'</p>' : '')+
+    '<form class="fields" id="transcript-export-form">'+select('export-language','导出语言',languages,languages[0][0])+
+    '<div class="actions export-options"><label><input type="checkbox" name="timestamps" checked> 保留时间戳</label>'+
+    '<label><input type="checkbox" name="vocab" checked> 文末附高亮词汇'+(seenWords?'（'+seenWords+' 个）':'')+'</label></div>'+
+    '<div class="export-selection-head"><strong id="export-count"></strong><div class="actions">'+
+    btn('全选','transcript-pick','quiet','type="button" data-key="all"')+
+    btn('清空','transcript-pick','quiet','type="button" data-key="none"')+'</div></div>'+
+    '<div class="export-lines" aria-label="选择导出的字幕">'+
+    rows.map(({index,cue})=>'<label class="export-line"><input type="checkbox" name="line" value="'+index+'" checked>'+
+      '<time>'+clock(cue.start)+'</time><span>'+e(cue.en || cue.zh)+'</span></label>').join('')+'</div>'+
+    '<div class="actions"><button class="btn primary" type="submit" value="pdf">导出 A4 PDF</button>'+
+    '<button class="btn outline" type="submit" value="text">导出 TXT</button></div></form>')
+  updateExportCount()
+}
+function updateExportCount() {
+  const f=$('transcript-export-form')
+  if (!f) return
+  const boxes=f.querySelectorAll('input[name="line"]')
+  const language=$('export-language').value
+  let picked=0
+  boxes.forEach(box=>{
+    const cue=exportSnapshot.byIndex.get(Number(box.value))
+    box.disabled=language==='en' && !cue.en || language==='zh' && !cue.zh
+    if (box.checked && !box.disabled) picked++
+  })
+  $('export-count').textContent='已选 '+picked+' / '+boxes.length+' 句'
+  for (const button of f.querySelectorAll('button[type="submit"]')) button.disabled=picked===0 || f.dataset.exporting==='true'
+}
+async function exportTranscript(form, data, format) {
+  const snapshot=exportSnapshot
+  const chosen=new Set(data.getAll('line').map(Number))
+  const rows=snapshot.rows.filter(row=>chosen.has(row.index))
+  if (!rows.length) return toast('请选择至少一句字幕。')
+  if (form.dataset.exporting==='true') return
+  form.dataset.exporting='true'
+  updateExportCount()
+  const language=$('export-language').value
+  const marks=snapshot.marks
+  const vocabulary=data.has('vocab') ? highlightedVocabulary(rows,marks) : []
+  try {
+    const words=await Promise.all(vocabulary.map(async word=>{
+      const key=word.term.toLowerCase()
+      const savedMeaning=s.books.flatMap(book=>book.items).find(item=>norm(item.en)===norm(key))?.zh
+      const meaning=snapshot.item.vocab?.[key] || savedMeaning || (await definition(key))?.[1]?.[0] || ''
+      return {...word,meaning}
+    }))
+    if (!form.isConnected || !modal.open || exportSnapshot!==snapshot) return
+    const options={...snapshot,rows,marks,words,language,timestamps:data.has('timestamps')}
+    const base=String(snapshot.item.zh || snapshot.item.title).replace(/[\\/:*?"<>|]+/g,' ').trim().slice(0,70) || '回声岛'
+    if (format==='text') {
+      const content=transcriptText(options)
+      if (native?.saveText) native.saveText(base+' - 听力原文.txt',content)
+      else saveFile(base+' - 听力原文.txt',content,'text/plain;charset=utf-8')
+      modal.close()
+      return
+    }
+    $('print-sheet').innerHTML=transcriptHtml(options)
+    modal.close()
+    if (native?.printTranscript) native.printTranscript(base+' - 听力原文')
+    else if (native) native.printSheet()
+    else window.print()
+  } catch { toast('导出未完成，请重试。') }
+  finally { delete form.dataset.exporting; if (form.isConnected) updateExportCount() }
 }
 
 setInterval(maybeRemind,30000)
