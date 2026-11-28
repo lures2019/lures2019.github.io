@@ -1,4 +1,5 @@
-import {escape as e, normalized as norm, clock, safeLink, localDay, dayOffset, parseTimed, pairTimed, wordScore, listeningBlanks} from './core.js?v=1.1.0'
+import {escape as e, normalized as norm, clock, safeLink, localDay, dayOffset, parseTimed, pairTimed, wordScore, listeningBlanks} from './core.js?v=1.2.0'
+import {boards,sections,libraryView,paperView,gradePaper,nextExamPlan,planPanel} from './exam-ui.js?v=1.2.0'
 
 const $ = id => document.getElementById(id)
 const page = $('page'), audio = $('audio'), modal = $('modal')
@@ -17,6 +18,7 @@ const icons = {
   home:'<path d="M3 11 12 4l9 7v9h-6v-6H9v6H3z"/>',
   library:'<path d="M3 14v-2a9 9 0 0 1 18 0v2M3 13h4v7H5a2 2 0 0 1-2-2zm18 0h-4v7h2a2 2 0 0 0 2-2z"/>',
   practice:'<path d="m12 3 2 6 6 3-6 2-2 7-2-7-6-2 6-3zm7 13 1 2 2 1-2 1-1 2-1-2-2-1 2-1z"/>',
+  exam:'<path d="M5 4h10l4 4v12H5zm10 0v5h4M8 12h8m-8 4h6"/>',
   books:'<path d="M5 4h13v16H6a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2zm0 13h13M8 8h6"/>',
   plan:'<path d="M5 5h14v15H5zm0 5h14M9 3v4m6-4v4m-6 8 2 2 4-4"/>',
   search:'<circle cx="10.5" cy="10.5" r="6"/><path d="m15 15 5 5"/>',
@@ -33,9 +35,9 @@ const icons = {
   film:'<path d="M3 9h18v11H3zm0 0 16-6 2 5M8 7l3 2m3-4 3 3m-7 5 5 2-5 2z"/>'
 }
 const icon = name => '<svg class="icon" aria-hidden="true" viewBox="0 0 24 24">' + icons[name] + '</svg>'
-const navigation = [['home','首页'],['library','听力馆'],['practice','练习场'],['books','生词本'],['plan','学习计划']]
+const navigation = [['home','首页'],['library','听力馆'],['exam','考试'],['practice','练习场'],['books','生词本'],['plan','学习计划']]
 const defaults = () => ({
-  level:'4', mode:'both', font:22, rate:1, goal:12, remind:'', minor:true, roadmap:null,
+  level:'4', mode:'both', font:22, rate:1, goal:12, remind:'', minor:true, roadmap:null, examFilters:null, examResults:{},
   library:{cat:'all', kind:'all', level:'all', show:36}, history:{}, marks:{}, highlights:{}, favorites:{}, events:{}, wins:{},
   books:[{id:'words', name:'我的生词', items:[]}, {id:'phrases', name:'常用短语', items:[]}], last:''
 })
@@ -44,7 +46,8 @@ function readState() {
 }
 let s = readState()
 let sources = {}, lessons = [], episodes = [], feedDates = {}, ready = false, search = ''
-const feedAdditions = new Map()
+const feedAdditions = new Map(), examImports = new Map(), examDrafts = new Map(), examRetakes = new Set()
+let examPapers = [], examSources = []
 const index = new Map(), localMaterials = new Map(), attachments = new Map(), dictionaries = new Map()
 let current = null, cues = [], active = -1, loop = false, follow = true, transcriptLabel = ''
 let started = 0, lastMediaTime = 0, checkpoint = 0, pendingTime = 0, resumeAt = 0, mediaGeneration = 0
@@ -262,7 +265,8 @@ function selectEpisode(item, fromStart = false) {
   transcriptLabel = attached?.label || ''
   active = -1
   loop = false
-  if (!queue.includes(item.id)) queue = allItems().filter(ep => ep.kind === item.kind && (item.kind === 'lesson' ? ep.level === item.level : ep.source === item.source)).map(ep => ep.id)
+  if (item.kind === 'exam') queue = [item.id]
+  else if (!queue.includes(item.id)) queue = allItems().filter(ep => ep.kind === item.kind && (item.kind === 'lesson' ? ep.level === item.level : ep.source === item.source)).map(ep => ep.id)
   audio.src = item.audio
   audio.playbackRate = s.rate
   s.last = item.id
@@ -337,6 +341,7 @@ audio.addEventListener('ended', () => {
   updateDock()
   if (current?.kind === 'lesson') record(0,15,0,'listen:' + current.id)
   if (sleepEnd) { setSleep('off'); toast('本集播完，已停止。'); return }
+  if (current?.kind === 'exam' && route()[0] === 'exam-paper') return
   if (s.playMode === 'one' || loop) { seekTo(loop ? cues[active]?.start || 0 : 0); playAudio(); return }
   if (s.playMode !== 'stop') moveEpisode(1)
 })
@@ -365,6 +370,13 @@ async function materialTransaction(mode, callback) {
 }
 function ingestMaterial(data) {
   if (data.id.startsWith('feed:')) { feedAdditions.set(data.id,data); return }
+  if (data.kind === 'exam' && data.blob) {
+    const {blob,...rest}=data
+    const paper={...rest,audio:URL.createObjectURL(blob)}
+    examImports.set(paper.id,paper)
+    index.set(paper.id,paper)
+    return
+  }
   if (data.blob) {
     const added = {...data, audio:URL.createObjectURL(data.blob)}
     delete added.blob
@@ -709,7 +721,7 @@ function plan() {
       const seconds = s.events[d]?.seconds || 0
       return '<div title="' + d + ' · ' + Math.floor(seconds/60) + ' 分钟"><span>' + Math.floor(seconds/60) + '</span><i style="--bar:' + Math.min(100,Math.round(seconds/60/s.goal*100)) + '%"></i><small>' + d.slice(-2) + '日</small></div>'
     }).join('') + '</div><p class="muted">首次听完精听课或答对一道题可获得 XP。</p></section></div>' +
-    roadmapView() + '<div class="section-heading"><h2>设置与数据</h2></div><section class="panel stack"><p class="muted">学习数据保存在当前设备。导入备份可以在设备之间迁移生词本和进度。</p><div class="actions">' +
+    examPlanForProfile() + roadmapView() + '<div class="section-heading"><h2>设置与数据</h2></div><section class="panel stack"><p class="muted">学习数据保存在当前设备。导入备份可以在设备之间迁移生词本和进度。</p><div class="actions">' +
     btn('导出备份','backup','outline') + btn('导入备份','restore','outline') + btn('资源来源','sources','outline') +
     (!native ? '<a class="btn outline" href="echo-field.apk" download>安卓安装包</a>' : '<a class="btn outline" href="https://lures2019.github.io/toolbox/echo-field/"' + external + '>打开网页版</a>') +
     '<a class="btn quiet" href="' + (native ? 'https://lures2019.github.io/toolbox/' : '/toolbox/') + '">返回百宝箱</a></div></section>'
@@ -758,9 +770,19 @@ function sourceDialog() {
 function render() {
   if (!ready) return
   const [name] = route()
-  const view = ['library','episode','practice','books','plan','guide'].includes(name) ? name : 'home'
-  $('nav').innerHTML = navigation.map(([k,v])=>'<a class="side-item" href="#' + k + '"' + ((view === 'episode' ? 'library' : view === 'guide' ? 'home' : view) === k ? ' aria-current="page"' : '') + '>' + icon(k) + v + '</a>').join('')
+  const view = ['library','episode','practice','books','plan','guide','exam','exam-paper'].includes(name) ? name : 'home'
+  $('nav').innerHTML = navigation.map(([k,v])=>'<a class="side-item" href="#' + k + '"' + ((view === 'exam-paper' ? 'exam' : view === 'episode' ? 'library' : view === 'guide' ? 'home' : view) === k ? ' aria-current="page"' : '') + '>' + icon(k) + v + '</a>').join('')
   $('level-chip').textContent = levels[s.level]
+  if (view === 'exam-paper') {
+    const paper=index.get(key())
+    if (!paper || paper.kind!=='exam') { page.innerHTML=heading('找不到这组考试材料')+goBtn('返回考试训练','exam','primary'); return }
+    selectEpisode(paper)
+    const result=examRetakes.has(paper.id) ? null : s.examResults[paper.id]?.latest
+    page.innerHTML=paperView(paper,{result,draft:examDrafts.get(paper.id) || [],favorite:Boolean(s.favorites[paper.id]),
+      paused:audio.paused,cueRows:(result || !paper.questions.length) && s.mode!=='off' ? cues.map(cueRow).join('') : ''})
+    if (cues.length) updateCues(true)
+    return
+  }
   if (view === 'episode') {
     const item = index.get(key())
     if (item && (!s.minor || !item.explicit)) selectEpisode(item)
@@ -768,7 +790,7 @@ function render() {
     if (cues.length) updateCues(true)
     return
   }
-  page.innerHTML = {home,library,practice,books:booksView,plan,guide}[view]()
+  page.innerHTML = {home,library,practice,books:booksView,plan,guide,exam:showExamLibrary}[view]()
 }
 function setLibrary(cat, kind = 'all') {
   s.library = {cat,kind,level:'all',show:36}
@@ -840,6 +862,14 @@ const actions = {
   'starter-travel':()=>{s.library={cat:'travel',kind:'lesson',level:'4',show:36};search=$('search-box').value='';persist();go('library')},
   'starter-lesson':()=>{const lesson=lessons.find(item=>item.id==='food-4');if(lesson){queue=[];go('episode',lesson.id)}},
   'feed-dialog':feedDialog, 'custom-feed':customFeedDialog,
+  'exam-board':el=>{s.examFilters=examDefaults(el.dataset.key);persist();render()},
+  'exam-import':examImportDialog,
+  'exam-log':el=>manualExamDialog(el.dataset.key),
+  'exam-favorite':el=>{const id=el.dataset.key;s.favorites[id]=!s.favorites[id];persist();render()},
+  'exam-external-done':el=>{const id=el.dataset.key;if(s.examResults[id])delete s.examResults[id];else s.examResults[id]={manual:true};persist();render()},
+  'exam-retake':()=>{examRetakes.add(current.id);examDrafts.delete(current.id);audio.pause();seekTo(0);render()},
+  'exam-evidence':el=>{const line=cues[Number(el.dataset.index)];if(current?.kind==='exam'&&line)playCue(current,line)},
+  'exam-word':el=>wordDialog(el.dataset.word,Number(el.dataset.index),el.dataset.meaning),
   checkins:()=>{flushProgress();const now=new Date();calendarAt=new Date(now.getFullYear(),now.getMonth(),1);calendarSelected=localDay(now);showCheckins()},
   'calendar-month':el=>{calendarAt=new Date(calendarAt.getFullYear(),calendarAt.getMonth()+Number(el.dataset.step),1);calendarSelected=calendarAt.getMonth()===new Date().getMonth() && calendarAt.getFullYear()===new Date().getFullYear() ? localDay() : localDay(calendarAt);showCheckins();modal.querySelector('[data-action="calendar-month"][data-step="'+el.dataset.step+'"]:not(:disabled)')?.focus()},
   'calendar-day':el=>{calendarSelected=el.dataset.key;showCheckins();modal.querySelector('[data-action="calendar-day"][aria-pressed="true"]')?.focus()},
@@ -864,6 +894,10 @@ document.addEventListener('submit', event => {
   switch(form.id) {
     case 'search': search=$('search-box').value;s.library={cat:'all',kind:'all',level:'all',show:36};go('library');break
     case 'material-form': importMaterial(form,false);break
+    case 'exam-filters': { s.examFilters={...examSettings(),question:f.get('question') || ''};persist();render();break }
+    case 'exam-answer-form': submitExam(f);break
+    case 'exam-import-form': importExam(form,f);break
+    case 'exam-log-form': logExamResult(f);break
     case 'feed-refresh-form': refreshTopics(form,f);break
     case 'custom-feed-form': addCustomFeed(form,f);break
     case 'profile-form': saveProfile(f.get('name'));break
@@ -886,6 +920,14 @@ document.addEventListener('submit', event => {
 })
 document.addEventListener('change',event=>{
   const {id,value,checked}=event.target
+  const examFilter={'exam-year':'year','exam-group':'group','exam-origin':'origin','exam-status':'status'}[id]
+  if(examFilter){s.examFilters={...examSettings(),[examFilter]:value};persist();render();$(id)?.focus();return}
+  if(id==='exam-import-board'){renderImportGroups(value);return}
+  if(route()[0]==='exam-paper' && event.target.name?.startsWith('q-') && current?.kind==='exam'){
+    const fields=examDrafts.get(current.id) || []
+    fields[Number(event.target.name.slice(2))]=value
+    examDrafts.set(current.id,fields)
+  }
   const filter={'filter-cat':'cat','filter-kind':'kind','filter-level':'level'}[id]
   if(filter){s.library[filter]=value;s.library.show=36;persist();render();return}
   switch(id) {
@@ -905,6 +947,8 @@ function validateBackup(data) {
   if (!v.books.every(b=>typeof b.id==='string' && typeof b.name==='string' && Array.isArray(b.items) && b.items.every(w=>
     ['id','en','zh','due'].every(k=>typeof w[k]==='string') && ['reviews','speak','dictate','interval'].every(k=>Number.isFinite(w[k]))))) return false
   if (!levels[v.level] || !['both','en','zh','off'].includes(v.mode) || typeof v.goal !== 'number' || v.goal<3 || v.goal>120) return false
+  if (v.examResults && (typeof v.examResults!=='object' || Array.isArray(v.examResults) ||
+      !Object.values(v.examResults).every(entry=>entry && (entry.manual===true || Array.isArray(entry.latest?.correct) && Array.isArray(entry.latest?.answered))))) return false
   if (v.roadmap && (!/^\d{4}-\d{2}-\d{2}$/.test(v.roadmap.start) || !Number.isFinite(v.roadmap.minutes) || !Number.isFinite(v.roadmap.days) || !Array.isArray(v.roadmap.done))) return false
   if (!Number.isFinite(v.font) || !Number.isFinite(v.rate) || v.rate<.5 || v.rate>2) return false
   return ['history','marks','favorites','events','wins','library'].every(k=>v[k] && typeof v[k]==='object' && !Array.isArray(v[k])) &&
@@ -946,8 +990,9 @@ function loadCatalog(batch) {
 async function init() {
   $('search-icon').innerHTML=icon('search')
   if (native) { $('apk-link').hidden=true;document.querySelector('.side-foot a:last-child').href='https://lures2019.github.io/toolbox/' }
-  const [config, local, catalog, imports]=await Promise.allSettled([
-    json('data/sources.json'),json('data/lessons.json'),json('data/podcasts.json'),materialTransaction('readonly',store=>store.getAll())
+  const [config, local, catalog, imports, papers, references]=await Promise.allSettled([
+    json('data/sources.json'),json('data/lessons.json'),json('data/podcasts.json'),materialTransaction('readonly',store=>store.getAll()),
+    json('data/exam-papers.json'),json('data/exam-sources.json')
   ])
   if(config.status!=='fulfilled' || local.status!=='fulfilled'){
     page.innerHTML='<p class="notice">核心课程读取失败。请重新打开页面或使用最新版安装包。</p>';return
@@ -955,6 +1000,8 @@ async function init() {
   sources=config.value;lessons=local.value
   lessons.forEach(item=>index.set(item.id,item))
   if(catalog.status==='fulfilled') loadCatalog(catalog.value)
+  if (papers.status==='fulfilled' && Array.isArray(papers.value)) { examPapers=papers.value; examPapers.forEach(paper=>index.set(paper.id,paper)) }
+  if (references.status==='fulfilled' && Array.isArray(references.value)) examSources=references.value
   if(imports.status==='fulfilled') imports.value.forEach(ingestMaterial)
   ready=true;render();maybeRemind()
   if(native) json('https://lures2019.github.io/toolbox/echo-field/data/podcasts.json',5000).then(batch=>{loadCatalog(batch);if(['home','library',''].includes(route()[0]))render()}).catch(()=>{})
@@ -1316,6 +1363,120 @@ document.addEventListener('selectionchange',syncHighlightTools)
 document.addEventListener('pointerdown',event=>{
   if (event.target.closest('#highlight-tools button:not(:disabled)')) event.preventDefault()
 })
+
+function examDefaults(board) {
+  return {board,year:'all',group:'all',origin:'all',status:'all',question:''}
+}
+function examSettings() {
+  return s.examFilters && Object.prototype.hasOwnProperty.call(boards,s.examFilters.board) ? s.examFilters :
+    examDefaults({'4':'cet4','6':'cet6','65':'ielts'}[s.level] || 'cet4')
+}
+const localExamBank=()=>[...examImports.values(),...examPapers]
+function showExamLibrary() {
+  const settings=examSettings()
+  return libraryView({items:[...localExamBank(),...examSources],settings,progress:s.examResults,favorites:s.favorites,
+    plan:nextExamPlan(localExamBank(),s.examResults,settings.board,examSources)})
+}
+function examPlanForProfile() {
+  const target=examSettings().board
+  return planPanel(target,nextExamPlan(localExamBank(),s.examResults,target,examSources))
+}
+function submitExam(form) {
+  const paper=current
+  if(paper?.kind!=='exam' || key()!==paper.id || !paper.questions.length) return
+  const values=paper.questions.map((_,i)=>String(form.get('q-'+i) || '').trim())
+  if (!values.some(Boolean)) return toast('请至少作答一道题。')
+  const score=gradePaper(paper,values)
+  const previous=s.examResults[paper.id]
+  s.examResults[paper.id]={latest:score,attempts:(previous?.attempts || 0)+1}
+  examRetakes.delete(paper.id)
+  examDrafts.delete(paper.id)
+  audio.pause()
+  record(0,score.correct.filter(Boolean).length*5,1,'exam:'+paper.id)
+  render()
+}
+function manualExamDialog(id) {
+  const source=examSources.find(item=>item.id===id)
+  if(!source || !source.month || source.group==='legacy' || !['cet4','cet6'].includes(source.board)) return
+  const old=s.examResults[id]?.sections || {}
+  message('记录真题成绩', form('<p class="muted">'+e(source.title)+' · 填写已做题型的正确题数。</p>'+
+    Object.entries(sections[source.board]).map(([group,[label,first,last]])=>{
+      const total=last-first+1
+      return '<label class="field">'+e(label)+'（共 '+total+' 题）<input type="number" min="0" max="'+total+'" name="'+group+'" value="'+e(old[group]?.correct ?? '')+'"></label>'
+    }).join('')+'<input type="hidden" name="paper" value="'+e(id)+'">','保存真题成绩','exam-log-form'))
+}
+function logExamResult(form) {
+  const source=examSources.find(item=>item.id===form.get('paper'))
+  if(!source) return
+  const rows={}
+  for (const [group,[,first,last]] of Object.entries(sections[source.board])) {
+    const raw=form.get(group), total=last-first+1, correct=Number(raw)
+    if(raw!==null && raw!=='' && Number.isInteger(correct) && correct>=0 && correct<=total) rows[group]={correct,total}
+  }
+  if(!Object.keys(rows).length) return toast('请至少填写一个题型的正确题数。')
+  s.examResults[source.id]={manual:true,sections:rows}
+  record(0,0,1)
+  modal.close()
+  render()
+  toast('成绩已记录，专项计划会优先推荐薄弱题型。')
+}
+function examImportDialog() {
+  const board=examSettings().board
+  message('导入历年听力资料',form(
+    select('exam-import-board','考试',Object.entries(boards).filter(([k])=>k!=='kaoyan').map(([k,v])=>[k,v[0]]),board) +
+    '<div class="grid-two"><label class="field">年份<input type="number" min="1987" max="2100" name="year" value="'+new Date().getFullYear()+'" required></label>' +
+    '<label class="field">月份（可选）<input type="number" min="1" max="12" name="month"></label></div>' +
+    field('套号或版本（可选）','number')+field('材料名称','title','',true)+
+    '<label class="field">题型<select id="exam-import-group"></select></label>' +
+    '<label class="field">音频文件<input name="audio" type="file" accept="audio/*,.m4a,.mp3,.wav,.ogg" required></label>' +
+    '<label class="field">双语或英文 SRT／VTT（可选）<input name="transcript" type="file" accept=".srt,.vtt"></label>' +
+    '<label class="field">标准答案（可选）<textarea name="keys" rows="4" placeholder="1=A&#10;2=C&#10;31=notebook | note book" maxlength="5000"></textarea></label>' +
+    '<p class="muted">每行写题号=答案。多种拼法用 | 分开。题干请配合自己的题册查看。文件保存在当前档案。</p>','导入考试资料','exam-import-form'))
+  renderImportGroups($('exam-import-board').value)
+}
+function renderImportGroups(board) {
+  const box=$('exam-import-group')
+  box.innerHTML=option('','整套听力','')+Object.entries(sections[board] || {}).map(([k,v])=>option(k,v[0],'')).join('')
+}
+async function importExam(form,data) {
+  const button=form.querySelector('button[type=submit]')
+  const board=$('exam-import-board').value, group=$('exam-import-group').value
+  const audioFile=data.get('audio'), transcript=data.get('transcript')
+  const title=data.get('title').trim(), year=data.get('year')
+  if (!title || !audioFile?.size || !/^\d{4}$/.test(year)) return toast('请填写名称并选择有效音频。')
+  button.disabled=true
+  try {
+    if (audioFile.size>150*1024*1024) throw Error('单个音频需小于 150 MB。')
+    if (transcript?.size>5*1024*1024) throw Error('字幕文件需小于 5 MB。')
+    const rows=String(data.get('keys') || '').split(/\r?\n/).map(x=>x.trim()).filter(Boolean)
+    const questions=[]
+    const nums=new Set()
+    for (const row of rows) {
+      const match=row.match(/^(\d{1,2})\s*[=＝]\s*(.+)$/)
+      if (!match || !Number(match[1]) || nums.has(Number(match[1]))) throw Error('请检查每行的题号与答案，题号需要唯一。')
+      const n=Number(match[1]), answer=match[2].trim(), range=sections[board]?.[group]
+      if (n>(board==='ielts'?40:25) || range && (n<range[1] || n>range[2])) throw Error('第 '+n+' 题不在所选考试或题型的题号范围内。')
+      nums.add(n)
+      const multiple=/^[a-d]$/i.test(answer) && board!=='ielts'
+      const answers=multiple?[String(answer.toUpperCase().charCodeAt(0)-65)]:answer.split('|').map(x=>x.trim()).filter(Boolean)
+      if (!answers.length) throw Error('答案栏不能为空。')
+      questions.push({number:n,prompt:'请对照原题册作答',answers,...(multiple?{options:['选项 A','选项 B','选项 C','选项 D']}:{})})
+    }
+    questions.sort((a,b)=>a.number-b.number)
+    const attachment=transcript?.size ? parseTimed(await transcript.text(),'auto') : []
+    if (transcript?.size && !attachment.length) throw Error('无法读取字幕时间轴。')
+    const paper={id:'exam-local-'+uid(),board,group,kind:'exam',cat:'news',examOrigin:'local',source:'本机资料',
+      title,year,month:String(data.get('month') || ''),number:String(data.get('number') || '').trim().slice(0,24),
+      cues:attachment,questions,terms:[],blob:audioFile}
+    await materialTransaction('readwrite',store=>store.put(paper))
+    ingestMaterial(paper)
+    s.examFilters=examDefaults(board);persist()
+    if (button.isConnected&&modal.open) modal.close()
+    go('exam-paper',paper.id)
+    toast('已导入考试资料。')
+  } catch(error){toast(error.message || '考试资料导入失败。')}
+  finally{button.disabled=false}
+}
 
 setInterval(maybeRemind,30000)
 init()
