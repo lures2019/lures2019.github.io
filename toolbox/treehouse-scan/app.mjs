@@ -1,9 +1,9 @@
-import { canvas, clearCanvas, decode, fromSource, jpeg, fullQuad, validQuad, detectPaper, makePage, renderPage,
-  splitPage, imageType, MAX_EDGE, MAX_FILE, MAX_PAGES, MAX_PROJECT } from './scan.mjs?v=1.1.0';
-import { openPdf, renderPdfPage, createOcr, exportPdf, safeName, saveFile, stopIfAborted } from './files.mjs?v=1.1.0';
-import { readDraft, saveDraft } from './draft.mjs?v=1.1.0';
-import { setUpCamera } from './camera.mjs?v=1.1.0';
-import { filterHints } from './filters.mjs?v=1.1.0';
+import { canvas, clearCanvas, decode, fromSource, jpeg, fullQuad, validQuad, detectPaper, makePage, renderPage, capturePreview,
+  splitPage, imageType, MAX_EDGE, MAX_FILE, MAX_PAGES, MAX_PROJECT } from './scan.mjs?v=1.2.0';
+import { openPdf, renderPdfPage, createOcr, exportPdf, safeName, saveFile, stopIfAborted } from './files.mjs?v=1.2.0';
+import { readDraft, saveDraft } from './draft.mjs?v=1.2.0';
+import { setUpCamera } from './camera.mjs?v=1.2.0';
+import { filterHints } from './filters.mjs?v=1.2.0';
 
 const el = id => document.getElementById(id);
 const all = selector => [...document.querySelectorAll(selector)];
@@ -38,7 +38,7 @@ const newProject = filter => ({pages:[], filename:'', paper:'fit', quality:'high
 let projects = {doc:newProject('sharp'),id:newProject('seal')};
 let mode = 'doc', selected, side = 'front', busy, saving = false, draftQueue = Promise.resolve();
 let undo, crop, replaceInput, dragged, previewUrl, previewEpoch = 0, previewTimer, noticeTimer;
-let compareId;
+let compareId, preparedPreview;
 const thumbUrls = new Map();
 const activeKey = () => mode === 'id' ? 'id' : 'doc';
 const project = () => projects[activeKey()];
@@ -183,6 +183,13 @@ async function preview() {
   if (!current) { setPreview(null); return; }
   el('preview').alt=original?'裁边和增强前的原图':'当前扫描页预览';
   if (original) { setPreview(URL.createObjectURL(current.blob)); return; }
+  if (preparedPreview?.id===current.id && preparedPreview.filter===current.filter
+      && preparedPreview.watermark===mark) {
+    el('preview').dataset.page=current.id;
+    setPreview(URL.createObjectURL(preparedPreview.blob));
+    preparedPreview=null;
+    return;
+  }
   if (current.id !== el('preview').dataset.page) setPreview(null);
   let rendered;
   try {
@@ -267,7 +274,7 @@ async function job(label, action, cancelable = false) {
   el('cancel-job').disabled=false;
   progress(label);
   refresh();
-  try { await action(controller.signal); }
+  try { return await action(controller.signal); }
   catch (error) { notice(controller.signal.aborted ? '已停止。' : (error.message || '操作失败，请重试。')); }
   finally { busy=null; refresh(); }
 }
@@ -359,11 +366,35 @@ function chooseImages(replace) {
   el('images').click();
 }
 
-const openCamera = setUpCamera(async (source,session,crop,split) => {
-  const filter=session.replace ? page()?.filter : project().filter;
-  const scan=await makePage(source,'相机拍摄',filter || 'original',crop);
-  const total=insert(split ? await splitPage(scan) : [scan],session);
-  return {total, needsCrop:scan.cropState==='review'};
+const openCamera = setUpCamera(async (source,session,{crop,split,guide}) => {
+  const save=async()=>{
+    if (mode!==session.mode) throw new Error('扫描模式已切换，请重拍当前页。');
+    const filter=session.replace ? page()?.filter : project().filter;
+    const scan=await makePage(source,'相机拍摄',filter || 'original',crop,'',guide);
+    const pages=split ? await splitPage(scan) : [scan];
+    let prepared;
+    if (!session.continuous && !split) {
+      const watermark=project().watermark;
+      const blob=await capturePreview(source,scan,watermark).catch(()=>null);
+      if (blob) prepared={id:scan.id,filter:scan.filter,watermark,blob};
+    }
+    preparedPreview=prepared;
+    try {
+      const total=insert(pages,session);
+      return {total, needsCrop:scan.cropState==='review'};
+    } catch(error) {
+      preparedPreview=null;
+      throw error;
+    }
+  };
+  if (session.continuous) {
+    await pause();
+    return save();
+  }
+  return job('正在生成扫描件…',async()=>{
+    await pause();
+    return save();
+  });
 }, (replace,msg) => {
   notice(msg);
   // The file picker stays behind a deliberate user gesture after permission denial.

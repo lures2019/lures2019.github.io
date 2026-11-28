@@ -1,5 +1,7 @@
-import { detectDocument, warpPerspective } from './vendor/doc-scanner/index.js';
-import { filterPixels } from './filters.mjs?v=1.1.0';
+import { warpPerspective } from './vendor/doc-scanner/index.js';
+import { filterPixels } from './filters.mjs?v=1.2.0';
+import { locatePaper, refineTrackedPaper } from './paper.mjs?v=1.2.0';
+export { validQuad } from './paper.mjs?v=1.2.0';
 
 export const fullQuad = () => [[0, 0], [1, 0], [1, 1], [0, 1]];
 export const MAX_EDGE = 3200;
@@ -19,15 +21,6 @@ export function clearCanvas(element) { element.width = element.height = 1; }
 export function scaledSize(width, height, limit) {
   const ratio = Math.min(1, limit / Math.max(width, height));
   return [width * ratio, height * ratio];
-}
-
-export function validQuad(points) {
-  if (points.length !== 4 || !points.every(p => p.every(v => v >= 0 && v <= 1))) return false;
-  return points.every(([x,y], i) => {
-    const [u,v] = points[(i + 1) % 4];
-    const [s,t] = points[(i + 2) % 4];
-    return (u - x) * (t - v) - (v - y) * (s - u) > .0012;
-  });
 }
 
 export function jpeg(element, quality = .95) {
@@ -77,11 +70,16 @@ export function detectPaper(source, limit = 900) {
   const { width, height } = small;
   try {
     const image = small.getContext('2d').getImageData(0,0,width,height);
-    const detected = detectDocument(image,{workSize:Math.min(400,limit),refineSize:limit,minArea:.10});
-    if (!detected) return null;
-    const quad = detected.corners.map(({x,y})=>[Math.max(0,Math.min(1,x/width)), Math.max(0,Math.min(1,y/height))]);
-    return validQuad(quad) ? quad : null;
+    return locatePaper(image,Math.min(400,limit));
   } finally { clearCanvas(small); }
+}
+
+function captureQuad(source, guide) {
+  const edgeFrame=fromSource(source,source.width,source.height,560);
+  try {
+    const pixels=edgeFrame.getContext('2d').getImageData(0,0,edgeFrame.width,edgeFrame.height);
+    return refineTrackedPaper(pixels,guide);
+  } finally { clearCanvas(edgeFrame); }
 }
 
 function straighten(source, quad, limit) {
@@ -119,12 +117,8 @@ export function addWatermark(element, { enabled, text, opacity }) {
   context.restore();
 }
 
-export async function renderPage(page, limit, watermark, applyFilter = true) {
-  // Decode at greater resolution than the requested preview so crop previews retain detail.
-  const source = await decode(page.blob, Math.min(MAX_EDGE, Math.max(1200, limit * 1.7)));
-  let result;
-  try { result = straighten(source, page.quad, limit); }
-  finally { clearCanvas(source); }
+function renderScan(source, page, limit, watermark, applyFilter) {
+  let result=straighten(source,page.quad,limit);
   if (page.rotation) {
     const swap = page.rotation % 180 !== 0;
     const next = canvas(swap ? result.height : result.width, swap ? result.width : result.height);
@@ -140,15 +134,40 @@ export async function renderPage(page, limit, watermark, applyFilter = true) {
   return result;
 }
 
-export async function makePage(source, name, mode, crop, text = '') {
-  const found = crop ? detectPaper(source) : null;
+export async function renderPage(page, limit, watermark, applyFilter = true) {
+  // Keep enough resolution for a crop to retain detail.
+  const source=await decode(page.blob,Math.min(MAX_EDGE,Math.max(1200,limit*1.7)));
+  try { return renderScan(source,page,limit,watermark,applyFilter); }
+  finally { clearCanvas(source); }
+}
+
+export async function capturePreview(source,page,watermark) {
+  const working=fromSource(source,source.width,source.height,1500);
+  let rendered;
+  try {
+    rendered=renderScan(working,page,1100,watermark,true);
+    return await jpeg(rendered,.91);
+  } finally {
+    clearCanvas(working);
+    if (rendered) clearCanvas(rendered);
+  }
+}
+
+export async function makePage(source, name, mode, crop, text = '', guide) {
+  const found = crop ? (guide && captureQuad(source,guide)) || detectPaper(source) : null;
   const quad = found || fullQuad();
   const cropState = found ? 'auto' : crop ? 'review' : 'whole';
-  const tiny = fromSource(source, source.width, source.height, 180);
+  const thumbSource=fromSource(source,source.width,source.height,360);
+  let tiny;
   try {
+    tiny=straighten(thumbSource,quad,180);
     const id=Array.from(crypto.getRandomValues(new Uint8Array(16)),byte=>byte.toString(16).padStart(2,'0')).join('');
-    return { id, name, blob:await jpeg(source, .96), thumb:await jpeg(tiny, .77), quad, cropState, rotation:0, filter:mode, text };
-  } finally { clearCanvas(tiny); }
+    const [blob,thumb]=await Promise.all([jpeg(source,.96),jpeg(tiny,.77)]);
+    return {id,name,blob,thumb,quad,cropState,rotation:0,filter:mode,text};
+  } finally {
+    clearCanvas(thumbSource);
+    if (tiny) clearCanvas(tiny);
+  }
 }
 
 export async function splitPage(page) {

@@ -1,25 +1,30 @@
-import { canvas, clearCanvas, fromSource, detectPaper, MAX_EDGE } from './scan.mjs?v=1.1.0';
+import { canvas, clearCanvas, fromSource, detectPaper, MAX_EDGE } from './scan.mjs?v=1.2.0';
+import { quadDistance } from './paper.mjs?v=1.2.0';
 
 const el = id => document.getElementById(id);
 const message = text => { el('camera-status').textContent = text; };
 const difference = (a,b) => a.reduce((sum,value,i) => sum+Math.abs(value-b[i]),0)/a.length;
 
-function fingerprint(video) {
-  const tiny = canvas(32,24), context = tiny.getContext('2d',{willReadFrequently:true});
-  context.drawImage(video,0,0,32,24);
-  const {data} = context.getImageData(0,0,32,24);
-  clearCanvas(tiny);
-  return Array.from({length:768},(_,i) => .3*data[4*i]+.59*data[4*i+1]+.11*data[4*i+2]);
-}
-
 export function setUpCamera(add, fallback) {
   const dialog = el('camera-dialog'), video = el('video');
   const outline = el('camera-outline'), polygon = outline.querySelector('polygon');
-  let stream, epoch = 0, timer, session, previous, lastShot, stableSince, active = false, torch = false;
+  const thumb=canvas(32,24).getContext('2d',{willReadFrequently:true});
+  const preferences={doc:false,book:true};
+  let stream, epoch = 0, timer, session, alignment, lastShot, stableSince, active = false, torch = false;
 
-  function showOutline(quad) {
+  function fingerprint(source) {
+    thumb.drawImage(source,0,0,32,24);
+    const {data}=thumb.getImageData(0,0,32,24);
+    return Uint8Array.from({length:768},(_,i)=>.3*data[4*i]+.59*data[4*i+1]+.11*data[4*i+2]);
+  }
+
+  function showOutline(quad, locked = false) {
     outline.toggleAttribute('hidden',!quad);
+    outline.classList.toggle('locked',locked);
     el('camera-guide').hidden=Boolean(quad) || !el('smart-crop').checked;
+    const status=el('alignment-status');
+    const text=!el('smart-crop').checked ? '' : locked ? '纸边已对准' : quad ? '正在对准纸边' : '请让纸张四角入镜';
+    if (status.textContent!==text) status.textContent=text;
     if (!quad) return;
     const frame=el('camera-view').getBoundingClientRect(), image=video.getBoundingClientRect();
     const scale=Math.min(image.width/video.videoWidth,image.height/video.videoHeight);
@@ -31,38 +36,50 @@ export function setUpCamera(add, fallback) {
 
   function close() {
     epoch++;
-    clearInterval(timer);
+    clearTimeout(timer);
     stream?.getTracks().forEach(track => track.stop());
     stream = null;
     video.srcObject = null;
     el('shutter').disabled = true;
     session = null;
+    alignment=null;
     showOutline(null);
   }
 
   async function capture() {
     if (active || !session || !video.videoWidth) return;
     active = true;
-    const saved = session;
+    const saved = {...session,continuous:el('continuous-scan').checked};
     el('shutter').disabled = true;
     el('finish-camera').disabled = true;
     el('close-camera').disabled = true;
     let image;
     try {
-      const still = fingerprint(video);
       image = fromSource(video,video.videoWidth,video.videoHeight,MAX_EDGE);
+      const still = fingerprint(image);
+      const crop=el('smart-crop').checked;
       const split = saved.mode==='book' && el('camera-split').checked;
-      const {total, needsCrop} = await add(image, saved, el('smart-crop').checked, split);
+      const guide=crop && alignment?.locked && performance.now()-alignment.time<710
+        && difference(alignment.frame,still)<5 ? alignment.quad : null;
+      if (!saved.continuous) {
+        dialog.close();
+        close();
+      } else {
+        message('正在生成扫描件…');
+      }
+      const result = await add(image, saved, {crop,split,guide});
+      if (!result) {
+        if (dialog.open) message('这一页未保存，请重试。');
+        return;
+      }
       lastShot = still;
       stableSince = 0;
-      saved.frames++;
-      if (session === saved) {
-        el('camera-count').textContent = `当前文档 ${total} 页`;
-        message(needsCrop ? '已收录。未找到完整纸边，可在预览里裁边。' : '已完成这一页，可以翻到下一页。');
-        if (saved.replace || saved.mode==='id') dialog.close();
+      if (dialog.open) {
+        el('camera-count').textContent = `当前文档 ${result.total} 页`;
+        message(result.needsCrop ? '已收录。未找到完整纸边，可在预览里裁边。' : '已完成这一页，可以翻到下一页。');
       }
     } catch (error) {
-      if (session === saved) {
+      if (dialog.open) {
         el('auto-shot').checked = false;
         message(error.message || '这张照片未能保存。');
       }
@@ -75,44 +92,65 @@ export function setUpCamera(add, fallback) {
     }
   }
 
-  function watch() {
-    if (active || !session || video.readyState < 2) return;
+  function watch(started) {
+    if (started!==epoch || !session) return;
+    const now=performance.now();
+    try {
+      if (!active && video.readyState>=2) alignFrame(now);
+    } finally {
+      if (started===epoch) timer=setTimeout(()=>watch(started),Math.max(170,350-(performance.now()-now)));
+    }
+  }
+
+  function alignFrame(now) {
     const auto=el('auto-shot').checked, autoCrop=el('smart-crop').checked;
-    if (!auto) {
-      previous = null; stableSince = 0;
+    if (!auto && !autoCrop) { alignment=null; stableSince=0; return; }
+    let frame, next, found, reused=false;
+    try {
+      frame=fromSource(video,video.videoWidth,video.videoHeight,320);
+      next=fingerprint(frame);
+      // An unmoving frame can keep its locked outline while still checking for motion.
+      reused=alignment?.locked && now-alignment.measuredAt<1250 && difference(alignment.frame,next)<1.4;
+      found=reused ? alignment.quad : detectPaper(frame,320);
+    } catch {
+      found=null;
+    } finally { if (frame) clearCanvas(frame); }
+    if (!found) {
+      alignment=null; stableSince=0; showOutline(null); return;
     }
-    if (!auto && !autoCrop) {
-      showOutline(null);
-      return;
-    }
-    let found;
-    const frame = fromSource(video,video.videoWidth,video.videoHeight,240);
-    try { found = detectPaper(frame,240); }
-    finally { clearCanvas(frame); }
-    showOutline(autoCrop ? found : null);
-    if (!auto || !found) {
-      previous = null; stableSince = 0; return;
-    }
-    const next = fingerprint(video);
-    const now = performance.now();
-    if (!previous || difference(previous,next) > 3.2) stableSince = now;
-    previous = next;
-    if (lastShot && difference(lastShot,next) < 4) return;
-    if (stableSince && now-stableSince >= 900) void capture();
+    const steady=alignment && quadDistance(alignment.quad,found)<.032 && difference(alignment.frame,next)<4;
+    const quad=steady ? found.map(([x,y],i)=>[
+      alignment.quad[i][0]*.42+x*.58,alignment.quad[i][1]*.42+y*.58
+    ]) : found;
+    alignment={quad,frame:next,time:now,measuredAt:reused?alignment.measuredAt:now,locked:Boolean(steady)};
+    showOutline(autoCrop ? quad : null,autoCrop && alignment.locked);
+    if (!steady || !stableSince) stableSince=now;
+    if (auto && steady && now-stableSince>=710 && (!lastShot || difference(lastShot,next)>=4)) void capture();
+  }
+
+  function updateCaptureMode() {
+    const continuous=el('continuous-scan').checked;
+    el('finish-camera').hidden=!continuous;
+    if (!session) return;
+    if (session.mode==='doc') el('camera-title').textContent=session.replace ? '补拍当前页' : continuous ? '文档连拍' : '单页扫描';
   }
 
   async function open(mode, replace, side, count) {
     if (!navigator.mediaDevices?.getUserMedia) return fallback(replace,'当前浏览器无法访问摄像头，可先拍照再导入。');
     const started = ++epoch;
-    session = {mode,replace,side,frames:0};
-    previous = lastShot = null;
+    session = {mode,replace,side};
+    alignment = lastShot = null;
     stableSince = 0; torch = false;
     el('torch').hidden = true;
     el('torch').setAttribute('aria-pressed','false');
     el('auto-shot').checked = false;
     el('auto-shot').disabled = mode==='id' || Boolean(replace);
+    const singleOnly=mode==='id' || Boolean(replace);
+    el('continuous-option').hidden=singleOnly;
+    el('continuous-scan').checked=!singleOnly && preferences[mode];
     el('camera-split-option').hidden = mode!=='book' || Boolean(replace);
     el('camera-title').textContent = replace ? '补拍当前页' : mode==='book' ? '书籍连拍' : mode==='id' ? (side==='front'?'拍摄正面':'拍摄反面') : '文档连拍';
+    updateCaptureMode();
     el('camera-count').textContent = `当前文档 ${count} 页`;
     message('正在启动摄像头…');
     dialog.showModal();
@@ -127,8 +165,8 @@ export function setUpCamera(add, fallback) {
       if (started!==epoch || !dialog.open) return;
       el('torch').hidden = !stream.getVideoTracks()[0]?.getCapabilities?.().torch;
       el('shutter').disabled = false;
-      message('让纸张四角入镜。绿框显示识别到的纸边。');
-      timer = setInterval(watch,400);
+      message(el('continuous-scan').checked ? '扫描后可直接翻页。' : '扫描后会直接打开预览。');
+      watch(started);
     } catch {
       if (started!==epoch || !dialog.open) return;
       dialog.close();
@@ -137,7 +175,12 @@ export function setUpCamera(add, fallback) {
   }
 
   el('shutter').addEventListener('click',capture);
-  el('smart-crop').addEventListener('change',()=>showOutline(null));
+  el('smart-crop').addEventListener('change',()=>{ alignment=null; showOutline(null); });
+  el('continuous-scan').addEventListener('change',()=>{
+    if (session) preferences[session.mode]=el('continuous-scan').checked;
+    updateCaptureMode();
+    if (video.readyState>=2) message(el('continuous-scan').checked ? '扫描后可直接翻页。' : '扫描后会直接打开预览。');
+  });
   for (const id of ['close-camera','finish-camera']) el(id).addEventListener('click',() => dialog.close());
   el('torch').addEventListener('click',async () => {
     const track = stream?.getVideoTracks()[0];
@@ -150,7 +193,7 @@ export function setUpCamera(add, fallback) {
     } catch { message('此摄像头无法切换补光。'); }
   });
   dialog.addEventListener('cancel',event => { if (active) event.preventDefault(); });
-  dialog.addEventListener('close',close);
+  dialog.addEventListener('close',()=>{ if (!dialog.open) close(); });
   document.addEventListener('visibilitychange',() => { if (document.hidden && dialog.open) dialog.close(); });
   return open;
 }

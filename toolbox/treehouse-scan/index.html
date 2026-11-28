@@ -10,8 +10,8 @@
   <meta name="referrer" content="no-referrer">
   <title>树影扫描 · Zaydenの树屋</title>
   <link rel="icon" href="./mark.svg" type="image/svg+xml">
-  <link rel="stylesheet" href="./app.css?v=1.1.0">
-  <script type="module" src="./app.mjs?v=1.1.0"></script>
+  <link rel="stylesheet" href="./app.css?v=1.2.0">
+  <script type="module" src="./app.mjs?v=1.2.0"></script>
 </head>
 <body>
   <aside class="sidebar">
@@ -25,7 +25,7 @@
     <div class="side-bottom">
       <div><span data-icon="shield"></span><strong>在设备上处理</strong></div>
       <p>照片、证件和识别结果仅在此设备上处理。</p>
-      <a class="android-link" href="./treehouse-scan-android.apk?v=1.1.0" download><span data-icon="download"></span> 安卓版下载</a>
+      <a class="android-link" href="./treehouse-scan-android.apk?v=1.2.0" download><span data-icon="download"></span> 安卓版下载</a>
     </div>
   </aside>
   <main>
@@ -143,12 +143,14 @@
     </div>
     <div class="camera-controls">
       <label class="check"><input id="auto-shot" type="checkbox"> 稳定后自动拍摄</label>
+      <label class="check" id="continuous-option"><input id="continuous-scan" type="checkbox"> 连续扫描</label>
       <button id="shutter" class="primary shutter" disabled><span data-icon="camera"></span> 扫描</button>
       <button id="torch" hidden>补光</button><button id="finish-camera">完成</button>
     </div>
     <div class="camera-options">
       <label class="check"><input id="smart-crop" type="checkbox" checked> 自动裁边</label>
       <label class="check" id="camera-split-option" hidden><input id="camera-split" type="checkbox"> 跨页分成两页</label>
+      <span id="alignment-status" aria-live="polite"></span>
       <span id="camera-count"></span>
     </div>
   </dialog>
