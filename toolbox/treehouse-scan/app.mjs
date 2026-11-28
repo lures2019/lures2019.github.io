@@ -1,8 +1,8 @@
 import { canvas, clearCanvas, decode, fromSource, jpeg, fullQuad, validQuad, makePage, renderPage,
-  splitPage, imageType, MAX_EDGE, MAX_FILE, MAX_PAGES, MAX_PROJECT } from './scan.mjs';
-import { openPdf, renderPdfPage, createOcr, exportPdf, safeName, saveFile } from './files.mjs';
-import { readDraft, saveDraft } from './draft.mjs';
-import { setUpCamera } from './camera.mjs';
+  splitPage, imageType, MAX_EDGE, MAX_FILE, MAX_PAGES, MAX_PROJECT } from './scan.mjs?v=1.0.1';
+import { openPdf, renderPdfPage, createOcr, exportPdf, safeName, saveFile, stopIfAborted } from './files.mjs?v=1.0.1';
+import { readDraft, saveDraft } from './draft.mjs?v=1.0.1';
+import { setUpCamera } from './camera.mjs?v=1.0.1';
 
 const el = id => document.getElementById(id);
 const all = selector => [...document.querySelectorAll(selector)];
@@ -95,7 +95,7 @@ function list() {
     URL.revokeObjectURL(url); thumbUrls.delete(image);
   }
   const scroll = el('pages').scrollTop, scrollX = el('pages').scrollLeft;
-  el('pages').replaceChildren();
+  el('pages').textContent='';
   for (const [index,item] of p.pages.entries()) {
     const li = document.createElement('li');
     const label = mode==='id' ? (item.side==='front'?'证件正面':'证件反面') : `第 ${index+1} 页`;
@@ -290,7 +290,7 @@ function insert(items, {replace, side:target=side} = {}) {
     pages=pages.concat(items);
   }
   checkCapacity(pages);
-  selected=items.at(-1).id;
+  selected=items[items.length-1].id;
   updateProject({pages},!busy);
   return pages.length;
 }
@@ -304,7 +304,7 @@ async function importFiles(files, {replace, kind} = {}) {
   let failures=0, firstError='';
   await job('正在导入文件…',async signal=>{
     for (const [i,file] of list.entries()) {
-      signal.throwIfAborted();
+      stopIfAborted(signal);
       progress(`读取文件 ${i+1} / ${list.length}`,i,list.length);
       try {
         if (file.size>MAX_FILE) throw new Error('单个文件超过 100 MB。');
@@ -316,7 +316,7 @@ async function importFiles(files, {replace, kind} = {}) {
             const doc=handle.document;
             if (doc.numPages+project().pages.length>MAX_PAGES) throw new Error(`该 PDF 无法完整导入。一份文档最多容纳 ${MAX_PAGES} 页。`);
             for (let n=1;n<=doc.numPages;n++) {
-              signal.throwIfAborted();
+              stopIfAborted(signal);
               progress(`读取 PDF 第 ${n} / ${doc.numPages} 页`,n-1,doc.numPages);
               const data=await renderPdfPage(doc,n,handle.pdf);
               try { insert([await makePage(data.canvas,`${file.name} · ${n}`,project().filter,false,data.text)]); }
@@ -326,13 +326,14 @@ async function importFiles(files, {replace, kind} = {}) {
         } else {
           const type=await imageType(file);
           const source=await decode(file.slice(0,file.size,type));
-          try { insert([await makePage(source,file.name,page()?.id===replace ? page().filter : project().filter,true)],{replace}); }
+          const filter = (replace && project().pages.find(item=>item.id===replace)?.filter) || project().filter;
+          try { insert([await makePage(source,file.name,filter,true)],{replace}); }
           finally { clearCanvas(source); }
         }
       } catch (error) {
         if (signal.aborted) throw error;
         failures++;
-        firstError ||= error.name==='PasswordException' ? '请先解除 PDF 的密码保护。' : (error.message || '文件无法读取。');
+        if (!firstError) firstError = error.name==='PasswordException' ? '请先解除 PDF 的密码保护。' : (error.message || '文件无法读取。');
       }
     }
     const added=project().pages.length-count;
@@ -533,7 +534,7 @@ function recognize(batch) {
     let index=0;
     try {
       for (const p of pages) {
-        signal.throwIfAborted();
+        stopIfAborted(signal);
         let text=p.text && fullQuad().every(([x,y],i)=>x===p.quad[i][0] && y===p.quad[i][1]) ? p.text : '';
         progress(`识别第 ${index+1} / ${pages.length} 页`,index,pages.length);
         if (!text) {
@@ -551,7 +552,7 @@ function recognize(batch) {
           }
           const image=await renderPage(p,2100,null,false);
           try {
-            signal.throwIfAborted();
+            stopIfAborted(signal);
             const result=await Promise.race([worker.recognize(image),cancelled,failure]);
             text=result.data.text.replace(/(?<=\p{Script=Han})[ \t]+(?=\p{Script=Han})/gu,'').trim();
           } finally { clearCanvas(image); }
@@ -625,16 +626,25 @@ const stageObserver = new ResizeObserver(entries=>{
 });
 stageObserver.observe(el('stage'));
 
-try {
-  const draft=await readDraft();
-  if (draft) {
-    projects=draft.projects;
-    mode=draft.mode;
-    selected=projects.doc.pages[0]?.id;
-    saving=el('draft').checked=true;
-    el('draft-status').textContent='已恢复此设备的草稿。';
+async function restoreSession() {
+  try {
+    const draft=await readDraft();
+    if (draft) {
+      projects=draft.projects;
+      mode=draft.mode;
+      selected=projects.doc.pages[0]?.id;
+      saving=el('draft').checked=true;
+      el('draft-status').textContent='已恢复此设备的草稿。';
+    }
+  } catch {
+    el('draft-status').textContent='此浏览器无法访问本机草稿。';
+  } finally {
+    busy=null;
+    refresh();
   }
-} catch {
-  el('draft-status').textContent='此浏览器无法访问本机草稿。';
 }
+busy=new AbortController();
+progress('正在载入工作台…');
 refresh();
+document.documentElement.dataset.scanReady='true';
+void restoreSession();

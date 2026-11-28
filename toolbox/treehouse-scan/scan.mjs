@@ -164,7 +164,8 @@ export async function makePage(source, name, mode, crop, text = '') {
   const quad = crop ? detectPaper(source) || fullQuad() : fullQuad();
   const tiny = fromSource(source, source.width, source.height, 180);
   try {
-    return { id:crypto.randomUUID(), name, blob:await jpeg(source, .96), thumb:await jpeg(tiny, .77), quad, rotation:0, filter:mode, text };
+    const id=Array.from(crypto.getRandomValues(new Uint8Array(16)),byte=>byte.toString(16).padStart(2,'0')).join('');
+    return { id, name, blob:await jpeg(source, .96), thumb:await jpeg(tiny, .77), quad, rotation:0, filter:mode, text };
   } finally { clearCanvas(tiny); }
 }
 

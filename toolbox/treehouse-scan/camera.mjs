@@ -1,4 +1,4 @@
-import { canvas, clearCanvas, fromSource, detectPaper, MAX_EDGE } from './scan.mjs';
+import { canvas, clearCanvas, fromSource, detectPaper, MAX_EDGE } from './scan.mjs?v=1.0.1';
 
 const el = id => document.getElementById(id);
 const message = text => { el('camera-status').textContent = text; };

@@ -1,11 +1,23 @@
-import { canvas, clearCanvas, renderPage, jpeg, addWatermark } from './scan.mjs';
+import { canvas, clearCanvas, renderPage, jpeg, addWatermark } from './scan.mjs?v=1.0.1';
 
 const path = name => new URL('./vendor/' + name, import.meta.url).href;
+
+export function stopIfAborted(signal) {
+  if (signal.aborted) throw new DOMException('已停止','AbortError');
+}
 
 export async function openPdf(file) {
   const head = new TextDecoder().decode(await file.slice(0,1024).arrayBuffer());
   if (!head.includes('%PDF-')) throw new Error('所选文件不是有效的 PDF。');
-  const pdf = await import('./vendor/pdfjs/pdf.mjs');
+  let pdf;
+  try {
+    pdf = await import('./vendor/pdfjs/pdf.mjs');
+  } catch (error) {
+    if (globalThis.ScanAndroid && error.name==='SyntaxError') {
+      throw new Error('当前 Android 系统 WebView 无法打开 PDF。请更新 WebView 后重试。');
+    }
+    throw error;
+  }
   pdf.GlobalWorkerOptions.workerSrc = path('pdfjs/pdf.worker.mjs');
   const task = pdf.getDocument({
     data: await file.arrayBuffer(), isEvalSupported: false, enableXfa: false,
@@ -36,6 +48,10 @@ export async function renderPdfPage(doc, i, pdf) {
 }
 
 export async function createOcr(langs, logger, errorHandler) {
+  const webViewVersion = globalThis.ScanAndroid && /Chrome\/(\d+)/.exec(navigator.userAgent);
+  if (webViewVersion && Number(webViewVersion[1]) < 97) {
+    throw new Error('当前 Android 系统 WebView 无法启动文字识别。请更新 WebView 后重试。');
+  }
   const { default: tesseract } = await import('./vendor/ocr/tesseract.esm.min.js');
   return tesseract.createWorker(langs.split('+'), 1, {
     workerPath:path('ocr/worker.min.js'), corePath:path('ocr/core/'), langPath:path('ocr/lang/'),
@@ -108,7 +124,7 @@ export async function exportPdf(pages, project, idMode, onPage, signal) {
       context.fillStyle = 'white';
       context.fillRect(0,0,sheet.width,sheet.height);
       for (let i=0; i<pages.length; i++) {
-        signal.throwIfAborted();
+        stopIfAborted(signal);
         await onPage(i, pages.length);
         const card = await renderPage(pages[i], limit);
         const ratio = Math.min(85.6*mm/card.width, 54*mm/card.height);
@@ -121,14 +137,14 @@ export async function exportPdf(pages, project, idMode, onPage, signal) {
     } finally { clearCanvas(sheet); }
   } else {
     for (let i=0;i<pages.length;i++) {
-      signal.throwIfAborted();
+      stopIfAborted(signal);
       await onPage(i, pages.length);
       const page = await renderPage(pages[i], limit, project.watermark);
       try { pdf.append(await jpeg(page,quality),page.width,page.height,project.paper==='a4'); }
       finally { clearCanvas(page); }
     }
   }
-  signal.throwIfAborted();
+  stopIfAborted(signal);
   return pdf.finish();
 }
 
