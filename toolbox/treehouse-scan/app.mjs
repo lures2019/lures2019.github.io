@@ -1,8 +1,9 @@
-import { canvas, clearCanvas, decode, fromSource, jpeg, fullQuad, validQuad, makePage, renderPage,
-  splitPage, imageType, MAX_EDGE, MAX_FILE, MAX_PAGES, MAX_PROJECT } from './scan.mjs?v=1.0.1';
-import { openPdf, renderPdfPage, createOcr, exportPdf, safeName, saveFile, stopIfAborted } from './files.mjs?v=1.0.1';
-import { readDraft, saveDraft } from './draft.mjs?v=1.0.1';
-import { setUpCamera } from './camera.mjs?v=1.0.1';
+import { canvas, clearCanvas, decode, fromSource, jpeg, fullQuad, validQuad, detectPaper, makePage, renderPage,
+  splitPage, imageType, MAX_EDGE, MAX_FILE, MAX_PAGES, MAX_PROJECT } from './scan.mjs?v=1.1.0';
+import { openPdf, renderPdfPage, createOcr, exportPdf, safeName, saveFile, stopIfAborted } from './files.mjs?v=1.1.0';
+import { readDraft, saveDraft } from './draft.mjs?v=1.1.0';
+import { setUpCamera } from './camera.mjs?v=1.1.0';
+import { filterHints } from './filters.mjs?v=1.1.0';
 
 const el = id => document.getElementById(id);
 const all = selector => [...document.querySelectorAll(selector)];
@@ -32,11 +33,12 @@ function icon(key) {
 }
 for (const slot of all('[data-icon]')) slot.append(icon(slot.dataset.icon));
 
-const newProject = () => ({pages:[], filename:'', paper:'fit', quality:'high', filter:'original',
+const newProject = filter => ({pages:[], filename:'', paper:'fit', quality:'high', filter,
   watermark:{enabled:false,text:'',opacity:22}});
-let projects = {doc:newProject(),id:newProject()};
+let projects = {doc:newProject('sharp'),id:newProject('seal')};
 let mode = 'doc', selected, side = 'front', busy, saving = false, draftQueue = Promise.resolve();
 let undo, crop, replaceInput, dragged, previewUrl, previewEpoch = 0, previewTimer, noticeTimer;
+let compareId;
 const thumbUrls = new Map();
 const activeKey = () => mode === 'id' ? 'id' : 'doc';
 const project = () => projects[activeKey()];
@@ -46,11 +48,6 @@ const descriptions = {
   doc:['文档扫描','拍摄纸张或导入文件，整理成一份 PDF。','添加你的第一页','拖入图片或 PDF，也可以直接打开相机。'],
   book:['书籍连拍','保持相机开启，逐页拍摄或将左右跨页拆开。','从书籍第一页开始','用连拍顺序收集每页。展开跨页可先拍后拆。'],
   id:['证件扫描','依次收集正反面，在一张 A4 上输出。','添加证件照片','先选择正面或反面，再拍摄或导入该面。']
-};
-const filterHints = {
-  original:'保留拍摄色彩，适合图文混排。', color:'提亮纸面并增加对比度，适合普通彩色资料。',
-  seal:'主要提亮低饱和度的纸面，保留浅红色章迹和其他颜色。',
-  gray:'保留明暗层次，适合无需彩色的文档。', bw:'提高黑白反差，适合底色均匀的文字稿。'
 };
 
 function notice(text) {
@@ -175,13 +172,17 @@ function setPreview(url) {
   el('preview-status').textContent=url ? '' : '正在生成预览…';
 }
 
-let shownPage, shownWatermark;
+let shownPage, shownWatermark, showingOriginal;
 async function preview() {
   const current = page(), mark = project().watermark;
-  if (crop || (current===shownPage && mark===shownWatermark)) return;
+  const original = Boolean(current && compareId===current.id);
+  if (crop || (current===shownPage && mark===shownWatermark && original===showingOriginal)) return;
   shownPage = current; shownWatermark = mark;
+  showingOriginal = original;
   const epoch = ++previewEpoch;
   if (!current) { setPreview(null); return; }
+  el('preview').alt=original?'裁边和增强前的原图':'当前扫描页预览';
+  if (original) { setPreview(URL.createObjectURL(current.blob)); return; }
   if (current.id !== el('preview').dataset.page) setPreview(null);
   let rendered;
   try {
@@ -218,6 +219,15 @@ function refresh() {
   el('preview-wrap').hidden=!current || !previewUrl;
   if (!current) el('preview-status').hidden=true;
   el('page-tools').hidden=!current || Boolean(crop);
+  el('scan-result').hidden=!current || Boolean(crop);
+  const cropStatus=el('crop-status');
+  const state=current?.cropState;
+  cropStatus.classList.toggle('review',state==='review');
+  const original=Boolean(current && compareId===current.id);
+  cropStatus.textContent=original ? '裁边和增强前' : state==='review' ? '未识别纸边，请检查裁边'
+    : state==='auto' ? '已自动裁边' : state==='manual' ? '已确认裁边' : '扫描结果';
+  el('compare').textContent=original ? '返回扫描结果' : '查看拍摄原图';
+  el('compare').setAttribute('aria-pressed',String(original));
   el('crop-layer').hidden=el('crop-controls').hidden=!crop;
   const locked=Boolean(busy || crop);
   for (const button of all('[data-mode]')) {
@@ -230,9 +240,9 @@ function refresh() {
   for (const button of all('[data-filter]')) {
     button.disabled=locked; button.setAttribute('aria-pressed',String(button.dataset.filter===filter));
   }
-  el('filter-hint').textContent=filterHints[filter];
+  el('filter-hint').textContent=filterHints[filter] || filterHints.original;
   for (const id of ['start-camera','start-images','add-camera','add-images','demo','draft','clear','undo','split','replace','retake','crop','remove','rotate',
-    'watermark','watermark-text','watermark-opacity','filename','paper','quality','ocr-lang']) el(id).disabled=locked;
+    'watermark','watermark-text','watermark-opacity','filename','paper','quality','ocr-lang','compare']) el(id).disabled=locked;
   el('add-pdf').hidden=el('start-pdf').hidden=isId;
   el('add-pdf').disabled=el('start-pdf').disabled=locked;
   el('export').disabled=el('ocr-all').disabled=el('apply').disabled=locked || !p.pages.length;
@@ -319,7 +329,7 @@ async function importFiles(files, {replace, kind} = {}) {
               stopIfAborted(signal);
               progress(`读取 PDF 第 ${n} / ${doc.numPages} 页`,n-1,doc.numPages);
               const data=await renderPdfPage(doc,n,handle.pdf);
-              try { insert([await makePage(data.canvas,`${file.name} · ${n}`,project().filter,false,data.text)]); }
+              try { insert([await makePage(data.canvas,`${file.name} · ${n}`,'original',false,data.text)]); }
               finally { clearCanvas(data.canvas); }
             }
           } finally { await handle.close(); }
@@ -352,7 +362,8 @@ function chooseImages(replace) {
 const openCamera = setUpCamera(async (source,session,crop,split) => {
   const filter=session.replace ? page()?.filter : project().filter;
   const scan=await makePage(source,'相机拍摄',filter || 'original',crop);
-  return insert(split ? await splitPage(scan) : [scan],session);
+  const total=insert(split ? await splitPage(scan) : [scan],session);
+  return {total, needsCrop:scan.cropState==='review'};
 }, (replace,msg) => {
   notice(msg);
   // The file picker stays behind a deliberate user gesture after permission denial.
@@ -403,8 +414,14 @@ for (const button of all('[data-mode]')) button.onclick=()=>{
 for (const button of all('[data-side]')) button.onclick=()=>selection(undefined,button.dataset.side);
 for (const button of all('[data-filter]')) button.onclick=()=>{
   const filter=button.dataset.filter, current=page();
+  compareId=null;
   if (!current) updateProject({filter});
   else updatePage({filter});
+};
+el('compare').onclick=()=>{
+  const id=page()?.id;
+  compareId=compareId===id ? null : id;
+  refresh();
 };
 el('apply').onclick=()=>{
   const filter=page()?.filter || project().filter;
@@ -456,7 +473,7 @@ function updateCrop() {
 }
 function moveCorner(index,x,y) {
   const next=crop.map((p,i)=>i===index?[Math.max(0,Math.min(1,x)),Math.max(0,Math.min(1,y))]:p);
-  if (validQuad(next)) { crop=next; updateCrop(); }
+  if (validQuad(next)) { crop=next; el('crop-message').textContent=''; updateCrop(); }
 }
 for (const [index,label] of ['左上','右上','右下','左下'].entries()) {
   const handle=document.createElement('button');
@@ -477,15 +494,38 @@ for (const [index,label] of ['左上','右上','右下','左下'].entries()) {
   });
 }
 el('crop').onclick=()=>{
+  compareId=null;
   crop=page().quad;
   previewEpoch++;
+  el('crop-message').textContent='';
+  el('preview').alt='拖动四角调整纸张范围';
   setPreview(URL.createObjectURL(page().blob));
   refresh(); updateCrop();
   layer.querySelector('button').focus();
 };
-el('reset-crop').onclick=()=>{ crop=fullQuad(); updateCrop(); };
+el('auto-crop').onclick=async()=>{
+  const before=crop, blob=page()?.blob;
+  if (!before || !blob) return;
+  const button=el('auto-crop');
+  button.disabled=true;
+  el('crop-message').textContent='正在寻找纸边…';
+  let image;
+  try {
+    image=await decode(blob,1100);
+    if (crop!==before) return;
+    const found=detectPaper(image,1100);
+    if (found) { crop=found; updateCrop(); }
+    el('crop-message').textContent=found ? '已定位纸边，请检查四角。' : '找不到完整纸边，请手动拖动四角。';
+  } catch {
+    if (crop===before) el('crop-message').textContent='当前图片无法自动裁边。';
+  } finally {
+    if (image) clearCanvas(image);
+    button.disabled=false;
+  }
+};
+el('reset-crop').onclick=()=>{ crop=fullQuad(); el('crop-message').textContent=''; updateCrop(); };
 el('cancel-crop').onclick=()=>{ crop=null; shownPage=null; refresh(); el('crop').focus(); };
-el('save-crop').onclick=()=>{ const quad=crop; crop=null; updatePage({quad}); el('crop').focus(); };
+el('save-crop').onclick=()=>{ const quad=crop; crop=null; updatePage({quad,cropState:'manual'}); el('crop').focus(); };
 
 el('watermark').onchange=()=>updateProject({watermark:{...project().watermark,enabled:el('watermark').checked}});
 for (const [id,key,map] of [['watermark-text','text',String],['watermark-opacity','opacity',Number]]) {
@@ -607,6 +647,14 @@ el('demo').onclick=()=>job('正在生成示例…',async()=>{
   ctx.translate(746,paperH-160); ctx.rotate(-.2);
   ctx.strokeStyle='#c67474'; ctx.lineWidth=7; ctx.beginPath(); ctx.arc(0,0,83,0,Math.PI*2); ctx.stroke();
   ctx.fillStyle='#c67474'; ctx.textAlign='center'; ctx.font='700 46px sans-serif'; ctx.fillText('样章',0,16);
+  ctx.restore();
+  ctx.save();
+  ctx.translate(105,60); ctx.rotate(.028);
+  const shadow=ctx.createLinearGradient(0,0,570,160);
+  shadow.addColorStop(0,'rgba(29,37,44,.37)');
+  shadow.addColorStop(.64,'rgba(29,37,44,.12)');
+  shadow.addColorStop(1,'rgba(29,37,44,0)');
+  ctx.fillStyle=shadow; ctx.fillRect(0,0,985,paperH);
   ctx.restore();
   try { insert([await makePage(source,'示例照片',project().filter,true)]); }
   finally { clearCanvas(source); }

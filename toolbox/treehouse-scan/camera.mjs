@@ -1,4 +1,4 @@
-import { canvas, clearCanvas, fromSource, detectPaper, MAX_EDGE } from './scan.mjs?v=1.0.1';
+import { canvas, clearCanvas, fromSource, detectPaper, MAX_EDGE } from './scan.mjs?v=1.1.0';
 
 const el = id => document.getElementById(id);
 const message = text => { el('camera-status').textContent = text; };
@@ -14,7 +14,20 @@ function fingerprint(video) {
 
 export function setUpCamera(add, fallback) {
   const dialog = el('camera-dialog'), video = el('video');
+  const outline = el('camera-outline'), polygon = outline.querySelector('polygon');
   let stream, epoch = 0, timer, session, previous, lastShot, stableSince, active = false, torch = false;
+
+  function showOutline(quad) {
+    outline.toggleAttribute('hidden',!quad);
+    el('camera-guide').hidden=Boolean(quad) || !el('smart-crop').checked;
+    if (!quad) return;
+    const frame=el('camera-view').getBoundingClientRect(), image=video.getBoundingClientRect();
+    const scale=Math.min(image.width/video.videoWidth,image.height/video.videoHeight);
+    const width=video.videoWidth*scale, height=video.videoHeight*scale;
+    const left=image.left-frame.left+(image.width-width)/2, top=image.top-frame.top+(image.height-height)/2;
+    polygon.setAttribute('points',quad.map(([x,y])=>
+      `${(left+x*width)*100/frame.width},${(top+y*height)*100/frame.height}`).join(' '));
+  }
 
   function close() {
     epoch++;
@@ -24,6 +37,7 @@ export function setUpCamera(add, fallback) {
     video.srcObject = null;
     el('shutter').disabled = true;
     session = null;
+    showOutline(null);
   }
 
   async function capture() {
@@ -33,18 +47,18 @@ export function setUpCamera(add, fallback) {
     el('shutter').disabled = true;
     el('finish-camera').disabled = true;
     el('close-camera').disabled = true;
-    const still = fingerprint(video);
     let image;
     try {
+      const still = fingerprint(video);
       image = fromSource(video,video.videoWidth,video.videoHeight,MAX_EDGE);
       const split = saved.mode==='book' && el('camera-split').checked;
-      const total = await add(image, saved, el('smart-crop').checked, split);
+      const {total, needsCrop} = await add(image, saved, el('smart-crop').checked, split);
       lastShot = still;
       stableSince = 0;
       saved.frames++;
       if (session === saved) {
         el('camera-count').textContent = `当前文档 ${total} 页`;
-        message('已拍摄，可以翻到下一页。');
+        message(needsCrop ? '已收录。未找到完整纸边，可在预览里裁边。' : '已完成这一页，可以翻到下一页。');
         if (saved.replace || saved.mode==='id') dialog.close();
       }
     } catch (error) {
@@ -62,7 +76,21 @@ export function setUpCamera(add, fallback) {
   }
 
   function watch() {
-    if (!el('auto-shot').checked || active || !session || video.readyState < 2) {
+    if (active || !session || video.readyState < 2) return;
+    const auto=el('auto-shot').checked, autoCrop=el('smart-crop').checked;
+    if (!auto) {
+      previous = null; stableSince = 0;
+    }
+    if (!auto && !autoCrop) {
+      showOutline(null);
+      return;
+    }
+    let found;
+    const frame = fromSource(video,video.videoWidth,video.videoHeight,240);
+    try { found = detectPaper(frame,240); }
+    finally { clearCanvas(frame); }
+    showOutline(autoCrop ? found : null);
+    if (!auto || !found) {
       previous = null; stableSince = 0; return;
     }
     const next = fingerprint(video);
@@ -70,13 +98,7 @@ export function setUpCamera(add, fallback) {
     if (!previous || difference(previous,next) > 3.2) stableSince = now;
     previous = next;
     if (lastShot && difference(lastShot,next) < 4) return;
-    if (!stableSince || now-stableSince < 900) return;
-    const frame = fromSource(video,video.videoWidth,video.videoHeight,240);
-    let found;
-    try { found = detectPaper(frame); }
-    finally { clearCanvas(frame); }
-    if (found) { void capture(); return; }
-    message('请让整页入镜，尽量使用有色差的桌面。也可以点拍摄。');
+    if (stableSince && now-stableSince >= 900) void capture();
   }
 
   async function open(mode, replace, side, count) {
@@ -105,8 +127,8 @@ export function setUpCamera(add, fallback) {
       if (started!==epoch || !dialog.open) return;
       el('torch').hidden = !stream.getVideoTracks()[0]?.getCapabilities?.().torch;
       el('shutter').disabled = false;
-      message('让纸张四角入镜，按拍摄可继续添加。');
-      timer = setInterval(watch,250);
+      message('让纸张四角入镜。绿框显示识别到的纸边。');
+      timer = setInterval(watch,400);
     } catch {
       if (started!==epoch || !dialog.open) return;
       dialog.close();
@@ -115,6 +137,7 @@ export function setUpCamera(add, fallback) {
   }
 
   el('shutter').addEventListener('click',capture);
+  el('smart-crop').addEventListener('change',()=>showOutline(null));
   for (const id of ['close-camera','finish-camera']) el(id).addEventListener('click',() => dialog.close());
   el('torch').addEventListener('click',async () => {
     const track = stream?.getVideoTracks()[0];

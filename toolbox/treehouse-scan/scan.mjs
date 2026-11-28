@@ -1,4 +1,5 @@
-import { detectDocument, warpPerspective, enhance } from './vendor/doc-scanner/index.js';
+import { detectDocument, warpPerspective } from './vendor/doc-scanner/index.js';
+import { filterPixels } from './filters.mjs?v=1.1.0';
 
 export const fullQuad = () => [[0, 0], [1, 0], [1, 1], [0, 1]];
 export const MAX_EDGE = 3200;
@@ -71,13 +72,13 @@ export async function imageType(file) {
   throw new Error('请选择 JPG、PNG、WebP、BMP 或 AVIF 图片。');
 }
 
-export function detectPaper(source) {
-  const small = fromSource(source, source.width, source.height, 760);
+export function detectPaper(source, limit = 900) {
+  const small = fromSource(source, source.width, source.height, limit);
   const { width, height } = small;
   try {
     const image = small.getContext('2d').getImageData(0,0,width,height);
-    const detected = detectDocument(image,{workSize:320,refineSize:760,minArea:.17});
-    if (!detected || detected.confidence < .35) return null;
+    const detected = detectDocument(image,{workSize:Math.min(400,limit),refineSize:limit,minArea:.10});
+    if (!detected) return null;
     const quad = detected.corners.map(({x,y})=>[Math.max(0,Math.min(1,x/width)), Math.max(0,Math.min(1,y/height))]);
     return validQuad(quad) ? quad : null;
   } finally { clearCanvas(small); }
@@ -94,34 +95,13 @@ function straighten(source, quad, limit) {
   result.getContext('2d',{alpha:false}).putImageData(new ImageData(output.data,output.width,output.height),0,0);
   return result;
 }
-export function enhancedPixel(r, g, b, mode) {
-  const y = .299*r + .587*g + .114*b;
-  if (mode === 'seal') {
-    const chroma = Math.max(r,g,b)-Math.min(r,g,b);
-    const red = Math.max(0, r - Math.max(g,b));
-    const preserve = Math.min(1, Math.max(chroma/40, red/9));
-    const whiten = (1-preserve) * Math.max(0, Math.min(1, (y-110)/125));
-    return [r,g,b].map(v => v + (255-v)*whiten*.82);
-  }
-  return [r,g,b];
-}
-
 function filter(element, mode) {
   if (mode === 'original') return;
   const context = element.getContext('2d');
   const {width,height} = element;
   const image = context.getImageData(0,0,width,height);
-  if (mode !== 'seal') {
-    const output = enhance(image,mode);
-    context.putImageData(new ImageData(output.data,width,height),0,0);
-    return;
-  }
-  const d = image.data;
-  for (let i=0;i<d.length;i+=4) {
-    const [r,g,b] = enhancedPixel(d[i],d[i+1],d[i+2],mode);
-    d[i]=r; d[i+1]=g; d[i+2]=b;
-  }
-  context.putImageData(image,0,0);
+  const output=filterPixels(image,mode);
+  context.putImageData(output===image ? image : new ImageData(output.data,width,height),0,0);
 }
 
 export function addWatermark(element, { enabled, text, opacity }) {
@@ -161,11 +141,13 @@ export async function renderPage(page, limit, watermark, applyFilter = true) {
 }
 
 export async function makePage(source, name, mode, crop, text = '') {
-  const quad = crop ? detectPaper(source) || fullQuad() : fullQuad();
+  const found = crop ? detectPaper(source) : null;
+  const quad = found || fullQuad();
+  const cropState = found ? 'auto' : crop ? 'review' : 'whole';
   const tiny = fromSource(source, source.width, source.height, 180);
   try {
     const id=Array.from(crypto.getRandomValues(new Uint8Array(16)),byte=>byte.toString(16).padStart(2,'0')).join('');
-    return { id, name, blob:await jpeg(source, .96), thumb:await jpeg(tiny, .77), quad, rotation:0, filter:mode, text };
+    return { id, name, blob:await jpeg(source, .96), thumb:await jpeg(tiny, .77), quad, cropState, rotation:0, filter:mode, text };
   } finally { clearCanvas(tiny); }
 }
 

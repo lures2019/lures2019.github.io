@@ -1,4 +1,4 @@
-import { canvas, clearCanvas, renderPage, jpeg, addWatermark } from './scan.mjs?v=1.0.1';
+import { canvas, clearCanvas, renderPage, jpeg, addWatermark } from './scan.mjs?v=1.1.0';
 
 const path = name => new URL('./vendor/' + name, import.meta.url).href;
 
