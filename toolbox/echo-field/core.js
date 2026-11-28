@@ -57,3 +57,12 @@ export function wordScore(expected, spoken) {
   })
   return Math.max(0, Math.round(100 * (1 - row[b.length] / a.length)))
 }
+
+export function listeningBlanks(sentence, mode) {
+  const tokens = sentence.split(/(\s+)/).filter(Boolean)
+  const eligible = tokens.flatMap((text, index) => /^[a-z]+$/i.test(text) ? [{text,index}] : [])
+  const selected = mode === 'gap' ? [...eligible].sort((a,b) => b.text.length - a.text.length).slice(0,1) : eligible
+  const answers = selected.map(token => token.text)
+  const positions = new Map(selected.map((token,index) => [token.index,index]))
+  return {answers, tokens:tokens.map((text,index) => ({text, blank:positions.get(index)}))}
+}

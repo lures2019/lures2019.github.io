@@ -84,14 +84,18 @@ def snapshot(category, source):
 def main():
     parser = argparse.ArgumentParser()
     parser.add_argument("--data", type=Path, default=DEFAULT)
+    parser.add_argument("--category", choices=("food", "travel", "news", "tech", "history", "film"))
+    parser.add_argument("--output", type=Path)
     args = parser.parse_args()
-    file = args.data / "podcasts.json"
+    file = args.output or args.data / "podcasts.json"
     previous = json.loads(file.read_text(encoding="utf-8")) if file.exists() else {"items": [], "feeds": {}}
     merged = {item["id"]: item for item in previous["items"]}
     state = previous.get("feeds", {})
     sources = json.loads((args.data / "sources.json").read_text(encoding="utf-8"))
     extra = {"news-npr": ["NPR Up First", "https://feeds.npr.org/510318/podcast.xml", "https://www.npr.org/podcasts/510318/up-first"], "tech-voa": ["VOA Science & Technology", "https://learningenglish.voanews.com/podcast/?count=250&zoneId=1579", "https://learningenglish.voanews.com/podcasts"]}
     sources.update({key: [*sources[key.split('-')[0]][:3], *value] for key, value in extra.items()})
+    if args.category:
+        sources = {key: source for key, source in sources.items() if key.split("-")[0] == args.category}
     updated = dt.datetime.now(dt.timezone.utc).isoformat(timespec="seconds")
     successes = 0
     with ThreadPoolExecutor(max_workers=6) as pool:

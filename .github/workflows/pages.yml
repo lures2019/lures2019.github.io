@@ -45,15 +45,18 @@ jobs:
         run: |
           data="$RUNNER_TEMP/treehouse-pages/toolbox/echo-field/data"
           test -s "$data/sources.json" || exit 0
-          if curl --fail --silent --max-time 20 https://lures2019.github.io/toolbox/echo-field/data/podcasts.json -o "$data/previous.json"; then
-            python3 -c 'import json, pathlib, sys; p = pathlib.Path(sys.argv[1]); d = json.loads(p.read_text()); assert isinstance(d.get("items"), list) and len(d["items"]) >= 100; p.replace(p.with_name("podcasts.json"))' "$data/previous.json" || true
+          cp "$data/podcasts.json" "$data/podcasts-updates.json"
+          if curl --fail --silent --max-time 20 https://lures2019.github.io/toolbox/echo-field/data/podcasts-updates.json -o "$data/previous.json"; then
+            python3 -c 'import json, pathlib, sys; p = pathlib.Path(sys.argv[1]); d = json.loads(p.read_text()); assert isinstance(d.get("items"), list) and len(d["items"]) >= 100; p.replace(p.with_name("podcasts-updates.json"))' "$data/previous.json" || true
           fi
           rm -f "$data/previous.json"
-          if [ "$GITHUB_EVENT_NAME" != schedule ] || [ "$(date -u +%H)" = 00 ]; then
-            python3 -m venv "$RUNNER_TEMP/echo-field-venv"
-            "$RUNNER_TEMP/echo-field-venv/bin/pip" -q install 'requests>=2.32,<3'
-            "$RUNNER_TEMP/echo-field-venv/bin/python" .github/echo-field/refresh_feeds.py --data "$data"
+          args=()
+          if [ "$GITHUB_EVENT_NAME" = schedule ] && [ "$(date -u +%H)" != 00 ]; then
+            args=(--category news)
           fi
+          python3 -m venv "$RUNNER_TEMP/echo-field-venv"
+          "$RUNNER_TEMP/echo-field-venv/bin/pip" -q install 'requests>=2.32,<3'
+          "$RUNNER_TEMP/echo-field-venv/bin/python" .github/echo-field/refresh_feeds.py --data "$data" --output "$data/podcasts-updates.json" "${args[@]}"
       - uses: actions/upload-pages-artifact@v4
         with:
           path: ${{ runner.temp }}/treehouse-pages
