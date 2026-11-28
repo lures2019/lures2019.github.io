@@ -1,4 +1,4 @@
-import {escape as e, normalized, clock, wordTokens} from './core.js?v=1.3.0'
+import {escape as e, normalized, clock, wordTokens} from './core.js?v=1.4.0'
 
 const colors = new Set(['gold','sage'])
 
@@ -25,7 +25,7 @@ function renderedEnglish(cue, painted) {
 export function transcriptHtml({item, rows, marks, words, language, timestamps}) {
   const title = item.zh || item.title
   const label = {both:'中英对照',en:'英文原文',zh:'中文译文'}[language]
-  const byline = [item.zh ? item.title : '',item.source,item.date].filter(Boolean).join(' · ')
+  const byline = [item.zh ? item.title : '',item.date].filter(Boolean).join(' · ')
   const printed = rows.map(({index,cue}) => {
     const english = language !== 'zh' && cue.en ? renderedEnglish(cue,marks[index] || {}) : ''
     const translation = language !== 'en' ? cue.zh || '暂无中文字幕' : ''
@@ -48,7 +48,7 @@ export function transcriptHtml({item, rows, marks, words, language, timestamps})
 
 export function transcriptText({item, rows, marks, words, language, timestamps}) {
   const title = item.zh || item.title
-  const text = [title,[item.zh ? item.title : '',item.source,item.date].filter(Boolean).join(' · '),'']
+  const text = [title,[item.zh ? item.title : '',item.date].filter(Boolean).join(' · '),'']
   for (const {index,cue} of rows) {
     const prefix = timestamps ? '['+clock(cue.start)+'] ' : ''
     const painted = marks[index] || {}

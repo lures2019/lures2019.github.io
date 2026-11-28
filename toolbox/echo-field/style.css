@@ -69,7 +69,7 @@ progress::-webkit-progress-value{background:#56846a;border-radius:25px}
 .btn.outline{border:1px solid var(--line);background:var(--paper)}
 .btn.quiet{background:none}
 .actions{display:flex;flex-wrap:wrap;align-items:center;gap:9px}
-.categories{display:grid;grid-template-columns:repeat(6,minmax(0,1fr));gap:11px}
+.categories{display:grid;grid-template-columns:repeat(7,minmax(0,1fr));gap:11px}
 .category{padding:12px;display:flex;align-items:center;gap:9px;text-align:left;min-height:74px}
 .category:hover,.episode:hover{border-color:#90a993}
 .category strong,.category small,.episode small{display:block}
