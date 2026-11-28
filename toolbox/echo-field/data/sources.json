@@ -1,0 +1,8 @@
+{
+  "food": ["美食", "◉", "饮食文化、食材与厨房里的科学", "Gastropod", "https://feeds.megaphone.fm/VMP6255701211", "https://gastropod.com/"],
+  "travel": ["旅行", "◇", "从行前准备到当地人的生活", "Travel with Rick Steves", "https://www.ricksteves.com/rss/podcast", "https://www.ricksteves.com/watch-read-listen/audio/radio/programs"],
+  "news": ["新闻", "▤", "从慢速英语到真实新闻对话", "VOA Learning English", "https://learningenglish.voanews.com/podcast/?count=250&zoneId=1689", "https://learningenglish.voanews.com/podcasts"],
+  "tech": ["科技", "✧", "科学发现、技术与日常生活", "Science Friday", "https://sciencefriday.libsyn.com/rss", "https://www.sciencefriday.com/"],
+  "history": ["历史", "◫", "从古代社会到近代生活", "HistoryExtra", "https://feeds.acast.com/public/shows/403b803d-7d0b-49a6-ae68-cb0a37b8cd5f", "https://www.historyextra.com/podcast/"],
+  "film": ["电影", "▷", "电影评论、故事和拍摄技巧", "Filmspotting", "https://feeds.megaphone.fm/filmspotting", "https://www.filmspotting.net/"]
+}

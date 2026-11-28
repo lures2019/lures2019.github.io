@@ -1,0 +1,45 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+  <meta name="theme-color" content="#163c31">
+  <meta name="description" content="回声岛英语听力与跟读练习。听六大主题播客，读双语字幕，积累和复习自己的生词。">
+  <title>回声岛 · Echo Field</title>
+  <link rel="icon" href="mark.svg">
+  <link rel="manifest" href="manifest.webmanifest">
+  <link rel="stylesheet" href="style.css">
+  <script type="module" src="app.js"></script>
+</head>
+<body>
+  <div class="shell">
+    <aside class="sidebar">
+      <a class="brand" href="#home"><img src="mark.svg" alt=""><span><strong>回声岛</strong><small>ECHO FIELD</small></span></a>
+      <div class="nav-caption">学习空间</div>
+      <nav id="nav" aria-label="学习空间"></nav>
+      <div class="side-foot">
+        <a id="apk-link" class="side-item" href="echo-field.apk" download>安卓安装包</a>
+        <a class="side-item" href="/toolbox/">返回百宝箱</a>
+      </div>
+    </aside>
+    <div class="body">
+      <header class="topbar">
+        <a class="mobile-brand" href="#home"><img src="mark.svg" alt="">回声岛</a>
+        <form id="search" role="search"><span aria-hidden="true" id="search-icon"></span><input id="search-box" type="search" placeholder="搜索主题、节目或课程" aria-label="搜索听力资源"><kbd>/</kbd></form>
+        <button id="level-chip" class="level-chip" data-go="plan">CET-4</button>
+      </header>
+      <main id="page" tabindex="-1" aria-live="off"><p class="loading">正在加载听力馆…</p></main>
+    </div>
+  </div>
+  <section id="dock" class="dock" hidden aria-label="音频播放器">
+    <button class="dock-title" data-action="open-current"><span class="dock-art" id="dock-art">♪</span><span><strong id="dock-name"></strong><small id="dock-source"></small></span></button>
+    <div id="dock-controls" class="dock-controls"></div>
+    <div class="dock-track"><time id="played">0:00</time><input id="seek" type="range" min="0" max="100" value="0" step="0.05" aria-label="播放进度"><time id="duration">0:00</time></div>
+  </section>
+  <audio id="audio" preload="metadata"></audio>
+  <dialog id="modal" aria-labelledby="modal-title"><div id="modal-body"></div></dialog>
+  <div id="toast" role="status" aria-live="polite"></div>
+  <section id="print-sheet"></section>
+  <input id="import-backup" type="file" accept=".json,application/json" hidden>
+</body>
+</html>

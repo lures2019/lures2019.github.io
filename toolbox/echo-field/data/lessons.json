@@ -1,0 +1,960 @@
+[
+  {
+    "id": "food-4",
+    "cat": "food",
+    "title": "The first cup of coffee",
+    "zh": "第一杯咖啡",
+    "level": "4",
+    "source": "回声岛原创课",
+    "kind": "lesson",
+    "cues": [
+      {
+        "en": "Would you like something to drink?",
+        "zh": "你想喝点什么吗？",
+        "start": 0.0,
+        "end": 1.6
+      },
+      {
+        "en": "I'll go with a cup of coffee, please.",
+        "zh": "我想要一杯咖啡，谢谢。",
+        "start": 1.94,
+        "end": 4.308
+      },
+      {
+        "en": "Would you like a pour-over or an espresso?",
+        "zh": "你想要手冲咖啡还是意式浓缩咖啡？",
+        "start": 4.648,
+        "end": 7.016
+      },
+      {
+        "en": "A pour-over, please. What do you recommend?",
+        "zh": "请给我一杯手冲咖啡。你有什么推荐？",
+        "start": 7.356,
+        "end": 10.343
+      },
+      {
+        "en": "This one has notes of orange and dark chocolate.",
+        "zh": "这款带有橙子和黑巧克力的风味。",
+        "start": 10.683,
+        "end": 13.477
+      },
+      {
+        "en": "That sounds great. I'll take it without milk.",
+        "zh": "听起来不错。我想喝不加奶的。",
+        "start": 13.817,
+        "end": 16.996
+      }
+    ],
+    "vocab": {
+      "pour over": "手冲咖啡",
+      "go with": "选择"
+    },
+    "duration": 17.336,
+    "audio": "assets/audio/food-4.mp3"
+  },
+  {
+    "id": "food-6",
+    "cat": "food",
+    "title": "A second life for leftovers",
+    "zh": "让剩菜焕发新生",
+    "level": "6",
+    "source": "回声岛原创课",
+    "kind": "lesson",
+    "cues": [
+      {
+        "en": "Leftover rice can make excellent fried rice the next day.",
+        "zh": "隔夜的米饭第二天可以做成很棒的炒饭。",
+        "start": 0.0,
+        "end": 3.328
+      },
+      {
+        "en": "Cold rice is easier to separate, so it gives the dish a better texture.",
+        "zh": "冷饭更容易拨散，所以炒出来的口感更好。",
+        "start": 3.668,
+        "end": 7.764
+      },
+      {
+        "en": "Start with a hot pan and add a little oil.",
+        "zh": "先把锅烧热，再加一点油。",
+        "start": 8.104,
+        "end": 10.429
+      },
+      {
+        "en": "A handful of chopped vegetables adds color and helps use up what is in the fridge.",
+        "zh": "一把切碎的蔬菜既能增添颜色，也能消耗冰箱里的食材。",
+        "start": 10.769,
+        "end": 15.527
+      },
+      {
+        "en": "A splash of soy sauce can bring out the savory flavor.",
+        "zh": "加一点酱油就能提鲜。",
+        "start": 15.867,
+        "end": 18.917
+      },
+      {
+        "en": "If the rice was left at room temperature for too long, throw it away.",
+        "zh": "如果米饭在室温下放得太久，就把它丢掉。",
+        "start": 19.257,
+        "end": 23.055
+      }
+    ],
+    "vocab": {
+      "leftovers": "剩菜",
+      "bring out": "使显现",
+      "texture": "口感"
+    },
+    "duration": 23.395,
+    "audio": "assets/audio/food-6.mp3"
+  },
+  {
+    "id": "food-65",
+    "cat": "food",
+    "title": "Why tasting takes practice",
+    "zh": "为什么品尝需要练习",
+    "level": "65",
+    "source": "回声岛原创课",
+    "kind": "lesson",
+    "cues": [
+      {
+        "en": "Two people can taste the same soup and describe it in completely different ways.",
+        "zh": "两个人喝同一碗汤，描述却可能截然不同。",
+        "start": 0.0,
+        "end": 4.245
+      },
+      {
+        "en": "That is partly because flavor combines taste, aroma, and texture.",
+        "zh": "部分原因在于风味融合了味觉、香气和口感。",
+        "start": 4.585,
+        "end": 8.468
+      },
+      {
+        "en": "Temperature matters too: frozen desserts often seem sweeter as they warm up.",
+        "zh": "温度也很重要：冷冻甜点回温后，常常让人觉得更甜。",
+        "start": 8.808,
+        "end": 13.309
+      },
+      {
+        "en": "Professional tasters build a vocabulary by comparing small samples side by side.",
+        "zh": "专业品尝者通过对照品尝少量样品来积累描述风味的词汇。",
+        "start": 13.649,
+        "end": 18.769
+      },
+      {
+        "en": "You can train your palate at home by trying to pick out just one unfamiliar note.",
+        "zh": "在家里，你可以试着从食物中辨别一种陌生的风味，来训练自己的味觉。",
+        "start": 19.109,
+        "end": 23.312
+      },
+      {
+        "en": "The goal is to notice more, even when you disagree with someone else's description.",
+        "zh": "目标是留意到更多细节，即使你不同意别人的描述。",
+        "start": 23.652,
+        "end": 28.089
+      }
+    ],
+    "vocab": {
+      "aroma": "香气",
+      "palate": "味觉",
+      "pick out": "辨别出"
+    },
+    "duration": 28.429,
+    "audio": "assets/audio/food-65.mp3"
+  },
+  {
+    "id": "travel-4",
+    "cat": "travel",
+    "title": "A window seat, please",
+    "zh": "请给我靠窗的座位",
+    "level": "4",
+    "source": "回声岛原创课",
+    "kind": "lesson",
+    "cues": [
+      {
+        "en": "Good morning. I'd like to check in for my flight.",
+        "zh": "早上好。我想办理登机手续。",
+        "start": 0.0,
+        "end": 2.795
+      },
+      {
+        "en": "May I see your passport and booking confirmation?",
+        "zh": "我可以看一下你的护照和预订确认单吗？",
+        "start": 3.135,
+        "end": 6.079
+      },
+      {
+        "en": "Of course. Do you still have a window seat available?",
+        "zh": "当然。还有靠窗的座位吗？",
+        "start": 6.419,
+        "end": 9.277
+      },
+      {
+        "en": "Yes, there is one near the back of the plane.",
+        "zh": "有一个，在飞机后部。",
+        "start": 9.617,
+        "end": 12.455
+      },
+      {
+        "en": "That works for me. What time does boarding start?",
+        "zh": "没问题。几点开始登机？",
+        "start": 12.795,
+        "end": 15.675
+      },
+      {
+        "en": "Boarding starts at nine fifteen, at gate twelve.",
+        "zh": "九点一刻开始登机，在十二号登机口。",
+        "start": 16.015,
+        "end": 19.343
+      }
+    ],
+    "vocab": {
+      "window seat": "靠窗座位",
+      "check in": "办理登机"
+    },
+    "duration": 19.683,
+    "audio": "assets/audio/travel-4.mp3"
+  },
+  {
+    "id": "travel-6",
+    "cat": "travel",
+    "title": "One day in a walkable city",
+    "zh": "在适合步行的城市待一天",
+    "level": "6",
+    "source": "回声岛原创课",
+    "kind": "lesson",
+    "cues": [
+      {
+        "en": "The best way to get to know this neighborhood is on foot.",
+        "zh": "了解这个街区最好的方式就是步行。",
+        "start": 0.0,
+        "end": 3.136
+      },
+      {
+        "en": "Instead of following the main road, take a detour through the market.",
+        "zh": "可以绕进市场走一走，避开主路。",
+        "start": 3.476,
+        "end": 7.508
+      },
+      {
+        "en": "Most of the stalls open early and sell something local.",
+        "zh": "大多数摊位开得很早，也会卖一些当地特色商品。",
+        "start": 7.848,
+        "end": 11.517
+      },
+      {
+        "en": "Leave enough time to stop when something catches your eye.",
+        "zh": "留出足够的时间，遇到感兴趣的东西就可以停下来看看。",
+        "start": 11.857,
+        "end": 15.249
+      },
+      {
+        "en": "If you get tired, look for a bench by the river.",
+        "zh": "如果走累了，可以找一张河边的长椅。",
+        "start": 15.589,
+        "end": 18.64
+      },
+      {
+        "en": "With no rigid schedule, a wrong turn can become the best part of the day.",
+        "zh": "行程宽松时，走错路也可能成为当天最精彩的部分。",
+        "start": 18.98,
+        "end": 23.588
+      }
+    ],
+    "vocab": {
+      "on foot": "步行",
+      "detour": "绕路"
+    },
+    "duration": 23.928,
+    "audio": "assets/audio/travel-6.mp3"
+  },
+  {
+    "id": "travel-65",
+    "cat": "travel",
+    "title": "Rethinking a packed itinerary",
+    "zh": "重新考虑排得太满的行程",
+    "level": "65",
+    "source": "回声岛原创课",
+    "kind": "lesson",
+    "cues": [
+      {
+        "en": "A packed itinerary can make a short trip feel surprisingly exhausting.",
+        "zh": "排得太满的行程会让一趟短途旅行也异常疲惫。",
+        "start": 0.0,
+        "end": 4.565
+      },
+      {
+        "en": "Every extra stop comes with a trade-off, even if it is only a few minutes away.",
+        "zh": "每多去一处都需要有所取舍，哪怕那里只有几分钟路程。",
+        "start": 4.905,
+        "end": 10.025
+      },
+      {
+        "en": "You may spend more time checking transport schedules than looking around.",
+        "zh": "你花在查交通时刻表上的时间，可能比观光还多。",
+        "start": 10.365,
+        "end": 14.717
+      },
+      {
+        "en": "One solution is to choose a single anchor activity for each day.",
+        "zh": "一种办法是每天只安排一项主要活动。",
+        "start": 15.057,
+        "end": 19.431
+      },
+      {
+        "en": "Then keep the rest of the day open for places you discover along the way.",
+        "zh": "然后把剩下的时间留给途中偶然发现的地方。",
+        "start": 19.771,
+        "end": 24.357
+      },
+      {
+        "en": "Planning for that flexibility is often what makes a trip feel spontaneous.",
+        "zh": "提前留出这种弹性，反而常常能让旅行更有随性探索的感觉。",
+        "start": 24.697,
+        "end": 29.327
+      }
+    ],
+    "vocab": {
+      "itinerary": "行程安排",
+      "trade-off": "取舍"
+    },
+    "duration": 29.667,
+    "audio": "assets/audio/travel-65.mp3"
+  },
+  {
+    "id": "news-4",
+    "cat": "news",
+    "title": "What makes a headline?",
+    "zh": "新闻标题是什么？",
+    "level": "4",
+    "source": "回声岛原创课",
+    "kind": "lesson",
+    "cues": [
+      {
+        "en": "A headline tells you what a news story is about.",
+        "zh": "新闻标题告诉你一篇报道讲的是什么。",
+        "start": 0.0,
+        "end": 2.816
+      },
+      {
+        "en": "It usually gives the main point in just a few words.",
+        "zh": "它通常只用几个词就概括了要点。",
+        "start": 3.156,
+        "end": 6.249
+      },
+      {
+        "en": "A short headline cannot tell you every detail.",
+        "zh": "简短的标题无法告诉你所有细节。",
+        "start": 6.589,
+        "end": 9.405
+      },
+      {
+        "en": "Read the first few paragraphs to find out what happened.",
+        "zh": "读一读开头几段，了解发生了什么。",
+        "start": 9.745,
+        "end": 12.881
+      },
+      {
+        "en": "Check when the story was published before you share it.",
+        "zh": "分享前看一看报道是什么时候发布的。",
+        "start": 13.221,
+        "end": 15.973
+      },
+      {
+        "en": "An old story can sound new when you see it without a date.",
+        "zh": "没有日期时，旧新闻也可能看起来像刚发生的事。",
+        "start": 16.313,
+        "end": 19.556
+      }
+    ],
+    "vocab": {
+      "headline": "新闻标题",
+      "main point": "要点"
+    },
+    "duration": 19.896,
+    "audio": "assets/audio/news-4.mp3"
+  },
+  {
+    "id": "news-6",
+    "cat": "news",
+    "title": "A closer look at a survey",
+    "zh": "仔细看一项调查",
+    "level": "6",
+    "source": "回声岛原创课",
+    "kind": "lesson",
+    "cues": [
+      {
+        "en": "A survey result can sound more certain than it really is.",
+        "zh": "调查结果听起来可能比实际更确定。",
+        "start": 0.0,
+        "end": 3.157
+      },
+      {
+        "en": "Before you trust the number, look at the sample size.",
+        "zh": "相信这个数字前，先看看样本量。",
+        "start": 3.497,
+        "end": 6.228
+      },
+      {
+        "en": "A survey of fifty people tells you less than a well-designed survey of five thousand.",
+        "zh": "与一项设计严谨的五千人调查相比，五十人的调查能说明的问题更少。",
+        "start": 6.568,
+        "end": 11.667
+      },
+      {
+        "en": "It also matters how the respondents were chosen.",
+        "zh": "受访者是如何选出来的，这同样重要。",
+        "start": 12.007,
+        "end": 14.673
+      },
+      {
+        "en": "A question posted in one online group may attract people who already agree.",
+        "zh": "在一个网络群组内发起的提问，可能吸引的是本来就持类似观点的人。",
+        "start": 15.013,
+        "end": 19.493
+      },
+      {
+        "en": "The next time you see a percentage, ask who was counted and who was left out.",
+        "zh": "下次看到百分比时，问问有哪些人被统计在内，哪些人被遗漏了。",
+        "start": 19.833,
+        "end": 24.036
+      }
+    ],
+    "vocab": {
+      "respondent": "受访者",
+      "sample size": "样本量"
+    },
+    "duration": 24.376,
+    "audio": "assets/audio/news-6.mp3"
+  },
+  {
+    "id": "news-65",
+    "cat": "news",
+    "title": "When early reports disagree",
+    "zh": "当早期报道相互矛盾",
+    "level": "65",
+    "source": "回声岛原创课",
+    "kind": "lesson",
+    "cues": [
+      {
+        "en": "In a developing story, two reputable outlets can report different details.",
+        "zh": "在一则仍在发展的新闻中，两家信誉良好的媒体也可能报道不同的细节。",
+        "start": 0.0,
+        "end": 4.203
+      },
+      {
+        "en": "One reporter may have a firsthand account, while another is quoting an official statement.",
+        "zh": "一位记者可能掌握了第一手叙述，而另一位引用的是官方声明。",
+        "start": 4.543,
+        "end": 9.193
+      },
+      {
+        "en": "Those accounts can both be useful, but neither necessarily contains the whole picture.",
+        "zh": "这两种信息都可能有用，但任何一种都未必涵盖全貌。",
+        "start": 9.533,
+        "end": 14.227
+      },
+      {
+        "en": "Look for independent sources that corroborate the most important claims.",
+        "zh": "寻找能够独立印证关键说法的信息来源。",
+        "start": 14.567,
+        "end": 18.599
+      },
+      {
+        "en": "When a fact is still uncertain, responsible outlets will say what they could verify.",
+        "zh": "某个事实尚无定论时，负责任的媒体会说明自己核实了哪些信息。",
+        "start": 18.939,
+        "end": 23.504
+      },
+      {
+        "en": "Waiting for an update can be the fastest way to avoid believing the wrong thing.",
+        "zh": "等一等后续消息，可能反而是避免误信的最快方法。",
+        "start": 23.844,
+        "end": 27.961
+      }
+    ],
+    "vocab": {
+      "verify": "核实",
+      "corroborate": "印证",
+      "firsthand": "第一手的"
+    },
+    "duration": 28.301,
+    "audio": "assets/audio/news-65.mp3"
+  },
+  {
+    "id": "tech-4",
+    "cat": "tech",
+    "title": "Why batteries run down",
+    "zh": "电池为什么会耗尽",
+    "level": "4",
+    "source": "回声岛原创课",
+    "kind": "lesson",
+    "cues": [
+      {
+        "en": "A battery stores energy that your phone can use later.",
+        "zh": "电池储存能量，供手机之后使用。",
+        "start": 0.0,
+        "end": 3.669
+      },
+      {
+        "en": "The screen uses some of that energy whenever it lights up.",
+        "zh": "屏幕每次亮起都会消耗一些能量。",
+        "start": 4.009,
+        "end": 7.828
+      },
+      {
+        "en": "Apps can also use power while you are doing something else.",
+        "zh": "在你做别的事情时，应用也可能在耗电。",
+        "start": 8.168,
+        "end": 12.051
+      },
+      {
+        "en": "If you turn down the brightness, your battery may last longer.",
+        "zh": "如果你调低屏幕亮度，电池可能更耐用。",
+        "start": 12.391,
+        "end": 16.273
+      },
+      {
+        "en": "When your phone runs down, plug it in and give it time to charge.",
+        "zh": "手机没电时，插上电源，给它一点时间充电。",
+        "start": 16.613,
+        "end": 20.901
+      },
+      {
+        "en": "How long it takes depends on the charger and the phone.",
+        "zh": "要充多久取决于充电器和手机。",
+        "start": 21.241,
+        "end": 24.719
+      }
+    ],
+    "vocab": {
+      "run down": "耗尽",
+      "plug in": "插上电源"
+    },
+    "duration": 25.059,
+    "audio": "assets/audio/tech-4.mp3"
+  },
+  {
+    "id": "tech-6",
+    "cat": "tech",
+    "title": "What a smart thermostat learns",
+    "zh": "智能恒温器能学到什么",
+    "level": "6",
+    "source": "回声岛原创课",
+    "kind": "lesson",
+    "cues": [
+      {
+        "en": "A smart thermostat can learn when a household usually comes and goes.",
+        "zh": "智能恒温器可以了解一家人通常什么时候出门和回家。",
+        "start": 0.0,
+        "end": 4.459
+      },
+      {
+        "en": "It uses that pattern to adjust the temperature automatically.",
+        "zh": "它利用这一规律自动调节温度。",
+        "start": 4.799,
+        "end": 8.532
+      },
+      {
+        "en": "During the day, it may turn the heating down while nobody is home.",
+        "zh": "白天家里没人时，它可能会调低供暖温度。",
+        "start": 8.872,
+        "end": 12.755
+      },
+      {
+        "en": "Before you return, it can start warming the room again.",
+        "zh": "在你回来之前，它可以重新给房间升温。",
+        "start": 13.095,
+        "end": 16.444
+      },
+      {
+        "en": "The savings depend on your home and how you used to heat it.",
+        "zh": "能节省多少取决于你家的条件，以及你过去怎样供暖。",
+        "start": 16.784,
+        "end": 20.325
+      },
+      {
+        "en": "The simplest way to check is to compare energy bills over a similar period.",
+        "zh": "最简单的检验方法，就是比较相似时段的能源账单。",
+        "start": 20.665,
+        "end": 25.615
+      }
+    ],
+    "vocab": {
+      "thermostat": "恒温器",
+      "adjust": "调节"
+    },
+    "duration": 25.955,
+    "audio": "assets/audio/tech-6.mp3"
+  },
+  {
+    "id": "tech-65",
+    "cat": "tech",
+    "title": "Why translation tools miss the joke",
+    "zh": "翻译工具为什么抓不住笑点",
+    "level": "65",
+    "source": "回声岛原创课",
+    "kind": "lesson",
+    "cues": [
+      {
+        "en": "An accurate translation can still miss the point of a joke.",
+        "zh": "即使翻译准确，仍可能没抓住一个笑话的笑点。",
+        "start": 0.0,
+        "end": 3.691
+      },
+      {
+        "en": "Wordplay often depends on a word having two meanings at once.",
+        "zh": "文字游戏往往依赖一个词同时具有两种含义。",
+        "start": 4.031,
+        "end": 7.679
+      },
+      {
+        "en": "In another language, the two meanings may require completely different words.",
+        "zh": "换成另一种语言，两种含义可能需要用完全不同的词来表达。",
+        "start": 8.019,
+        "end": 12.563
+      },
+      {
+        "en": "A literal translation can preserve the information while losing the surprise.",
+        "zh": "直译可能保留了信息，却丢掉了反转带来的惊喜。",
+        "start": 12.903,
+        "end": 17.511
+      },
+      {
+        "en": "A translator may create new wordplay to produce a comparable effect.",
+        "zh": "译者可能会创造新的文字游戏，以取得类似效果。",
+        "start": 17.851,
+        "end": 22.373
+      },
+      {
+        "en": "That is one reason to read subtitles alongside the original dialogue.",
+        "zh": "这也是将字幕和原始对白对照着看的一条理由。",
+        "start": 22.713,
+        "end": 27.129
+      }
+    ],
+    "vocab": {
+      "wordplay": "文字游戏",
+      "literal": "字面的",
+      "ambiguity": "歧义"
+    },
+    "duration": 27.469,
+    "audio": "assets/audio/tech-65.mp3"
+  },
+  {
+    "id": "history-4",
+    "cat": "history",
+    "title": "A letter from the past",
+    "zh": "一封来自过去的信",
+    "level": "4",
+    "source": "回声岛原创课",
+    "kind": "lesson",
+    "cues": [
+      {
+        "en": "Before email, people often wrote letters by hand.",
+        "zh": "在电子邮件出现之前，人们经常手写信件。",
+        "start": 0.0,
+        "end": 3.499
+      },
+      {
+        "en": "They put the letter in an envelope and took it to the post office.",
+        "zh": "他们把信装进信封，再带到邮局。",
+        "start": 3.839,
+        "end": 7.913
+      },
+      {
+        "en": "A letter could take days or even weeks to arrive.",
+        "zh": "一封信可能需要数天甚至数周才能送到。",
+        "start": 8.253,
+        "end": 11.688
+      },
+      {
+        "en": "Some families kept letters for many years.",
+        "zh": "有些家庭把这些信保存了许多年。",
+        "start": 12.028,
+        "end": 14.631
+      },
+      {
+        "en": "Even the handwriting can tell us something about the person who wrote the letter.",
+        "zh": "连笔迹也能让我们了解写信人的一些情况。",
+        "start": 14.971,
+        "end": 19.643
+      },
+      {
+        "en": "Reading a letter can make the past feel closer.",
+        "zh": "读一封旧信能让我们感觉离过去更近。",
+        "start": 19.983,
+        "end": 23.076
+      }
+    ],
+    "vocab": {
+      "handwriting": "笔迹",
+      "post office": "邮局"
+    },
+    "duration": 23.416,
+    "audio": "assets/audio/history-4.mp3"
+  },
+  {
+    "id": "history-6",
+    "cat": "history",
+    "title": "How time became standard",
+    "zh": "时间是如何统一的",
+    "level": "6",
+    "source": "回声岛原创课",
+    "kind": "lesson",
+    "cues": [
+      {
+        "en": "Different towns once set their clocks according to local solar time.",
+        "zh": "过去，不同城镇曾按照当地的太阳时校准时钟。",
+        "start": 0.0,
+        "end": 4.245
+      },
+      {
+        "en": "That worked when most people rarely traveled between distant places.",
+        "zh": "在大多数人很少进行长途旅行的年代，这种方式行得通。",
+        "start": 4.585,
+        "end": 8.617
+      },
+      {
+        "en": "Railways made different local times a problem for anyone writing a timetable.",
+        "zh": "铁路出现后，各地时间不同就成了编制时刻表的人要面对的问题。",
+        "start": 8.957,
+        "end": 14.333
+      },
+      {
+        "en": "A train could appear to leave one station before it arrived at the previous one.",
+        "zh": "按各站的当地时间看，一辆火车甚至可能在抵达上一站前就从下一站发车。",
+        "start": 14.673,
+        "end": 19.452
+      },
+      {
+        "en": "Standard times helped railways coordinate journeys across longer distances.",
+        "zh": "标准时间帮助铁路协调更长距离的旅程。",
+        "start": 19.792,
+        "end": 24.976
+      },
+      {
+        "en": "The clocks we use today still reflect that need to coordinate.",
+        "zh": "我们今天使用的时钟仍体现了这种协调的需要。",
+        "start": 25.316,
+        "end": 29.135
+      }
+    ],
+    "vocab": {
+      "time zone": "时区",
+      "timetable": "时刻表"
+    },
+    "duration": 29.475,
+    "audio": "assets/audio/history-6.mp3"
+  },
+  {
+    "id": "history-65",
+    "cat": "history",
+    "title": "What a map leaves out",
+    "zh": "地图省略了什么",
+    "level": "65",
+    "source": "回声岛原创课",
+    "kind": "lesson",
+    "cues": [
+      {
+        "en": "A map can tell us as much about its maker as it does about the land itself.",
+        "zh": "一张地图既能让我们了解土地，也能让我们了解制图者。",
+        "start": 0.0,
+        "end": 4.651
+      },
+      {
+        "en": "A merchant might care about roads, ports, and market towns.",
+        "zh": "一位商人可能关心道路、港口和集镇。",
+        "start": 4.991,
+        "end": 8.639
+      },
+      {
+        "en": "Someone working for a government may instead draw boundaries that show control.",
+        "zh": "为政府工作的人可能更关心画出能体现管辖范围的边界。",
+        "start": 8.979,
+        "end": 13.693
+      },
+      {
+        "en": "The things a map leaves out can be just as revealing as the details it includes.",
+        "zh": "地图省略的东西，可能和它绘出的细节一样能说明问题。",
+        "start": 14.033,
+        "end": 19.047
+      },
+      {
+        "en": "Historians ask who commissioned the map and what its intended users needed to know.",
+        "zh": "历史学家会问是谁委托绘制地图，以及目标使用者需要知道什么。",
+        "start": 19.387,
+        "end": 24.443
+      },
+      {
+        "en": "That helps explain why maps of the same place can look so different.",
+        "zh": "这有助于解释为什么绘制的是同一个地方，地图却大相径庭。",
+        "start": 24.783,
+        "end": 28.495
+      }
+    ],
+    "vocab": {
+      "boundary": "边界",
+      "commission": "委托制作"
+    },
+    "duration": 28.835,
+    "audio": "assets/audio/history-65.mp3"
+  },
+  {
+    "id": "film-4",
+    "cat": "film",
+    "title": "At the cinema",
+    "zh": "在电影院",
+    "level": "4",
+    "source": "回声岛原创课",
+    "kind": "lesson",
+    "cues": [
+      {
+        "en": "Do you have two tickets for the seven o'clock show?",
+        "zh": "晚上七点那场还有两张票吗？",
+        "start": 0.0,
+        "end": 2.496
+      },
+      {
+        "en": "Sorry, that show is sold out, but there is another at eight thirty.",
+        "zh": "抱歉，那场卖完了，不过八点半还有一场。",
+        "start": 2.836,
+        "end": 6.996
+      },
+      {
+        "en": "Are there any seats near the middle of the room?",
+        "zh": "放映厅中间附近还有座位吗？",
+        "start": 7.336,
+        "end": 9.64
+      },
+      {
+        "en": "I have two in the fifth row, next to the aisle.",
+        "zh": "第五排还有两个，挨着过道。",
+        "start": 9.98,
+        "end": 13.223
+      },
+      {
+        "en": "Perfect. I'll take both of them.",
+        "zh": "太好了。我两张都要。",
+        "start": 13.563,
+        "end": 15.504
+      },
+      {
+        "en": "Enjoy the movie, and keep your tickets until you are inside.",
+        "zh": "祝你观影愉快，进场前请保管好电影票。",
+        "start": 15.844,
+        "end": 20.132
+      }
+    ],
+    "vocab": {
+      "sold out": "售罄",
+      "aisle seat": "靠过道的座位"
+    },
+    "duration": 20.472,
+    "audio": "assets/audio/film-4.mp3"
+  },
+  {
+    "id": "film-6",
+    "cat": "film",
+    "title": "How sound builds suspense",
+    "zh": "声音如何营造悬念",
+    "level": "6",
+    "source": "回声岛原创课",
+    "kind": "lesson",
+    "cues": [
+      {
+        "en": "A film can build suspense before anything unusual appears on screen.",
+        "zh": "电影可以在画面中出现异常之前就营造出悬念。",
+        "start": 0.0,
+        "end": 4.309
+      },
+      {
+        "en": "Imagine a character walking down an empty hallway.",
+        "zh": "想象一位角色走过空荡荡的走廊。",
+        "start": 4.649,
+        "end": 7.551
+      },
+      {
+        "en": "At first, the only sound is the steady rhythm of footsteps.",
+        "zh": "起初，唯一的声音是节奏稳定的脚步声。",
+        "start": 7.891,
+        "end": 11.133
+      },
+      {
+        "en": "Then the soundtrack adds a low note that almost feels like a warning.",
+        "zh": "随后配乐加入一个低音，几乎像在发出警告。",
+        "start": 11.473,
+        "end": 15.292
+      },
+      {
+        "en": "If that note suddenly stops, the silence can feel even more unsettling.",
+        "zh": "如果低音突然消失，寂静可能让人更加不安。",
+        "start": 15.632,
+        "end": 19.92
+      },
+      {
+        "en": "The choices the audience barely notices can have the strongest effect.",
+        "zh": "观众几乎没察觉的声音安排，有时反而最有感染力。",
+        "start": 20.26,
+        "end": 24.292
+      }
+    ],
+    "vocab": {
+      "suspense": "悬念",
+      "soundtrack": "配乐"
+    },
+    "duration": 24.632,
+    "audio": "assets/audio/film-6.mp3"
+  },
+  {
+    "id": "film-65",
+    "cat": "film",
+    "title": "Why an adaptation changes the story",
+    "zh": "改编为何改变原故事",
+    "level": "65",
+    "source": "回声岛原创课",
+    "kind": "lesson",
+    "cues": [
+      {
+        "en": "Readers sometimes feel disappointed when a film changes a scene from a favorite novel.",
+        "zh": "当电影改动了心爱小说中的一幕，读者有时会觉得失望。",
+        "start": 0.0,
+        "end": 4.843
+      },
+      {
+        "en": "But a novel and a film offer different ways to show what a character is thinking.",
+        "zh": "不过，小说和电影展现人物想法的方式不同。",
+        "start": 5.183,
+        "end": 9.577
+      },
+      {
+        "en": "A page of inner monologue can tell readers things that a camera cannot record directly.",
+        "zh": "一页内心独白能告诉读者一些镜头无法直接拍摄的信息。",
+        "start": 9.917,
+        "end": 14.931
+      },
+      {
+        "en": "An adaptation might show those thoughts through a gesture, a silence, or a different scene.",
+        "zh": "改编作品可能通过一个动作、一阵沉默或另一个场景来表现这些想法。",
+        "start": 15.271,
+        "end": 20.156
+      },
+      {
+        "en": "That can change the details of the story while keeping its emotional shape.",
+        "zh": "这样既可能改变故事的细节，也可能保留其情感走向。",
+        "start": 20.496,
+        "end": 24.379
+      },
+      {
+        "en": "A good comparison asks what each version makes possible.",
+        "zh": "好的比较会问，每个版本各自实现了什么。",
+        "start": 24.719,
+        "end": 27.961
+      }
+    ],
+    "vocab": {
+      "adaptation": "改编",
+      "inner monologue": "内心独白"
+    },
+    "duration": 28.301,
+    "audio": "assets/audio/film-65.mp3"
+  }
+]
