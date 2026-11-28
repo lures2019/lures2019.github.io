@@ -1,0 +1,139 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+  <meta name="theme-color" content="#11263a">
+  <meta name="description" content="树影扫描在设备上完成多页扫描、证件拼版、鲜章保真和中英文文字识别。">
+  <meta name="application-name" content="树影扫描">
+  <meta http-equiv="Content-Security-Policy" content="default-src 'none'; script-src 'self' 'wasm-unsafe-eval'; style-src 'self'; img-src 'self' blob: data:; font-src 'self' blob: data:; worker-src 'self'; connect-src 'self' blob:; media-src blob:; object-src 'none'; base-uri 'none'; form-action 'none'; frame-src 'none'">
+  <meta name="referrer" content="no-referrer">
+  <title>树影扫描 · Zaydenの树屋</title>
+  <link rel="icon" href="./mark.svg" type="image/svg+xml">
+  <link rel="stylesheet" href="./app.css">
+  <script type="module" src="./app.mjs"></script>
+</head>
+<body>
+  <aside class="sidebar">
+    <a class="back" href="/toolbox/"><span data-icon="back"></span> 树屋百宝箱</a>
+    <div class="brand"><img src="./mark.svg" width="46" height="46" alt=""><div>树影扫描<small>TREEHOUSE SCAN</small></div></div>
+    <nav class="modes" aria-label="扫描模式">
+      <button data-mode="doc" aria-pressed="true"><span data-icon="doc"></span><span>文档扫描</span></button>
+      <button data-mode="book" aria-pressed="false"><span data-icon="book"></span><span>书籍连拍</span></button>
+      <button data-mode="id" aria-pressed="false"><span data-icon="card"></span><span>证件扫描</span></button>
+    </nav>
+    <div class="side-bottom">
+      <div><span data-icon="shield"></span><strong>在设备上处理</strong></div>
+      <p>照片、证件和识别结果仅在此设备上处理。</p>
+      <a class="android-link" href="./treehouse-scan-android.apk" download><span data-icon="download"></span> 安卓版下载</a>
+    </div>
+  </aside>
+  <main>
+    <header class="top">
+      <div><h1 id="heading">文档扫描</h1><p id="subtitle">拍摄纸张或导入文件，整理成一份 PDF。</p></div>
+      <button class="primary export-top" id="export" disabled><span data-icon="download"></span> 导出 PDF</button>
+    </header>
+    <div class="workspace">
+      <section class="pages panel" aria-labelledby="pages-title">
+        <div class="section-top"><h2 id="pages-title">页面</h2><span id="count" class="page-count">0 页</span></div>
+        <ol id="pages" class="page-list"></ol>
+        <p id="list-hint" class="subtle">添加后可拖动页面调整顺序。</p>
+        <div class="list-foot"><button id="undo" class="text-button" hidden>撤销删除</button><button id="clear" class="text-button danger" hidden>清空</button></div>
+      </section>
+      <section class="view panel" id="drop" aria-labelledby="preview-title">
+        <div class="section-top"><h2 id="preview-title">扫描预览</h2><div class="view-actions">
+          <button id="add-camera" class="icon-button" title="拍摄或连拍" aria-label="拍摄或连拍"><span data-icon="camera"></span></button>
+          <button id="add-images" class="icon-button" title="导入图片" aria-label="导入图片"><span data-icon="image"></span></button>
+          <button id="add-pdf" class="icon-button" title="导入 PDF 文件" aria-label="导入 PDF 文件"><span data-icon="doc"></span></button>
+        </div></div>
+        <div id="id-options" class="id-options" hidden>
+          <button data-side="front" aria-pressed="true">证件正面</button><button data-side="back" aria-pressed="false">证件反面</button>
+        </div>
+        <div class="stage" id="stage">
+          <div class="empty" id="empty">
+            <div class="scan-art" aria-hidden="true"><i class="paper rear"></i><i class="paper front"><i></i><i></i><i></i><i></i><b>影</b></i><i class="scan-frame"></i><i class="scan-line"></i></div>
+            <h3 id="empty-title">添加你的第一页</h3>
+            <p id="empty-copy">拖入图片或 PDF，也可以直接打开相机。</p>
+            <div class="empty-actions">
+              <button class="primary" id="start-camera"><span data-icon="camera"></span> 打开相机</button>
+              <button id="start-images"><span data-icon="image"></span> 导入图片</button>
+            </div>
+            <div class="empty-links"><button id="start-pdf" class="text-button">导入 PDF</button><button id="demo" class="text-button">试用示例</button></div>
+          </div>
+          <p id="preview-status" class="subtle preview-status" role="status" hidden></p>
+          <div id="preview-wrap" class="preview-wrap" hidden><img id="preview" alt="当前扫描页预览"><div id="crop-layer" class="crop-layer" hidden></div></div>
+          <div id="crop-controls" class="crop-controls" hidden>
+            <p>拖动四角，或用方向键微调当前选中的角点。</p>
+            <button id="reset-crop">整张图</button><button id="cancel-crop">取消</button><button id="save-crop" class="primary">确认裁边</button>
+          </div>
+        </div>
+        <div id="page-tools" class="page-tools" hidden>
+          <button id="crop"><span data-icon="crop"></span> 裁边</button><button id="rotate"><span data-icon="rotate"></span> 旋转</button>
+          <button id="retake"><span data-icon="camera"></span> 补拍</button><button id="replace"><span data-icon="image"></span> 替换</button>
+          <button id="split" hidden><span data-icon="book"></span> 跨页拆分</button><button id="remove" class="danger"><span data-icon="trash"></span> 删除</button>
+        </div>
+      </section>
+      <aside class="settings panel" aria-label="扫描调整与导出">
+        <div class="section-top"><h2>扫描设置</h2></div>
+        <fieldset id="filters">
+          <legend>颜色模式</legend>
+          <div class="filters">
+            <button data-filter="original" aria-pressed="true"><i></i> 原色</button>
+            <button data-filter="color" aria-pressed="false"><i></i> 彩色增强</button>
+            <button data-filter="seal" aria-pressed="false"><i></i> 鲜章保真</button>
+            <button data-filter="gray" aria-pressed="false"><i></i> 灰度</button>
+            <button data-filter="bw" aria-pressed="false"><i></i> 黑白</button>
+          </div>
+          <p id="filter-hint" class="subtle">保留拍摄色彩，适合图文混排。</p>
+          <button id="apply" class="text-button" disabled>将此模式应用到全部页</button>
+        </fieldset>
+        <details class="settings-item">
+          <summary><span data-icon="stamp"></span> 文字水印 <span id="watermark-status" class="summary-value">关闭</span></summary>
+          <label class="check"><input type="checkbox" id="watermark"> 添加水印</label>
+          <label class="field">水印内容<input type="text" id="watermark-text" maxlength="42" placeholder="例如：仅供材料审核使用"></label>
+          <label class="field">透明度<input type="range" id="watermark-opacity" min="8" max="55" value="22"></label>
+        </details>
+        <details class="settings-item" id="ocr-settings">
+          <summary><span data-icon="text"></span> 提取文字</summary>
+          <label class="field">识别语言<select id="ocr-lang"><option value="chi_sim+eng">简体中文 + 英文</option><option value="chi_sim">简体中文</option><option value="eng">英文</option></select></label>
+          <div class="ocr-actions"><button id="ocr-page" disabled>当前页</button><button id="ocr-all" disabled>全部页</button></div>
+        </details>
+        <details class="settings-item">
+          <summary><span data-icon="file"></span> PDF 导出设置</summary>
+          <label class="field">文件名<input id="filename" type="text" maxlength="80" placeholder="树影扫描"></label>
+          <label class="field" id="paper-field">页面尺寸<select id="paper"><option value="fit">按扫描原比例</option><option value="a4">统一 A4</option></select></label>
+          <label class="field">清晰度<select id="quality"><option value="high">高清 · 最长边 2800 px</option><option value="normal">标准 · 最长边 1800 px</option><option value="small">小文件 · 最长边 1200 px</option></select></label>
+        </details>
+        <details class="settings-item local-draft">
+          <summary><span data-icon="shield"></span> 本机草稿</summary>
+          <label class="check"><input type="checkbox" id="draft"> 在此设备保留草稿</label>
+          <p class="subtle" id="draft-status">开启后可关闭页面再续扫。关闭此选项会删除已保存草稿。</p>
+        </details>
+      </aside>
+    </div>
+    <div id="progress" class="progress" role="status" hidden><span id="progress-label"></span><progress id="progress-bar"></progress><button id="cancel-job" hidden>停止</button></div>
+    <div id="notice" class="notice" role="status" aria-live="polite"></div>
+  </main>
+  <input id="images" type="file" accept="image/jpeg,image/png,image/webp,image/bmp,image/avif,.jpg,.jpeg,.png,.webp,.bmp,.avif" multiple hidden>
+  <input id="documents" type="file" accept="application/pdf,.pdf" multiple hidden>
+  <dialog id="camera-dialog" class="camera-dialog">
+    <header><div><h2 id="camera-title">相机</h2><p id="camera-status" role="status">正在启动摄像头…</p></div><button id="close-camera" class="icon-button" aria-label="关闭相机"><span data-icon="close"></span></button></header>
+    <div class="camera-view"><video id="video" autoplay muted playsinline></video><div class="camera-guide" aria-hidden="true"></div></div>
+    <div class="camera-controls">
+      <label class="check"><input id="auto-shot" type="checkbox"> 稳定后自动拍摄</label>
+      <button id="shutter" class="primary shutter" disabled><span data-icon="camera"></span> 拍摄</button>
+      <button id="torch" hidden>补光</button><button id="finish-camera">完成</button>
+    </div>
+    <div class="camera-options">
+      <label class="check"><input id="smart-crop" type="checkbox" checked> 自动裁边</label>
+      <label class="check" id="camera-split-option" hidden><input id="camera-split" type="checkbox"> 跨页分成两页</label>
+      <span id="camera-count"></span>
+    </div>
+  </dialog>
+  <dialog id="ocr-dialog">
+    <header><h2>识别结果</h2><button id="close-ocr" class="icon-button" aria-label="关闭识别结果"><span data-icon="close"></span></button></header>
+    <label class="field">文字可直接编辑<textarea id="ocr-result" rows="12"></textarea></label>
+    <div class="dialog-actions"><button id="copy-ocr" class="primary">复制文字</button><button id="save-ocr">保存 TXT</button></div>
+  </dialog>
+</body>
+</html>
